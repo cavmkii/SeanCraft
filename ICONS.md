@@ -42,8 +42,8 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 **Meds:** `bandage`, `tourniquet`, `splint`, `painkillers`, `field_kit`, `surgical_kit`, `surgery_case`, `antidote`
 
 **Gear:**
-- **Rigs:** `rig_scav`, `rig_carrier`
-- **Backpacks:** `pack_sling`, `pack_scav`, `pack_pilgrim`
+- **Rigs:** `rig_scav`, `rig_chest`, `rig_carrier`, `rig_assault`
+- **Backpacks:** `pack_sling`, `pack_scav`, `pack_pilgrim`, `pack_expedition`
 - **Secure pouches:** `secure_beta`, `secure_gamma`, `secure_kappa`
 
 **Joe and Sean:** `soda`, `merch`, `glock`, `restraining_order`, `diddy_oil`, `sixty_seven`, `baby_bonnet`

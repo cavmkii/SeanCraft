@@ -576,7 +576,11 @@ public final class Tarkov {
             }
             String description = result.getItem() instanceof com.cavmkii.seancraft.boss.BossContent.TotemItem totem
                     ? com.cavmkii.seancraft.boss.BossSites.hint(player, totem) : describe(result);
-            entries.add(new TarkovNet.Entry(TarkovNet.Entry.RECIPE, recipe.id(), result.getHoverName().getString()
+            if (recipe.id().startsWith(HideoutRecipe.UPGRADE)) {
+                description = "Upgrade: trade in an empty " + recipe.costs().get(0).label() + " for half the materials.";
+            }
+            entries.add(new TarkovNet.Entry(TarkovNet.Entry.RECIPE, recipe.id(), (recipe.id().startsWith(HideoutRecipe.UPGRADE) ? "Upgrade to " : "")
+                    + result.getHoverName().getString()
                     + (result.getCount() > 1 ? " x" + result.getCount() : ""), description, id(result.getItem()), status, note,
                     costLines(player, h, recipe.costs()), 0));
         }

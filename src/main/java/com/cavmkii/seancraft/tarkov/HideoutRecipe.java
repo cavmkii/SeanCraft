@@ -31,11 +31,13 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
                 List.of(Cost.planks(6), Cost.of(Items.ITEM_FRAME, 1), Cost.of(Items.IRON_INGOT, 2)), null, 0));
         ALL.add(new HideoutRecipe("fob_table", () -> new ItemStack(TarkovContent.FOB_TABLE_ITEM),
                 List.of(Cost.planks(8), Cost.of(Items.STICK, 4), Cost.of(Items.CAMPFIRE, 1)), null, 0));
-        gear(GearSpec.RIG_SCAV, null, 0, Cost.of(Items.LEATHER, 6), Cost.of(Items.STRING, 4));
-        gear(GearSpec.PACK_SLING, null, 0, Cost.of(Items.LEATHER, 4), Cost.of(Items.STRING, 4));
-        gear(GearSpec.PACK_SCAV, Module.WORKSHOP, 1, Cost.of(Items.LEATHER, 12), Cost.of(Items.STRING, 8), Cost.of(Items.IRON_INGOT, 2));
-        gear(GearSpec.RIG_CARRIER, Module.WORKSHOP, 2, Cost.of(Items.LEATHER, 10), Cost.of(Items.STRING, 6), Cost.of(Items.IRON_INGOT, 6));
-        gear(GearSpec.PACK_PILGRIM, Module.WORKSHOP, 3, Cost.of(Items.LEATHER, 24), Cost.of(Items.STRING, 12), Cost.of(Items.GOLD_INGOT, 4));
+        // Rigs and backpacks (3.1). The scav vest and sling bag are the starting kit; the rest are made here.
+        gear(GearSpec.RIG_CHEST, null, 0, Cost.of(Items.LEATHER, 6), Cost.of(Items.STRING, 4));
+        gear(GearSpec.RIG_CARRIER, Module.WORKSHOP, 1, Cost.of(Items.LEATHER, 10), Cost.of(Items.STRING, 6), Cost.of(Items.IRON_NUGGET, 4));
+        gear(GearSpec.RIG_ASSAULT, Module.WORKSHOP, 2, Cost.of(Items.LEATHER, 12), Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.RABBIT_HIDE, 2));
+        gear(GearSpec.PACK_SCAV, null, 0, Cost.of(Items.LEATHER, 8), Cost.of(Items.STRING, 4));
+        gear(GearSpec.PACK_PILGRIM, Module.WORKSHOP, 1, Cost.of(Items.LEATHER, 14), Cost.of(Items.STRING, 8));
+        gear(GearSpec.PACK_EXPEDITION, Module.WORKSHOP, 3, Cost.of(Items.LEATHER, 16), Cost.of(Items.RABBIT_HIDE, 6), Cost.of(Items.PHANTOM_MEMBRANE, 4));
         ALL.add(new HideoutRecipe("antidote", () -> new ItemStack(TarkovContent.ANTIDOTE),
                 List.of(Cost.of(Items.HONEY_BOTTLE, 1), Cost.of(Items.SUGAR, 2), Cost.of(Items.BROWN_MUSHROOM, 1)), Module.MEDSTATION, 1));
         for (Med med : Med.values()) {
@@ -43,9 +45,21 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
         }
     }
 
+    /** Makes a rig or backpack, and the upgrade to it from the one before: trade that in, empty, plus half the materials. */
     private static void gear(GearSpec spec, Module gate, int gateLevel, Cost... costs) {
         ALL.add(new HideoutRecipe(spec.id, () -> new ItemStack(Tetris.GEAR.get(spec)), List.of(costs), gate, gateLevel));
+        GearSpec from = spec.previous();
+        if (from != null) {
+            List<Cost> half = new ArrayList<>();
+            half.add(Cost.of(Tetris.GEAR.get(from), 1));
+            for (Cost c : costs) {
+                half.add(c.times(0.5f));
+            }
+            ALL.add(new HideoutRecipe(UPGRADE + spec.id, () -> new ItemStack(Tetris.GEAR.get(spec)), half, gate, gateLevel));
+        }
     }
+
+    public static final String UPGRADE = "upgrade_";
 
     public static HideoutRecipe byId(String id) {
         for (HideoutRecipe r : ALL) {

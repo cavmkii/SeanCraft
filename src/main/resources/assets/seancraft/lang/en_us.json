@@ -220,5 +220,11 @@
   "item.seancraft.gold_pike": "Gold Pike",
   "item.seancraft.diamond_pike": "Diamond Pike",
   "item.seancraft.netherite_pike": "Netherite Pike",
-  "item.seancraft.wooden_club": "Wooden Club"
+  "item.seancraft.wooden_club": "Wooden Club",
+  "item.seancraft.rig_chest": "Chest Rig",
+  "item.seancraft.rig_chest.desc": "4x3 rig. Wear it in its slot on the GEAR tab (E). Must be empty to take off.",
+  "item.seancraft.rig_assault": "Assault Rig",
+  "item.seancraft.rig_assault.desc": "6x3 rig. Wear it in its slot on the GEAR tab (E). Must be empty to take off.",
+  "item.seancraft.pack_expedition": "Expedition Pack",
+  "item.seancraft.pack_expedition.desc": "6x8 backpack. Wear it in its slot on the GEAR tab (E). Must be empty to take off."
 }
