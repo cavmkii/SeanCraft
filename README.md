@@ -206,10 +206,17 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - Village chests almost always have meds and some supplies. Other vanilla chests have meds about half the time.
 - Small supply caches (a barrel and some mossy slabs) are scattered around the overworld.
 - Portals work like normal.
+- **Hazards.** Some places hurt to be in. You can go in early, but it drains about 1% of your health a second (a minute and a half from full) until you have the right key or drink the right potion. A potion covers you for 3 minutes, however long the effect itself lasts. While it's draining you, the edges of your screen glow and the effect list says what fixes it.
+  - **Darkness:** the deep dark, and anywhere below Y 0 that isn't lit (a lit tunnel is fine). Key: Daylan's Follower Lantern. Potion: Night Vision.
+  - **Heat:** deserts. Potion: Fire Resistance. The key comes from a tier 2 boss that isn't in yet.
+  - **Cold:** frozen biomes out in the Far lands (not the snowy taiga), and the frozen and jagged peaks anywhere. Potion: Warmth, brewed from an awkward potion and a magma block. Its key is also from a tier 2 boss.
+  - Boss arenas never have a hazard, so every dungeon can be reached.
 
 ### Bosses
 
-The first boss is in. Boss dungeons come later, so for now an op places the arena's Summoning Pedestal with `/seancraft pedestal` (it's also in the creative tab).
+- **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
+  - Mark: a sandy landing on a beach or river mouth. Daylan: a photo-shoot clearing in a cherry grove. Bo Daddy: a lit cavern dug in at the edge of the deep dark. It's walled in, so you tunnel to it.
+  - No Hideout Bench within 100 blocks of a dungeon.
 
 - **Summoning.** Craft the boss's totem at the Hideout Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
 - **The arena** is a ring 40 blocks across around the pedestal. Everyone inside sees the boss bar.
@@ -279,7 +286,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
-  - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you) and `/seancraft reload` need op.
+  - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 

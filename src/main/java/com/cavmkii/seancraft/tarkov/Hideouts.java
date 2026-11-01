@@ -138,6 +138,9 @@ public final class Hideouts extends SavedData {
                 }
             }
         }
+        if (com.cavmkii.seancraft.boss.BossSites.nearSite(level, at, com.cavmkii.seancraft.boss.BossSites.PEDESTAL_CLEARANCE)) {
+            return "Too close to a boss dungeon (hideouts need " + (int) com.cavmkii.seancraft.boss.BossSites.PEDESTAL_CLEARANCE + " blocks).";
+        }
         if (player != null && ownedBy(level.getServer(), player.getUUID()) >= Cfg.maxHideouts) {
             return "You already have " + Cfg.maxHideouts + " hideouts. Break one of your Hideout Benches to move it.";
         }

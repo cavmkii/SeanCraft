@@ -65,10 +65,12 @@ public abstract class LivingEntityMixin {
         return com.cavmkii.seancraft.tarkov.Health.capHeal((LivingEntity) (Object) this, Damage.heal(amount));
     }
 
-    /** Brewing skill: potions you drink last longer. */
+    /** Brewing skill: potions you drink last longer. Hazard potions also start a pass. */
     @ModifyVariable(method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
             at = @At("HEAD"), argsOnly = true)
     private MobEffectInstance seancraft$longerPotions(MobEffectInstance effect) {
-        return RpgHooks.extendDrunkPotion((LivingEntity) (Object) this, effect);
+        MobEffectInstance result = RpgHooks.extendDrunkPotion((LivingEntity) (Object) this, effect);
+        com.cavmkii.seancraft.hazard.Hazards.onEffect((LivingEntity) (Object) this, result);
+        return result;
     }
 }

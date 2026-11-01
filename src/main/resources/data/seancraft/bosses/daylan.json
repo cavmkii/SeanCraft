@@ -1,6 +1,7 @@
 {
   "name": "Daylan Little",
   "tier": 1,
+  "home": { "biomes": ["minecraft:cherry_grove"], "style": "photo_shoot" },
   "health": 2000,
   "resist": { "slash": 1.5, "spirit": 0.5 },
   "phases": [

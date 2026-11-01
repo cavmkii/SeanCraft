@@ -147,5 +147,12 @@
   "item.seancraft.pack_pilgrim": "Pilgrim Backpack",
   "item.seancraft.pack_pilgrim.desc": "5x7 backpack. Wear it in its slot on the GEAR tab (E). Must be empty to take off.",
   "item.seancraft.antidote": "Antidote",
-  "item.seancraft.antidote.desc": "Drink to cure every harmful effect (poison, wither, hunger, nausea...). Or use it from the STATUS tab."
+  "item.seancraft.antidote.desc": "Drink to cure every harmful effect (poison, wither, hunger, nausea...). Or use it from the STATUS tab.",
+  "death.attack.seancraft.hazard": "%1$s couldn't survive out there",
+  "death.attack.seancraft.hazard.player": "%1$s couldn't survive out there",
+  "effect.seancraft.warmth": "Warmth",
+  "item.minecraft.potion.effect.warmth": "Potion of Warmth",
+  "item.minecraft.splash_potion.effect.warmth": "Splash Potion of Warmth",
+  "item.minecraft.lingering_potion.effect.warmth": "Lingering Potion of Warmth",
+  "item.minecraft.tipped_arrow.effect.warmth": "Arrow of Warmth"
 }

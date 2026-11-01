@@ -1,6 +1,7 @@
 {
   "name": "Bo Daddy Harris",
   "tier": 1,
+  "home": { "biomes": ["minecraft:deep_dark"], "underground": true, "style": "cavern" },
   "health": 2000,
   "resist": {},
   "phases": [

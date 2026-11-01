@@ -122,6 +122,7 @@ public final class BossContent {
         BossDef.init();
         Arenas.init();
         Trophies.init();
+        BossSites.init();
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 Restraint.tick(player);
@@ -153,6 +154,10 @@ public final class BossContent {
         public TotemItem(Supplier<EntityType<? extends BossEntity>> boss, Properties properties) {
             super(properties);
             this.boss = boss;
+        }
+
+        public EntityType<? extends BossEntity> boss() {
+            return boss.get();
         }
 
         @Override

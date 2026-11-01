@@ -157,7 +157,7 @@ public final class Damage {
      * own steps (blocking, the Resistance effect), which no longer include armor.
      */
     public static float apply(LivingEntity victim, DamageSource source, float amount) {
-        if (amount <= 0 || source.is(Health.BLEED) || victim.level().isClientSide) {
+        if (amount <= 0 || source.is(Health.BLEED) || source.is(com.cavmkii.seancraft.hazard.Hazards.DAMAGE) || victim.level().isClientSide) {
             // Bleeding is already sized to the player's health.
             return amount;
         }
