@@ -21,12 +21,21 @@ public final class StationTabs {
 
     private StationTabs() {}
 
+    private static String moduleLabel(String kind) {
+        for (com.cavmkii.seancraft.tarkov.Module m : com.cavmkii.seancraft.tarkov.Module.values()) {
+            if (com.cavmkii.seancraft.tarkov.Stations.moduleKind(m).equals(kind)) {
+                return m.label.toUpperCase();
+            }
+        }
+        return kind.toUpperCase();
+    }
+
     public static String label(String kind) {
         return switch (kind) {
             case HIDEOUT -> "HIDEOUT";
             case WEAPON_BENCH -> "WEAPON BENCH";
             case CRAFTING_TABLE -> "CRAFTING";
-            default -> kind.toUpperCase();
+            default -> kind.startsWith("module_") ? moduleLabel(kind) : kind.toUpperCase();
         };
     }
 

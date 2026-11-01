@@ -13,14 +13,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-/** The Hideout Bench: MODULES to build and upgrade, CRAFT for hideout-only items. Materials come from you and the stash. */
+/**
+ * The Hideout Bench's crafts, or a module block's build-and-upgrade screen (design doc 2.5). Materials come from you
+ * and the stash.
+ */
 public class HideoutScreen extends Screen {
     private static final int ROW = 46;
     private static final int TRACK_W = 40;
 
     final BlockPos pos;
     private TarkovNet.HideoutView view;
-    private int tab;
     private double scroll;
     private int ticks;
 
@@ -63,14 +65,9 @@ public class HideoutScreen extends Screen {
         return height - 8;
     }
 
+    /** Everything in the view: the bench's crafts, or the one module a module block opened. */
     private List<TarkovNet.Entry> shown() {
-        List<TarkovNet.Entry> out = new ArrayList<>();
-        for (TarkovNet.Entry e : view.entries()) {
-            if (e.kind() == tab) {
-                out.add(e);
-            }
-        }
-        return out;
+        return new ArrayList<>(view.entries());
     }
 
     @Override
@@ -78,16 +75,10 @@ public class HideoutScreen extends Screen {
         g.fill(0, 0, width, height, 0xE0101014);
         int x0 = left();
         int w = panelWidth();
-        g.drawString(font, "HIDEOUT", x0, 8, 0xFFFFE080, true);
-        g.drawString(font, view.summary(), x0 + 60, 8, 0xFFAAAAAA, false);
-        String[] tabs = {"MODULES", "CRAFT"};
-        for (int t = 0; t < 2; t++) {
-            int tx = x0 + t * 80;
-            boolean active = t == tab;
-            g.fill(tx, 22, tx + 76, 38, active ? 0xFF3A3A44 : 0xFF202026);
-            g.drawString(font, tabs[t], tx + (76 - font.width(tabs[t])) / 2, 26, active ? 0xFFFFFFFF : 0xFF888888, false);
-        }
-        StationTabs.render(g, font, x0 + 164, 24, w - 164, StationTabs.HIDEOUT, mouseX, mouseY);
+        String heading = StationTabs.label(view.station());
+        g.drawString(font, heading, x0, 8, 0xFFFFE080, true);
+        g.drawString(font, view.summary(), x0 + font.width(heading) + 12, 8, 0xFFAAAAAA, false);
+        StationTabs.render(g, font, x0, 24, w, view.station(), mouseX, mouseY);
 
         List<TarkovNet.Entry> entries = shown();
         int top = listTop();
@@ -199,16 +190,8 @@ public class HideoutScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int x0 = left();
-        if (StationTabs.click(x0 + 164, 24, panelWidth() - 164, StationTabs.HIDEOUT, mouseX, mouseY)) {
+        if (StationTabs.click(x0, 24, panelWidth(), view.station(), mouseX, mouseY)) {
             return true;
-        }
-        for (int t = 0; t < 2; t++) {
-            int tx = x0 + t * 80;
-            if (mouseX >= tx && mouseX < tx + 76 && mouseY >= 22 && mouseY < 38) {
-                tab = t;
-                scroll = 0;
-                return true;
-            }
         }
         if (mouseY >= listTop() && mouseY < listBottom()) {
             List<TarkovNet.Entry> entries = shown();

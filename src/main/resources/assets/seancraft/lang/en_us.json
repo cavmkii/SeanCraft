@@ -226,5 +226,13 @@
   "item.seancraft.rig_assault": "Assault Rig",
   "item.seancraft.rig_assault.desc": "6x3 rig. Wear it in its slot on the GEAR tab (E). Must be empty to take off.",
   "item.seancraft.pack_expedition": "Expedition Pack",
-  "item.seancraft.pack_expedition.desc": "6x8 backpack. Wear it in its slot on the GEAR tab (E). Must be empty to take off."
+  "item.seancraft.pack_expedition.desc": "6x8 backpack. Wear it in its slot on the GEAR tab (E). Must be empty to take off.",
+  "block.seancraft.workshop": "Workshop",
+  "item.seancraft.workshop.desc": "Hideout module: faster furnaces and bigger pouches, rigs and backpacks. Place it in a hideout and use it to build.",
+  "block.seancraft.medstation": "Medstation",
+  "item.seancraft.medstation.desc": "Hideout module: meds to make, and bleeds and fractures heal in the hideout. Place it in a hideout and use it to build.",
+  "block.seancraft.perimeter": "Perimeter",
+  "item.seancraft.perimeter.desc": "Hideout module: a bigger hideout radius. Place it in a hideout and use it to build.",
+  "block.seancraft.intel": "Intel Center",
+  "item.seancraft.intel.desc": "Hideout module: calmer raid starts and hunting party warnings. Place it in a hideout and use it to build."
 }

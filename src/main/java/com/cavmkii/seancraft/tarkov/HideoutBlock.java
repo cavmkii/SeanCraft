@@ -43,7 +43,7 @@ public class HideoutBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (player instanceof ServerPlayer serverPlayer) {
-            Tarkov.openHideout(serverPlayer, pos);
+            Tarkov.openBench(serverPlayer, pos);
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

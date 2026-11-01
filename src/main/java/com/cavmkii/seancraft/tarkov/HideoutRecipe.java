@@ -27,6 +27,15 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
                 List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.EMERALD, 1), Cost.of(Items.GLOW_INK_SAC, 1), Cost.of(Items.CHERRY_SAPLING, 1)), null, 0));
         ALL.add(new HideoutRecipe("bo_daddy_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.BO_DADDY_TOTEM),
                 List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.NOTE_BLOCK, 1), Cost.of(Items.LEATHER, 1), Cost.of(Items.POPPY, 1)), null, 0));
+        // The module stations (2.5): placed in the hideout, then built and upgraded from their own screens.
+        ALL.add(new HideoutRecipe("workshop", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.WORKSHOP)),
+                List.of(Cost.of(Items.SMITHING_TABLE, 1), Cost.planks(8)), null, 0));
+        ALL.add(new HideoutRecipe("medstation", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.MEDSTATION)),
+                List.of(Cost.of(Items.BREWING_STAND, 1), Cost.planks(8)), null, 0));
+        ALL.add(new HideoutRecipe("perimeter", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.PERIMETER)),
+                List.of(Cost.of(Items.STONE_BRICKS, 8), Cost.planks(4)), null, 0));
+        ALL.add(new HideoutRecipe("intel", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.INTEL)),
+                List.of(Cost.of(Items.LECTERN, 1), Cost.of(Items.COMPASS, 1)), null, 0));
         ALL.add(new HideoutRecipe("trophy_rack", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.TROPHY_RACK_ITEM),
                 List.of(Cost.planks(6), Cost.of(Items.ITEM_FRAME, 1), Cost.of(Items.IRON_INGOT, 2)), null, 0));
         ALL.add(new HideoutRecipe("fob_table", () -> new ItemStack(TarkovContent.FOB_TABLE_ITEM),
