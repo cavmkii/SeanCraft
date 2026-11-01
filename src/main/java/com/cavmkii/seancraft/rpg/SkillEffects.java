@@ -369,11 +369,17 @@ public final class SkillEffects {
         }
     }
 
-    /** Multiplier from the skill's attribute (2% per point), ability-damage nodes and Casting. */
+    /** The rank of the skill being cast (6.5.2), set around each cast. */
+    static int rank = 1;
+
+    /**
+     * Multiplier from the skill's attribute (+1% per point, 6.3.1), ability-damage nodes, Casting and the skill's rank
+     * (+15% a rank).
+     */
     private static double power(ServerPlayer player, Stats stats, Attr attr) {
         int casting = Rpg.data(player).skillLevel(Skill.CASTING);
-        double spell = attr == Attr.INT ? stats.spellPowerPct() : stats.get(Stat.SPELL_DAMAGE);
-        return (1 + stats.attr(attr) * 0.02) * (1 + spell / 100) * (1 + Skill.CASTING.effectValue(casting) / 100.0);
+        return (1 + stats.attr(attr) * 0.01) * (1 + stats.spellDamagePct() / 100) * (1 + Skill.CASTING.effectValue(casting) / 100.0)
+                * (1 + 0.15 * (rank - 1));
     }
 
     private static double weaponDamage(ServerPlayer player) {

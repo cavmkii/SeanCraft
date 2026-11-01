@@ -43,6 +43,10 @@ public class MedItem extends Item {
 
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity user) {
+        // AGI applies meds faster (6.3). The server's count decides when it's done.
+        if (user instanceof net.minecraft.server.level.ServerPlayer player) {
+            return Math.max(1, (int) Math.round(med.useTicks / com.cavmkii.seancraft.rpg.Rpg.stats(player).medSpeed()));
+        }
         return med.useTicks;
     }
 

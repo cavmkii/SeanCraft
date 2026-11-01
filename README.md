@@ -23,7 +23,8 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | E or J | Inventory screen (GEAR tab) |
 | H | Inventory screen, STATUS tab |
 | K | Inventory screen, WEB tab (passive tree) |
-| Z, X, C, V, B | Active skills in your 5 ability slots |
+| Z, X, C | Your three active skills |
+| V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
@@ -204,12 +205,24 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Character
 
-- **Levels.** You get class XP from killing mobs and mining ores, up to level 60. Each level gives a point for the passive web.
-- **The web (K)** has about 120 nodes and no fixed classes. Go straight down one branch and you're a pure warrior, ranger or caster, or mix them however you want. While you have points to spend, a small yellow "Unspent web points" note sits next to your ability bar. Some nodes unlock active skills, which go in your 5 ability slots. Each archetype has its own resource: rage, stamina or mana.
-- **Attributes.** Strength, Agility and Intelligence come from your skills and the web. Your highest one is your primary attribute, and it adds damage.
-- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, and Strength adds to that. Some web nodes add more of both. Your numbers are on the SKILLS tab.
-- **Skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
-- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian). It wipes your web and kills you on the spot. Below level 21 you get every point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret.
+- **Origin.** The first time you open the web (K) you pick an origin, and it never changes:
+  - **Vanguard** (Strength): starts in the Warrior region with a wooden club. Can become a Warrior, Knight or Paladin.
+  - **Scout** (Agility): starts in the Ranger region with a bow. Can become an Archer, Blademaster or Rogue.
+  - **Arcanist** (Intelligence): starts in the Mage region. Can become a Sorcerer, Warlock or Cleric. (The apprentice wand comes with wands.)
+- **Levels.** You get class XP from killing mobs, mining ores and first boss kills, up to level 60. Each level gives a web point and 2 attribute points.
+- **Attributes.** You start with 10 in your origin's attribute. Each level's 2 points split by what you trained during that level: swords, axes, mining and blocking feed Strength; bows, running and sneaking feed Agility; casting, brewing and enchanting feed Intelligence. Swimming and farming feed nothing. The web never gives attributes. There's no "primary" attribute:
+  - Each weapon scales with its own: +1% damage per point. Axes, maces, warhammers, greatswords, halberds and the club use Strength. Daggers, bows and crossbows use Agility. Swords, spears and pikes use the average of Strength and Agility. Skills scale with their region's attribute.
+  - Strength: more rage, bigger crits, a little knockback, a little max health.
+  - Agility: crit chance, swing speed, faster meds, and Agility weapons and skills cost up to 50% less stamina.
+  - Intelligence: more mana and faster regen, shorter cooldowns, faster skill XP, and longer food, Rested and painkillers.
+- **The web (K)** has 120 nodes in six regions around a ring. At first you only see your starter web, your origin's home region, with a faint outline of the rest. Every node does something on its own: damage, health, stamina, elemental resistance, bonuses that scale with an attribute, keystones with a real drawback, and active skills.
+- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), and opens your ultimate slot. You get one specialization. Ultimates and signature nodes aren't in yet.
+- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each (+15% damage and -10% cost per rank).
+- **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
+- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
+- **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
+- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
+- **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.
 
 ### World
 

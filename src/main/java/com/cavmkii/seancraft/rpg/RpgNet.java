@@ -4,6 +4,7 @@ import com.cavmkii.seancraft.SeanCraft;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
@@ -102,7 +103,23 @@ public final class RpgNet {
         @Override public Type<Respec> type() { return TYPE; }
     }
 
+    /** Client to server: pick an origin (6.2.1). */
+    public record ChooseOrigin(int origin) implements CustomPacketPayload {
+        public static final Type<ChooseOrigin> TYPE = payloadType("rpg_choose_origin");
+        public static final StreamCodec<FriendlyByteBuf, ChooseOrigin> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, ChooseOrigin::origin, ChooseOrigin::new);
+        @Override public Type<ChooseOrigin> type() { return TYPE; }
+    }
+
+    /** Client to server: place one attribute point freed by a respec (6.6). */
+    public record AssignAttribute(int attr) implements CustomPacketPayload {
+        public static final Type<AssignAttribute> TYPE = payloadType("rpg_assign_attribute");
+        public static final StreamCodec<FriendlyByteBuf, AssignAttribute> CODEC = StreamCodec.composite(ByteBufCodecs.VAR_INT, AssignAttribute::attr, AssignAttribute::new);
+        @Override public Type<AssignAttribute> type() { return TYPE; }
+    }
+
     public static void register() {
+        PayloadTypeRegistry.playC2S().register(ChooseOrigin.TYPE, ChooseOrigin.CODEC);
+        PayloadTypeRegistry.playC2S().register(AssignAttribute.TYPE, AssignAttribute.CODEC);
         PayloadTypeRegistry.playS2C().register(Sync.TYPE, Sync.CODEC);
         PayloadTypeRegistry.playS2C().register(Resources.TYPE, Resources.CODEC);
         PayloadTypeRegistry.playS2C().register(Toast.TYPE, Toast.CODEC);

@@ -31,7 +31,18 @@ public enum Stat {
     NO_FALL("No fall damage"),
     MIND_OVER_MATTER("%.0f%% of damage taken comes from mana first"),
     GHOST("Sneaking makes you invisible"),
-    HOLY_AURA("Burn nearby monsters every second");
+    HOLY_AURA("Burn nearby monsters every second"),
+    // Lineage resistance (6.2.6, 9.3.2): elemental resistance points.
+    FIRE_RES("%+.0f fire resistance"),
+    FROST_RES("%+.0f frost resistance"),
+    LIGHTNING_RES("%+.0f lightning resistance"),
+    POISON_RES("%+.0f poison resistance"),
+    // Scaling (6.2.6): a bonus that grows with an attribute, in percent per 10 points.
+    MELEE_PER_STR("%+.0f%% melee damage per 10 Strength"),
+    PROJECTILE_PER_AGI("%+.0f%% projectile damage per 10 Agility"),
+    SPELL_PER_INT("%+.0f%% ability damage per 10 Intelligence"),
+    BLEED_DURATION("Bleeds you cause last %.0f%% longer"),
+    SNEAK_SPEED("%+.0f%% speed while sneaking");
 
     private final String format;
 

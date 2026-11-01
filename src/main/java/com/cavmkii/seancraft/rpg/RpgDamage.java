@@ -90,9 +90,10 @@ public final class RpgDamage {
                 amount = melee(attacker, victim, data, stats, amount) * com.cavmkii.seancraft.combat.Combat.swingMultiplier(attacker);
             } else if (source.getDirectEntity() instanceof AbstractArrow arrow) {
                 int bows = data.skillLevel(Skill.BOWS);
-                amount = (float) ((amount + stats.primaryDamage())
-                        * (1 + Skill.BOWS.effectValue(bows) / 100.0 + stats.get(Stat.PROJECTILE_DAMAGE) / 100 + crit(attacker, victim, stats)));
                 ItemStack bow = arrow.getWeaponItem();
+                Attr[] scaling = bow != null ? Scaling.of(bow) : new Attr[] {Attr.AGI, null};
+                amount = (float) (amount * (1 + Skill.BOWS.effectValue(bows) / 100.0 + stats.projectileDamagePct() / 100
+                        + stats.scalingPct(scaling[0], scaling[1]) / 100 + crit(attacker, victim, stats)));
                 if (bow != null && Parts.modular(bow)) {
                     amount *= Math.max(0.05f, 1 + Parts.totals(bow).damage);
                 }
@@ -121,7 +122,9 @@ public final class RpgDamage {
 
     private static float melee(ServerPlayer attacker, LivingEntity victim, PlayerData data, Stats stats, float amount) {
         ItemStack weapon = attacker.getMainHandItem();
-        double mult = 1 + stats.get(Stat.MELEE_DAMAGE) / 100;
+        // Increased damage: melee nodes, and +1% per point of the weapon's scaling attribute (6.3.1, 9.5 step 2).
+        Attr[] scaling = Scaling.of(weapon);
+        double mult = 1 + stats.meleeDamagePct() / 100 + stats.scalingPct(scaling[0], scaling[1]) / 100;
         Skill weaponSkill = weapon.is(ItemTags.SWORDS) ? Skill.SWORDS : weapon.is(ItemTags.AXES) ? Skill.AXES : null;
         if (weaponSkill != null) {
             mult += weaponSkill.effectValue(data.skillLevel(weaponSkill)) / 100.0;
@@ -152,7 +155,7 @@ public final class RpgDamage {
         if (stats.has(Stat.VENOM)) {
             victim.addEffect(new MobEffectInstance(MobEffects.POISON, (int) (stats.get(Stat.VENOM) * 20), 0), attacker);
         }
-        Rpg.gainRage(attacker, 4);
+        Rpg.gainRage(attacker, 5);
         return amount;
     }
 
@@ -160,7 +163,7 @@ public final class RpgDamage {
         Stats stats = Rpg.stats(player);
         PlayerData data = Rpg.data(player);
         if (source.getEntity() instanceof LivingEntity attacker && attacker != player) {
-            Rpg.gainRage(player, 2);
+            Rpg.gainRage(player, 10);
             if (player.isBlocking() && player.isDamageSourceBlocked(source)) {
                 int blocking = data.skillLevel(Skill.BLOCKING);
                 Rpg.addSkillXp(player, Skill.BLOCKING, 1 + Math.min(amount, 15) * 2);

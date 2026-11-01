@@ -182,7 +182,9 @@ public final class Food {
             meals.sort((a, b) -> Integer.compare(a.left, b.left));
             meals.remove(0);
         }
-        meals.add(new Meal(id, def.ticks(), def.ticks()));
+        // INT makes food last longer (6.3).
+        int ticks = (int) Math.round(def.ticks() * com.cavmkii.seancraft.rpg.Rpg.stats(player).preparation());
+        meals.add(new Meal(id, ticks, ticks));
         player.setAttached(MEALS, meals);
         apply(player, meals);
         ServerPlayNetworking.send(player, new Sync(meals));

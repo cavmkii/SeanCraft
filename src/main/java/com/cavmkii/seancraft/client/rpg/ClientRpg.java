@@ -31,8 +31,7 @@ public final class ClientRpg {
             new KeyMapping("key.seancraft.ability1", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_Z, CATEGORY),
             new KeyMapping("key.seancraft.ability2", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, CATEGORY),
             new KeyMapping("key.seancraft.ability3", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, CATEGORY),
-            new KeyMapping("key.seancraft.ability4", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY),
-            new KeyMapping("key.seancraft.ability5", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, CATEGORY),
+            new KeyMapping("key.seancraft.ultimate", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, CATEGORY),
     };
 
     private static final SystemToast.SystemToastId LEVEL_TOAST = new SystemToast.SystemToastId(5000L);

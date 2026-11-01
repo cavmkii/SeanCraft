@@ -444,7 +444,8 @@ public final class Damage {
 
     /** Elemental resistance points (9.3.2). For now from Fire Protection; food, web nodes and trophy powers come later. */
     static float elementPoints(ServerPlayer player, Type type) {
-        return type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0;
+        float web = (float) com.cavmkii.seancraft.rpg.Rpg.stats(player).resistance(type);
+        return web + (type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0);
     }
 
     /** Blast and Projectile Protection: resistance points against explosions and projectiles. */

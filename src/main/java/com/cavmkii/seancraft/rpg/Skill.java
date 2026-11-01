@@ -1,8 +1,8 @@
 package com.cavmkii.seancraft.rpg;
 
 /**
- * Valheim-style use-skills. Each ranks 0-100 from use, improves its own action, and feeds one attribute.
- * The xp multiplier evens out how often each one gets exercised.
+ * Valheim-style use-skills (design doc 6.4). Each ranks 0-100 from use and improves its own action. Most feed one
+ * attribute, which decides where a level's attribute points go; swimming and farming feed none.
  */
 public enum Skill {
     SWORDS("Swords", Attr.STR, "+%d%% damage with swords"),
@@ -12,11 +12,11 @@ public enum Skill {
     BOWS("Bows & Crossbows", Attr.AGI, "+%d%% arrow damage"),
     RUNNING("Running", Attr.AGI, "+%d%% sprint speed"),
     SNEAKING("Sneaking", Attr.AGI, "+%d%% sneaking speed"),
-    SWIMMING("Swimming", Attr.AGI, "+%d%% swim speed, longer breath"),
+    SWIMMING("Swimming", null, "+%d%% swim speed, longer breath"),
     ENCHANTING("Enchanting", Attr.INT, "%d%% chance to refund enchanting levels"),
     BREWING("Brewing", Attr.INT, "Potions you drink last +%d%% longer"),
     CASTING("Casting", Attr.INT, "+%d%% ability damage, faster cooldowns"),
-    FARMING("Farming", Attr.INT, "%d%% chance of extra crops");
+    FARMING("Farming", null, "%d%% chance of extra crops");
 
     public static final int MAX_LEVEL = 100;
 
@@ -28,6 +28,11 @@ public enum Skill {
         this.label = label;
         this.attr = attr;
         this.effectFormat = effectFormat;
+    }
+
+    /** The attribute's colour, or grey for skills that feed none. */
+    public int color() {
+        return attr != null ? attr.color : 0x9A9AA4;
     }
 
     /** Total xp needed to reach a level. */

@@ -534,7 +534,8 @@ public final class Health {
         double brewing = 1 + Skill.BREWING.effectValue(Rpg.data(player).skillLevel(Skill.BREWING)) / 100.0;
         boolean did = false;
         if (med.painkillerTicks > 0) {
-            d.painkillerTicks = Math.max(d.painkillerTicks, (int) (med.painkillerTicks * brewing));
+            // Brewing and INT (6.3) make painkillers last longer.
+            d.painkillerTicks = Math.max(d.painkillerTicks, (int) (med.painkillerTicks * brewing * Rpg.stats(player).preparation()));
             did = true;
         } else {
             if (!helps(d, med, part)) {

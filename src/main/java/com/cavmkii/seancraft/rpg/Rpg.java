@@ -127,6 +127,8 @@ public final class Rpg {
         ServerPlayNetworking.registerGlobalReceiver(RpgNet.SetSlot.TYPE, (payload, ctx) -> setSlot(ctx.player(), payload.slot(), payload.skill()));
         ServerPlayNetworking.registerGlobalReceiver(RpgNet.Cast.TYPE, (payload, ctx) -> cast(ctx.player(), payload.slot()));
         ServerPlayNetworking.registerGlobalReceiver(RpgNet.Respec.TYPE, (payload, ctx) -> respec(ctx.player(), payload.pos()));
+        ServerPlayNetworking.registerGlobalReceiver(RpgNet.ChooseOrigin.TYPE, (payload, ctx) -> chooseOrigin(ctx.player(), payload.origin()));
+        ServerPlayNetworking.registerGlobalReceiver(RpgNet.AssignAttribute.TYPE, (payload, ctx) -> assignAttribute(ctx.player(), payload.attr()));
     }
 
     // ================================================================== xp
@@ -137,11 +139,16 @@ public final class Rpg {
         }
         PlayerData data = data(player);
         int before = data.skillLevel(skill);
-        amount *= com.cavmkii.seancraft.food.Rest.skillMultiplier(player) * com.cavmkii.seancraft.boss.Trophies.xpMultiplier(player);
+        amount *= com.cavmkii.seancraft.food.Rest.skillMultiplier(player) * com.cavmkii.seancraft.boss.Trophies.xpMultiplier(player)
+                * stats(player).skillXpMultiplier();
         data.skillXp.merge(skill, amount, Double::sum);
+        if (skill.attr != null) {
+            // Where this level's attribute points will go (6.4).
+            data.levelProgress.merge(skill.attr, amount, Double::sum);
+        }
         int after = data.skillLevel(skill);
         if (after != before) {
-            toast(player, skill.label + " " + after, skill.attr.label + " grows. " + skill.describe(after));
+            toast(player, skill.label + " " + after, skill.describe(after));
             markDirty(player);
         }
     }
@@ -161,13 +168,11 @@ public final class Rpg {
             data.xp -= PlayerData.xpToNext(data.level);
             data.level++;
             levelled = true;
-            String extra = "";
-            for (int s = 0; s < PlayerData.SLOTS; s++) {
-                if (PlayerData.SLOT_LEVELS[s] == data.level) {
-                    extra = " Ability slot " + (s + 1) + " unlocked!";
-                }
-            }
-            toast(player, "Level " + data.level, "+1 web point." + extra);
+            // The level's attribute points, split by what you trained during it (6.4).
+            data.split(data.levelProgress, PlayerData.ATTR_PER_LEVEL, data.origin);
+            data.levelProgress.clear();
+            String extra = data.level == Specialization.LEVEL ? " You can choose a specialization once you have a tier 1 trophy." : "";
+            toast(player, "Level " + data.level, "+1 web point, +" + PlayerData.ATTR_PER_LEVEL + " attribute points." + extra);
         }
         if (data.level >= PlayerData.MAX_LEVEL) {
             data.xp = 0;
@@ -233,7 +238,8 @@ public final class Rpg {
         data.mana = Math.min(stats.maxMana(), data.mana + stats.manaRegen() / 20f);
         com.cavmkii.seancraft.combat.Combat.tick(player, data, stats.maxStamina() + com.cavmkii.seancraft.food.Food.stamina(player));
         if (now > rt.combatUntil) {
-            data.rage = Math.max(0, data.rage - 2f / 20f);
+            // Rage decays 10 a second once you've been out of combat for 5 seconds (6.5).
+            data.rage = Math.max(0, data.rage - 10f / 20f);
         }
         data.rage = Math.min(stats.maxRage(), data.rage);
 
@@ -325,12 +331,13 @@ public final class Rpg {
         setModifier(player, Attributes.MOVEMENT_SPEED, "rpg_move_speed", stats.moveSpeedPct() / 100,
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
         setModifier(player, Attributes.ARMOR, "rpg_armor", stats.bonusArmor(), AttributeModifier.Operation.ADD_VALUE);
-        setModifier(player, Attributes.ATTACK_DAMAGE, "rpg_primary", stats.primaryDamage(), AttributeModifier.Operation.ADD_VALUE);
+        setModifier(player, Attributes.ATTACK_DAMAGE, "rpg_primary", 0, AttributeModifier.Operation.ADD_VALUE);
+        setModifier(player, Attributes.ATTACK_KNOCKBACK, "rpg_knockback_str", stats.knockback(), AttributeModifier.Operation.ADD_VALUE);
         setModifier(player, Attributes.KNOCKBACK_RESISTANCE, "rpg_knockback", stats.get(Stat.KNOCKBACK_RES) / 100,
                 AttributeModifier.Operation.ADD_VALUE);
         setModifier(player, Attributes.BLOCK_BREAK_SPEED, "rpg_mining", Skill.MINING.effectValue(data.skillLevel(Skill.MINING)) / 100.0,
                 AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
-        setModifier(player, Attributes.SNEAKING_SPEED, "rpg_sneaking", data.skillLevel(Skill.SNEAKING) / 100.0 * 0.3,
+        setModifier(player, Attributes.SNEAKING_SPEED, "rpg_sneaking", data.skillLevel(Skill.SNEAKING) / 100.0 * 0.3 + stats.get(Stat.SNEAK_SPEED) / 100,
                 AttributeModifier.Operation.ADD_VALUE);
         setModifier(player, Attributes.WATER_MOVEMENT_EFFICIENCY, "rpg_swimming", data.skillLevel(Skill.SWIMMING) / 100.0 * 0.5,
                 AttributeModifier.Operation.ADD_VALUE);
@@ -363,16 +370,54 @@ public final class Rpg {
 
     // ================================================================== web and slots
 
+    private static boolean inHideout(ServerPlayer player) {
+        return com.cavmkii.seancraft.tarkov.Hideouts.at(player.serverLevel(), player.position()) != null;
+    }
+
+    /** Any tier 1 boss beaten, for the specialization milestone (6.2.5). */
+    static boolean hasTierOneTrophy(ServerPlayer player) {
+        for (String boss : player.getAttachedOrCreate(com.cavmkii.seancraft.boss.BossContent.BEATEN)) {
+            com.cavmkii.seancraft.boss.BossDef def = com.cavmkii.seancraft.boss.BossDef.get(boss);
+            if (def != null && def.tier() >= 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Takes a node, ranks up a learned skill, or chooses a specialization at its gate. */
     private static void allocate(ServerPlayer player, int node) {
         PlayerData data = data(player);
+        WebNode web = PassiveWeb.get(node);
+        if (web == null) {
+            return;
+        }
+        if (data.canRankUp(node)) {
+            data.ranks.merge(web.active.name(), 1, Integer::sum);
+            toast(player, web.active.label + " rank " + data.rank(web.active), "");
+            markDirty(player);
+            return;
+        }
         if (!data.canAllocate(node)) {
             return;
         }
+        if (web.kind == WebNode.Kind.GATE) {
+            if (!hasTierOneTrophy(player)) {
+                player.displayClientMessage(Component.literal("A specialization needs a tier 1 trophy too: beat Mark, Daylan or Bo Daddy."), true);
+                return;
+            }
+            if (!inHideout(player)) {
+                player.displayClientMessage(Component.literal("Choose a specialization in a hideout."), true);
+                return;
+            }
+            data.spec = web.spec;
+            data.revealed = true;
+            toast(player, "Specialization: " + web.spec.label, "The whole web is open to you now.");
+        }
         data.nodes.add(node);
-        WebNode web = PassiveWeb.get(node);
-        // A newly learned active goes into the first free open slot.
+        // A newly learned skill goes into the first empty basic slot.
         if (web.active != null) {
-            for (int s = 0; s < data.unlockedSlots(); s++) {
+            for (int s = 0; s < PlayerData.ULTIMATE_SLOT; s++) {
                 if (data.slots[s] == null) {
                     data.slots[s] = web.active.name();
                     break;
@@ -382,16 +427,55 @@ public final class Rpg {
         markDirty(player);
     }
 
+    /** Picks the character's origin, once (6.2.1), and hands over its starting weapon. */
+    private static void chooseOrigin(ServerPlayer player, int index) {
+        PlayerData data = data(player);
+        if (data.origin != null || index < 0 || index >= Origin.values().length) {
+            return;
+        }
+        data.origin = Origin.values()[index];
+        ItemStack weapon = switch (data.origin) {
+            case VANGUARD -> new ItemStack(com.cavmkii.seancraft.parts.WeaponItems.WOODEN_CLUB);
+            case SCOUT -> new ItemStack(net.minecraft.world.item.Items.BOW);
+            case ARCANIST -> ItemStack.EMPTY;
+        };
+        if (!weapon.isEmpty()) {
+            com.cavmkii.seancraft.tetris.Tetris.give(player, weapon);
+        }
+        if (data.origin == Origin.SCOUT) {
+            com.cavmkii.seancraft.tetris.Tetris.give(player, new ItemStack(net.minecraft.world.item.Items.ARROW, 16));
+        }
+        toast(player, "Origin: " + data.origin.label, data.origin == Origin.ARCANIST
+                ? "Your apprentice wand comes with wands; for now, your skills are your weapon." : "Here's your " + data.origin.weapon.toLowerCase() + ".");
+        markDirty(player);
+    }
+
+    /** Places an attribute point freed by a respec (6.6). */
+    private static void assignAttribute(ServerPlayer player, int index) {
+        PlayerData data = data(player);
+        if (data.unassigned <= 0 || index < 0 || index >= Attr.values().length) {
+            return;
+        }
+        data.unassigned--;
+        data.attrPoints.merge(Attr.values()[index], 1.0, Double::sum);
+        markDirty(player);
+    }
+
+    /** The loadout changes only in a hideout, so the kit is chosen before a raid (6.5.2). */
     private static void setSlot(ServerPlayer player, int slot, String skillName) {
         PlayerData data = data(player);
-        if (slot < 0 || slot >= data.unlockedSlots()) {
+        if (!data.slotOpen(slot)) {
+            return;
+        }
+        if (!inHideout(player)) {
+            player.displayClientMessage(Component.literal("Change your loadout in a hideout."), true);
             return;
         }
         if (skillName.isEmpty()) {
             data.slots[slot] = null;
         } else {
             ActiveSkill skill = ActiveSkill.byName(skillName);
-            if (skill == null || !data.hasActive(skill)) {
+            if (skill == null || !data.hasActive(skill) || slot == PlayerData.ULTIMATE_SLOT) {
                 return;
             }
             for (int s = 0; s < PlayerData.SLOTS; s++) {
@@ -411,7 +495,7 @@ public final class Rpg {
             return;
         }
         PlayerData data = data(player);
-        if (slot < 0 || slot >= data.unlockedSlots()) {
+        if (!data.slotOpen(slot)) {
             return;
         }
         ActiveSkill skill = data.slot(slot);
@@ -429,18 +513,30 @@ public final class Rpg {
             case STAMINA -> data.stamina;
         };
         boolean free = player.isCreative();
-        if (!free && available < skill.cost) {
+        // Ranks make a skill cheaper (6.5.2); AGI makes AGI skills' stamina cheaper (6.5.1).
+        float cost = skill.cost * (1 - 0.1f * (data.rank(skill) - 1));
+        if (skill.resource == Resource.STAMINA) {
+            cost *= (float) (1 - stats(player).staminaEfficiency() * Scaling.agiShare(skill.archetype));
+        }
+        if (!free && available < cost) {
             player.displayClientMessage(Component.literal("Not enough " + skill.resource.label.toLowerCase()), true);
             return;
         }
-        if (!SkillEffects.cast(player, skill, stats(player), rt)) {
+        SkillEffects.rank = data.rank(skill);
+        boolean cast;
+        try {
+            cast = SkillEffects.cast(player, skill, stats(player), rt);
+        } finally {
+            SkillEffects.rank = 1;
+        }
+        if (!cast) {
             return;
         }
         if (!free) {
             switch (skill.resource) {
-                case MANA -> data.mana -= skill.cost;
-                case RAGE -> data.rage -= skill.cost;
-                case STAMINA -> data.stamina -= skill.cost;
+                case MANA -> data.mana -= cost;
+                case RAGE -> data.rage -= cost;
+                case STAMINA -> data.stamina -= cost;
             }
         }
         int casting = data.skillLevel(Skill.CASTING);
@@ -473,15 +569,23 @@ public final class Rpg {
                 data.spentPoints()));
     }
 
-    /** Clears the web and kills you. You keep a share of the points you'd spent; the rest are gone for good. */
+    /**
+     * Clears the web and the specialization, frees your attribute points to place again, and kills you (6.6). Only in a
+     * hideout, so a respec never costs a raid kit. You keep a share of the web points you'd spent; the rest are gone for
+     * good. Your origin stays, and the whole web stays open if it was.
+     */
     private static void respec(ServerPlayer player, BlockPos pos) {
         if (!player.isAlive() || player.distanceToSqr(Vec3.atCenterOf(pos)) > 36
                 || !player.level().getBlockState(pos).is(RpgContent.ALTAR_OF_REGRET)) {
             return;
         }
+        if (!inHideout(player)) {
+            player.displayClientMessage(Component.literal("The altar only works inside a hideout."), true);
+            return;
+        }
         PlayerData data = data(player);
-        if (data.spentPoints() == 0) {
-            player.displayClientMessage(Component.literal("You have no points to take back."), true);
+        if (data.spentPoints() == 0 && data.attrPoints.isEmpty()) {
+            player.displayClientMessage(Component.literal("You have nothing to take back."), true);
             return;
         }
         if (needsOrb(data.level) && !player.isCreative()) {
@@ -496,7 +600,12 @@ public final class Rpg {
         int refunded = (int) Math.round(spent * refundPercent(data.level) / 100.0);
         data.lostPoints += spent - refunded;
         data.nodes.clear();
+        data.ranks.clear();
+        data.spec = null;
         java.util.Arrays.fill(data.slots, null);
+        double attrs = data.attrPoints.values().stream().mapToDouble(Double::doubleValue).sum();
+        data.unassigned += (int) Math.round(attrs);
+        data.attrPoints.clear();
         markDirty(player);
         SeanCraft.LOG.info("{} respecced: {} of {} points refunded.", player.getName().getString(), refunded, spent);
         player.displayClientMessage(Component.literal("The altar takes its price."), true);
