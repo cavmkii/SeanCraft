@@ -52,6 +52,11 @@ public final class Damage {
     public static final double PLAYER_BASE_HEALTH = 300;
     static final float ARMOR_K = 20;
     static final float PIERCE_IGNORES = 0.25f;
+    /** Enchantments as pipeline terms (9.7.1): increased damage per level, spirit share per level, armor ignored per level. */
+    static final float SHARPNESS_INCREASED = 0.10f;
+    static final float BANE_INCREASED = 0.15f;
+    static final float SMITE_SHARE = 0.25f;
+    static final float BREACH_PENETRATION = 0.15f;
     /** Resistance points per level of Fire, Blast or Projectile Protection on a piece (9.7.1). */
     static final float PROTECTION_POINTS = 4;
     /** Armor points per level of Protection, on the parts that piece covers (9.7.1). */
@@ -171,6 +176,7 @@ public final class Damage {
             return amount;
         }
         amount = Traits.beforeHit(victim, source, amount);
+        amount *= enchantIncreased(victim, source);
         Split split = boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
         BodyPart part = null;
         if (victim instanceof ServerPlayer player) {
@@ -194,7 +200,7 @@ public final class Damage {
             }
             float dealt = amount * share * resistance(victim, type);
             if (type.physical() && armor > 0) {
-                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source));
+                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source), breach(source));
                 dealt *= ARMOR_K / (x + ARMOR_K);
             }
             if (type.elemental() && victim instanceof ServerPlayer player) {
@@ -300,7 +306,35 @@ public final class Damage {
         if (fireAspect > 0) {
             split.add(Type.FIRE, 0.15f * fireAspect);
         }
+        if (attacker instanceof Player) {
+            // Smite: added spirit, which only hurts what's weak to it (9.7.1).
+            int smite = level(attacker, weapon, Enchantments.SMITE);
+            if (smite > 0) {
+                split.add(Type.SPIRIT, SMITE_SHARE * smite);
+            }
+        }
         return split;
+    }
+
+    /** Sharpness, and Bane of Arthropods against arthropods, as increased damage on a player's melee hit (9.7.1). */
+    private static float enchantIncreased(LivingEntity victim, DamageSource source) {
+        if (!(source.getEntity() instanceof Player player) || source.getDirectEntity() != player) {
+            return 1;
+        }
+        ItemStack weapon = player.getMainHandItem();
+        float increased = SHARPNESS_INCREASED * level(player, weapon, Enchantments.SHARPNESS);
+        if (victim.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) {
+            increased += BANE_INCREASED * level(player, weapon, Enchantments.BANE_OF_ARTHROPODS);
+        }
+        return 1 + increased;
+    }
+
+    /** Breach: extra share of armor a player's melee hit ignores. */
+    private static float breach(DamageSource source) {
+        if (!(source.getEntity() instanceof Player player) || source.getDirectEntity() != player) {
+            return 0;
+        }
+        return BREACH_PENETRATION * level(player, player.getMainHandItem(), Enchantments.BREACH);
     }
 
     /** Gold adds +15% as spirit and netherite +20% as fire, on top of the physical damage (9.1). */
