@@ -28,7 +28,8 @@ public final class Traits {
 
     static void init() {
         ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, base, taken, blocked) -> {
-            if (family(source) == Family.DAGGER) {
+            if (family(source) == Family.DAGGER || family(source) == Family.SWORD && source.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp
+                    && com.cavmkii.seancraft.rpg.Rpg.stats(sp).has(com.cavmkii.seancraft.rpg.Stat.QUICK_STRIKES)) {
                 // Hurt time runs from 20 and blocks hits while above 10; a dagger leaves only a short window.
                 entity.invulnerableTime = Math.min(entity.invulnerableTime, 10 + QUICK_STRIKE_TICKS);
             }

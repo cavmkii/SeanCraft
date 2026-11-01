@@ -80,7 +80,7 @@ public final class ClientRpg {
         }
         for (int i = 0; i < ABILITY_KEYS.length; i++) {
             while (ABILITY_KEYS[i].consumeClick()) {
-                if (mc.screen == null && data.slot(i) != null) {
+                if (mc.screen == null && (data.slot(i) != null || i == PlayerData.ULTIMATE_SLOT && data.spec != null)) {
                     ClientPlayNetworking.send(new RpgNet.Cast(i));
                 }
             }

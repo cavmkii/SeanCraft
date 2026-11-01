@@ -375,6 +375,27 @@ public final class Health {
         }
     }
 
+    /**
+     * Revives every destroyed part with this much lasting damage (the Cleric's Miracle). Returns how many came back.
+     */
+    public static int revive(ServerPlayer player, float scar) {
+        TarkovData d = Tarkov.data(player);
+        float max = player.getMaxHealth();
+        int revived = 0;
+        for (BodyPart part : BodyPart.values()) {
+            if (Body.destroyed(d, part)) {
+                d.scar[part.ordinal()] = Math.max(d.scar[part.ordinal()], scar);
+                Body.heal(d, part, 0, max, true);
+                Body.sync(d, part.ordinal());
+                revived++;
+            }
+        }
+        if (revived > 0) {
+            rt(player).dirty = true;
+        }
+        return revived;
+    }
+
     private static void bleed(ServerPlayer player, TarkovData d, Runtime rt) {
         float max = player.getMaxHealth();
         for (BodyPart p : BodyPart.values()) {
@@ -388,6 +409,8 @@ public final class Health {
             // From a trickle at 10% to 2% of max health every 2 seconds at 100%.
             float sev = d.bleed[p.ordinal()];
             float drain = sev <= 0 ? 0 : Math.max(0.1f + 0.4f * sev, max * (0.004f + 0.016f * sev));
+            // The Paladin's Mercy and Hallowed Ground slow bleeding nearby.
+            drain *= (float) (1 - Rpg.bleedSlow(player));
             if (drain > 0 && player.isAlive()) {
                 rt.bleeding = p;
                 // Bleeding ignores the usual hurt cooldown so several parts can drain at once.
@@ -549,8 +572,8 @@ public final class Health {
             }
             if (med.revives && Body.destroyed(d, part)) {
                 if (!med.restores()) {
-                    // A surgical kit saves the part, but it never quite comes back.
-                    d.scar[i] = Math.max(d.scar[i], Med.KIT_SCAR);
+                    // A surgical kit saves the part, but it never quite comes back (less so for a Cleric's Field Surgery).
+                    d.scar[i] = Math.max(d.scar[i], Rpg.stats(player).has(com.cavmkii.seancraft.rpg.Stat.SURGERY) ? 0.15f : Med.KIT_SCAR);
                 }
                 Body.heal(d, part, 0, max, true);
                 did = true;
@@ -567,7 +590,8 @@ public final class Health {
                 did = true;
             }
             if (med.heal > 0) {
-                float used = Body.heal(d, part, (float) (max * med.heal * brewing), max, false);
+                double power = 1 + Rpg.stats(player).get(com.cavmkii.seancraft.rpg.Stat.MED_POWER) / 100;
+                float used = Body.heal(d, part, (float) (max * med.heal * brewing * power), max, false);
                 if (used > 0) {
                     player.setHealth(Math.min(max, player.getHealth() + used));
                     did = true;

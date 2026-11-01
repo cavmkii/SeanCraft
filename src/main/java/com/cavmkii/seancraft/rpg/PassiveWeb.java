@@ -7,7 +7,8 @@ import java.util.List;
 /**
  * The passive web (design doc 6.2): six regions in a ring, 19 nodes each, with a bridge between each pair of
  * neighbours, 120 nodes in all. Each origin starts at the inner node of its home region; its starter web is that region
- * plus the two bridges out of it. Its three specialization gates are its region's far node and those two bridges.
+ * plus the two bridges out of it. Its three specialization gates are its region's far node and those two bridges. Past
+ * each region's edge sit its specializations' signature nodes.
  * There are no flat attribute nodes: every node does something on its own. Built the same way on server and client, so
  * node ids match without being sent over the network.
  */
@@ -113,6 +114,23 @@ public final class PassiveWeb {
             connect(nodes, mine[3], theirs[2]);
         }
 
+        // Signature nodes (6.2.4, 6.2.5): three per specialization at the outer edge of its region, past the region's
+        // far node, opened one by one by the specialization, mastery and capstone milestones.
+        for (Specialization spec : Specialization.values()) {
+            int[] region = regionIds[spec.region.ordinal()];
+            double offset = !spec.region.hybrid() ? 16 : spec.origin.home == spec.region.next() ? 14 : -14;
+            int previous = region[HOME_GATE_SLOT];
+            for (int tier = 1; tier <= 3; tier++) {
+                double angle = spec.region.angle() + Math.toRadians(offset * (1 + 0.15 * (tier - 1)));
+                double radius = 8.0 + 0.75 * tier;
+                int id = nodes.size();
+                WebNode node = Signatures.node(id, spec, tier, Math.sin(angle) * radius, -Math.cos(angle) * radius);
+                nodes.add(node);
+                connect(nodes, id, previous);
+                previous = id;
+            }
+        }
+
         NODES = Collections.unmodifiableList(nodes);
     }
 
@@ -134,7 +152,8 @@ public final class PassiveWeb {
 
     /** In an origin's starter web (6.2.2): its home region, plus the gates out of it. */
     public static boolean inStarter(WebNode node, Origin origin) {
-        return origin != null && (node.archetype == origin.home && node.kind != WebNode.Kind.GATE || node.spec != null && node.spec.origin == origin);
+        return origin != null && (node.archetype == origin.home && node.kind != WebNode.Kind.GATE && node.kind != WebNode.Kind.SIGNATURE
+                || node.spec != null && node.spec.origin == origin);
     }
 
     private static void connect(List<WebNode> nodes, int a, int b) {

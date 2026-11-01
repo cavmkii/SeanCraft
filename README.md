@@ -216,7 +216,22 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Agility: crit chance, swing speed, faster meds, and Agility weapons and skills cost up to 50% less stamina.
   - Intelligence: more mana and faster regen, shorter cooldowns, faster skill XP, and longer food, Rested and painkillers.
 - **The web (K)** has 120 nodes in six regions around a ring. At first you only see your starter web, your origin's home region, with a faint outline of the rest. Every node does something on its own: damage, health, stamina, elemental resistance, bonuses that scale with an attribute, keystones with a real drawback, and active skills.
-- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), and opens your ultimate slot. You get one specialization. Ultimates and signature nodes aren't in yet.
+- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), opens your ultimate (V), and opens the first of your specialization's three signature nodes at the outer edge of its region. You get one specialization.
+- **Milestones.** Mastery (level 40 and any tier 2 trophy) opens your second signature node and ranks your ultimate up; Capstone (level 60 and a tier 3 trophy) opens the third and ranks it up again. Tier 2 and 3 bosses aren't in yet, so for now only the first step is reachable.
+
+  | Specialization | Signature nodes (specialization / mastery / capstone) | Ultimate |
+  |---|---|---|
+  | Warrior | Can't be staggered while Rage is above half / +50% rage gain, +10% melee / +25% melee while Rage is above half | Rampage: 8s of free Rage skills, no staggers, +20% damage |
+  | Knight | Players within 6 blocks take 15% less / blocking pulls the attacker and nearby monsters onto you / +10 armor, +50% knockback resistance | Bulwark: 6s, players behind you take half, you 30% less |
+  | Paladin | Melee hits add 20% spirit / players within 8 blocks bleed 30% slower / another 20% spirit and a holy aura | Hallowed Ground: 8s, spirit damage to undead in it, slower bleeding |
+  | Archer | Arrows slow / +15% arrow damage, +5% crit / arrow crits pin | Deadeye: next three arrows always crit and pin |
+  | Blademaster | +50% on your first hit after a block / sword hits leave enemies open fast, like a dagger / +15% swing speed, +10% crit | Thousand Cuts: dash through up to five enemies, three cuts each |
+  | Rogue | +25% sneak speed, +25% backstab / invisible while sneaking / +50% backstab, +25% crit damage | Vanish: 5s invisible, things lose you, first hit is a backstab |
+  | Sorcerer | +30% skill area / +20% skill damage / skills cost 20% less mana | Cataclysm: 5s of lightning on monsters around you |
+  | Warlock | Skill hits hex for +15% damage taken / melee hits poison / hex +15% more, +10% skill damage | Doom: 8s of double damage from its weaknesses; it bursts into poison if it dies |
+  | Cleric | Meds apply and heal 30% better / surgical kits leave 15% lasting damage instead of 35% / you and players near you regenerate | Miracle: revives every destroyed part on players near you |
+
+  Ultimates cost 40 of the specialization's resource (rage, stamina or mana) and recharge in 120 seconds, 100 at mastery and 80 at capstone; each rank also makes them last or hit 25% more.
 - **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each (+15% damage and -10% cost per rank).
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
 - **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.

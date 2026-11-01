@@ -72,7 +72,7 @@ public final class Restraint {
 
     /** A heavy hit's stagger: a 0.6-second stop. Bass Drop makes the player immune. */
     public static void stagger(ServerPlayer player) {
-        if (Trophies.active(player, Trophies.Power.BASS_DROP) || rooted(player)) {
+        if (Trophies.active(player, Trophies.Power.BASS_DROP) || rooted(player) || com.cavmkii.seancraft.rpg.Rpg.unstaggerable(player)) {
             return;
         }
         Hold old = HELD.get(player.getUUID());

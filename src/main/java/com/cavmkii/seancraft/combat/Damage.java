@@ -177,7 +177,7 @@ public final class Damage {
         }
         amount = Traits.beforeHit(victim, source, amount);
         amount *= enchantIncreased(victim, source);
-        Split split = boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
+        Split split = FORCED.get() != null ? fromMap(FORCED.get()) : boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
         BodyPart part = null;
         if (victim instanceof ServerPlayer player) {
             part = Health.locate(player, source, source.is(DamageTypeTags.IS_FALL));
@@ -306,6 +306,13 @@ public final class Damage {
         if (fireAspect > 0) {
             split.add(Type.FIRE, 0.15f * fireAspect);
         }
+        if (attacker instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // The Paladin's Smite signature: a spirit share on every melee hit.
+            double share = com.cavmkii.seancraft.rpg.Rpg.stats(sp).get(com.cavmkii.seancraft.rpg.Stat.SPIRIT_SHARE);
+            if (share > 0) {
+                split.add(Type.SPIRIT, (float) share / 100);
+            }
+        }
         if (attacker instanceof Player) {
             // Smite: added spirit, which only hurts what's weak to it (9.7.1).
             int smite = level(attacker, weapon, Enchantments.SMITE);
@@ -314,6 +321,13 @@ public final class Damage {
             }
         }
         return split;
+    }
+
+    private static final ThreadLocal<java.util.Map<Type, Float>> FORCED = new ThreadLocal<>();
+
+    /** Sets the split for hits dealt on this thread until cleared with null (ultimates that deal one damage type). */
+    public static void forced(java.util.Map<Type, Float> split) {
+        FORCED.set(split);
     }
 
     /** Sharpness, and Bane of Arthropods against arthropods, as increased damage on a player's melee hit (9.7.1). */
@@ -362,6 +376,12 @@ public final class Damage {
      * hurts the undead and players; chop and pickaxe only work on things made of wood and stone.
      */
     static float resistance(LivingEntity victim, Type type) {
+        float r = baseResistance(victim, type);
+        // Doom (the Warlock's ultimate): weaknesses count double.
+        return r > 1 && com.cavmkii.seancraft.rpg.Rpg.doomed(victim) ? r * 2 : r;
+    }
+
+    private static float baseResistance(LivingEntity victim, Type type) {
         if (victim instanceof com.cavmkii.seancraft.boss.BossEntity boss) {
             return boss.resistance(type);
         }

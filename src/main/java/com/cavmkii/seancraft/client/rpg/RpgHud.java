@@ -27,6 +27,7 @@ final class RpgHud {
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             any |= data.slot(s) != null;
         }
+        any |= data.spec != null;
         // Clear of Combat Roll's roll counter, which sits just right of the vanilla hotbar, unless the screen is too narrow.
         int x0 = Math.min(g.guiWidth() / 2 + 91 + 28, g.guiWidth() - PlayerData.SLOTS * SLOT - 2);
         int y0 = g.guiHeight() - SLOT - 2;
@@ -45,6 +46,9 @@ final class RpgHud {
 
         // Stamina (swings and rolls spend it), plus whatever the slotted skills use, stacked above the ability bar.
         Set<Resource> used = EnumSet.of(Resource.STAMINA);
+        if (data.spec != null && com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) != null) {
+            used.add(com.cavmkii.seancraft.rpg.Ultimate.of(data.spec).resource);
+        }
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             ActiveSkill skill = data.slot(s);
             if (skill != null) {
@@ -96,8 +100,11 @@ final class RpgHud {
             return;
         }
         ActiveSkill skill = ClientRpg.data.slot(slot);
-        if (skill != null) {
-            g.renderItem(new ItemStack(skill.icon), x + 1, y + 1);
+        com.cavmkii.seancraft.rpg.Ultimate ult = slot == PlayerData.ULTIMATE_SLOT && ClientRpg.data.spec != null
+                ? com.cavmkii.seancraft.rpg.Ultimate.of(ClientRpg.data.spec) : null;
+        net.minecraft.world.item.Item icon = skill != null ? skill.icon : ult != null ? ult.icon : null;
+        if (icon != null) {
+            g.renderItem(new ItemStack(icon), x + 1, y + 1);
             int cd = ClientRpg.cooldowns[slot];
             int total = Math.max(1, ClientRpg.cooldownTotals[slot]);
             if (cd > 0) {

@@ -112,7 +112,7 @@ public class WebScreen extends Screen {
     }
 
     private double scale() {
-        double fit = Math.min(width - PANEL - 10, height - SLOT - 20) / 2.0 / 8.4;
+        double fit = Math.min(width - PANEL - 10, height - SLOT - 20) / 2.0 / 10.6;
         return fit * zoom;
     }
 
@@ -135,6 +135,7 @@ public class WebScreen extends Screen {
     private double size(WebNode n) {
         double base = switch (n.kind) {
             case ORIGIN, GATE -> 5;
+            case SIGNATURE -> 4;
             case SMALL -> 2.5;
             case NOTABLE -> 3.5;
             case ACTIVE -> 4.5;
@@ -188,7 +189,8 @@ public class WebScreen extends Screen {
             }
             boolean allocated = data.isAllocated(n.id);
             boolean available = data.canAllocate(n.id) || data.canRankUp(n.id);
-            int color = n.kind == WebNode.Kind.GATE ? 0xFFF2F2F2 : n.archetype != null ? n.archetype.color : 0xFFDDDDDD;
+            int color = n.kind == WebNode.Kind.GATE ? 0xFFF2F2F2 : n.kind == WebNode.Kind.SIGNATURE ? 0xFFE8B030
+                    : n.archetype != null ? n.archetype.color : 0xFFDDDDDD;
             int border = allocated ? 0xFFFFE080 : available ? 0xFFFFFFFF : 0xFF4A4A50;
             int fill = allocated ? color : (color & 0x00FFFFFF) | (available ? 0x90000000 : 0x40000000);
             if (n.active != null && n.active == selected) {
@@ -223,9 +225,16 @@ public class WebScreen extends Screen {
             ActiveSkill skill = data.slot(hoveredSlot);
             List<Component> lines = new ArrayList<>();
             if (hoveredSlot == PlayerData.ULTIMATE_SLOT) {
-                lines.add(Component.literal("Ultimate (V)").withStyle(ChatFormatting.GOLD));
-                lines.add(Component.literal(data.spec == null ? "Comes with your specialization." : data.spec.label + "'s ultimate isn't in yet.")
-                        .withStyle(ChatFormatting.GRAY));
+                com.cavmkii.seancraft.rpg.Ultimate ult = data.spec != null ? com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) : null;
+                if (ult == null) {
+                    lines.add(Component.literal("Ultimate (V)").withStyle(ChatFormatting.GOLD));
+                    lines.add(Component.literal("Comes with your specialization.").withStyle(ChatFormatting.GRAY));
+                } else {
+                    lines.add(Component.literal(ult.label + " (V), rank " + Math.max(1, data.milestone) + "/3").withStyle(ChatFormatting.GOLD));
+                    lines.add(Component.literal(ult.description).withStyle(ChatFormatting.GRAY));
+                    lines.add(Component.literal("Costs " + com.cavmkii.seancraft.rpg.Ultimate.COST + " " + ult.resource.label.toLowerCase()
+                            + ". Ranks up at mastery and capstone.").withStyle(ChatFormatting.DARK_GRAY));
+                }
             } else if (skill != null) {
                 lines.add(Component.literal(skill.label).withStyle(ChatFormatting.YELLOW));
                 lines.add(Component.literal(skill.description).withStyle(ChatFormatting.GRAY));
@@ -253,6 +262,7 @@ public class WebScreen extends Screen {
         String kind = switch (n.kind) {
             case ORIGIN -> n.origin.label + " start";
             case GATE -> "Specialization gate";
+            case SIGNATURE -> "Signature node";
             case SMALL -> "Passive";
             case NOTABLE -> "Notable passive";
             case ACTIVE -> "Active skill";
@@ -413,7 +423,12 @@ public class WebScreen extends Screen {
             if (open && skill != null) {
                 g.renderItem(new ItemStack(skill.icon), x + 1, y + 1);
             } else if (s == PlayerData.ULTIMATE_SLOT) {
-                g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, open ? 0xFFFFD040 : 0xFF666666, false);
+                com.cavmkii.seancraft.rpg.Ultimate ult = data.spec != null ? com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) : null;
+                if (ult != null) {
+                    g.renderItem(new ItemStack(ult.icon), x + 1, y + 1);
+                } else {
+                    g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, 0xFF666666, false);
+                }
             }
         }
         if (selected != null) {
@@ -522,7 +537,7 @@ public class WebScreen extends Screen {
                     return;
                 }
                 if (hasShiftDown() && data.canRankUp(n.id) && button == 0) {
-                    ClientPlayNetworking.send(new RpgNet.Allocate(n.id));
+                    ClientPlayNetworking.send(new RpgNet.Allocate(-1 - n.id));
                 } else if (data.canAllocate(n.id) && button == 0) {
                     ClientPlayNetworking.send(new RpgNet.Allocate(n.id));
                 } else if (data.isAllocated(n.id) && n.active != null) {

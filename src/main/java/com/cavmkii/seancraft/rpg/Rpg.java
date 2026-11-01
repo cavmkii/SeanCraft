@@ -64,6 +64,17 @@ public final class Rpg {
         int leapTicks;
         /** Just respawned: start with full mana and stamina and no rage. */
         boolean refill;
+        // Ultimates (6.5.4) and signatures.
+        long ultimateEnd;
+        long rampageUntil;
+        long bulwarkUntil;
+        Vec3 hallowedAt;
+        long hallowedUntil;
+        long cataclysmUntil;
+        float cataclysmPower;
+        int deadeyeShots;
+        boolean vanishStrike;
+        long riposteUntil;
         Vec3 lastPos;
         boolean dirty = true;
     }
@@ -80,6 +91,28 @@ public final class Rpg {
         return RUNTIME.computeIfAbsent(player.getUUID(), id -> new Runtime());
     }
 
+    /** Can't be staggered: Rampage, or the Warrior's Iron Will while Rage is above half. */
+    public static boolean unstaggerable(ServerPlayer player) {
+        Runtime rt = runtime(player);
+        Stats stats = stats(player);
+        return player.serverLevel().getGameTime() < rt.rampageUntil
+                || stats.has(Stat.RAGE_STEADY) && data(player).rage >= stats.maxRage() / 2;
+    }
+
+    /** How much slower a player bleeds: a Paladin's Mercy nearby, or standing in Hallowed Ground. */
+    public static double bleedSlow(ServerPlayer player) {
+        double slow = Ultimates.hallowed(player) ? 0.3 : 0;
+        for (ServerPlayer p : player.serverLevel().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(8))) {
+            slow = Math.max(slow, stats(p).get(Stat.ALLY_BLEED_SLOW) / 100);
+        }
+        return Math.min(0.9, slow);
+    }
+
+    /** Under the Warlock's Doom. */
+    public static boolean doomed(LivingEntity target) {
+        return Ultimates.doomed(target);
+    }
+
     public static Stats stats(ServerPlayer player) {
         Runtime rt = runtime(player);
         if (rt.stats == null) {
@@ -93,6 +126,7 @@ public final class Rpg {
     public static void init() {
         RpgContent.init();
         RpgNet.register();
+        Ultimates.init();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             Scheduler.tick(server);
@@ -246,6 +280,7 @@ public final class Rpg {
         if (rt.leapTicks > 0) {
             SkillEffects.tickLeap(player, rt);
         }
+        Ultimates.tick(player, rt, now);
 
         if (now % 20 == 0) {
             double regen = stats.healthRegen();
@@ -254,6 +289,14 @@ public final class Rpg {
             }
             if (stats.has(Stat.HOLY_AURA)) {
                 SkillEffects.holyAura(player, stats);
+            }
+            if (stats.has(Stat.ALLY_REGEN)) {
+                // The Cleric's Sanctuary: healing is on the 5x scale, so a fifth of the number.
+                for (ServerPlayer p : player.serverLevel().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(8))) {
+                    if (p.isAlive() && p.getHealth() < p.getMaxHealth()) {
+                        p.heal((float) stats.get(Stat.ALLY_REGEN) / 5);
+                    }
+                }
             }
         }
         if (stats.has(Stat.GHOST) && player.isCrouching() && now % 10 == 0) {
@@ -300,6 +343,11 @@ public final class Rpg {
     private static void sendResources(ServerPlayer player, Runtime rt, PlayerData data, long now) {
         int[] cooldowns = new int[PlayerData.SLOTS];
         int[] totals = new int[PlayerData.SLOTS];
+        Ultimate ult = data.spec != null ? Ultimate.of(data.spec) : null;
+        if (ult != null) {
+            cooldowns[PlayerData.ULTIMATE_SLOT] = (int) Math.max(0, rt.ultimateEnd - now);
+            totals[PlayerData.ULTIMATE_SLOT] = ult.cooldownTicks(Math.max(1, data.milestone));
+        }
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             ActiveSkill skill = data.slot(s);
             if (skill != null) {
@@ -318,8 +366,41 @@ public final class Rpg {
     }
 
     /** Re-derive stats and push them onto vanilla attributes. */
+    /** The highest boss tier beaten, for milestones. */
+    static int bestTier(ServerPlayer player) {
+        int best = 0;
+        for (String boss : player.getAttachedOrCreate(com.cavmkii.seancraft.boss.BossContent.BEATEN)) {
+            com.cavmkii.seancraft.boss.BossDef def = com.cavmkii.seancraft.boss.BossDef.get(boss);
+            if (def != null) {
+                best = Math.max(best, def.tier());
+            }
+        }
+        return best;
+    }
+
+    /** Specialization, then mastery at level 40 with a tier 2 trophy, then capstone at 60 with a tier 3 trophy (6.2.5). */
+    private static int milestone(ServerPlayer player, PlayerData data) {
+        if (data.spec == null) {
+            return 0;
+        }
+        int tier = bestTier(player);
+        int m = 1;
+        if (data.level >= 40 && tier >= 2) {
+            m = 2;
+            if (data.level >= 60 && tier >= 3) {
+                m = 3;
+            }
+        }
+        return m;
+    }
+
     private static void recompute(ServerPlayer player) {
         PlayerData data = data(player);
+        int reached = milestone(player, data);
+        if (reached > data.milestone && data.milestone > 0) {
+            toast(player, reached == 2 ? "Mastery" : "Capstone", "Your next signature node is open, and your ultimate is rank " + reached + ".");
+        }
+        data.milestone = reached;
         Stats stats = new Stats(data);
         runtime(player).stats = stats;
 
@@ -385,14 +466,22 @@ public final class Rpg {
         return false;
     }
 
-    /** Takes a node, ranks up a learned skill, or chooses a specialization at its gate. */
-    private static void allocate(ServerPlayer player, int node) {
+    /**
+     * Takes a node or chooses a specialization at its gate. A negative id (-1 - node) asks to rank up a learned skill
+     * instead, so a repeated click can never rank one up by accident.
+     */
+    private static void allocate(ServerPlayer player, int request) {
         PlayerData data = data(player);
+        boolean rankUp = request < 0;
+        int node = rankUp ? -1 - request : request;
         WebNode web = PassiveWeb.get(node);
         if (web == null) {
             return;
         }
-        if (data.canRankUp(node)) {
+        if (rankUp) {
+            if (!data.canRankUp(node)) {
+                return;
+            }
             data.ranks.merge(web.active.name(), 1, Integer::sum);
             toast(player, web.active.label + " rank " + data.rank(web.active), "");
             markDirty(player);
@@ -498,6 +587,10 @@ public final class Rpg {
         if (!data.slotOpen(slot)) {
             return;
         }
+        if (slot == PlayerData.ULTIMATE_SLOT) {
+            castUltimate(player, data);
+            return;
+        }
         ActiveSkill skill = data.slot(slot);
         if (skill == null || !data.hasActive(skill)) {
             return;
@@ -517,6 +610,11 @@ public final class Rpg {
         float cost = skill.cost * (1 - 0.1f * (data.rank(skill) - 1));
         if (skill.resource == Resource.STAMINA) {
             cost *= (float) (1 - stats(player).staminaEfficiency() * Scaling.agiShare(skill.archetype));
+        } else if (skill.resource == Resource.MANA) {
+            cost *= (float) (1 - stats(player).get(Stat.MANA_COST) / 100);
+        } else if (now < rt.rampageUntil) {
+            // Rampage: Rage skills are free.
+            cost = 0;
         }
         if (!free && available < cost) {
             player.displayClientMessage(Component.literal("Not enough " + skill.resource.label.toLowerCase()), true);
@@ -542,6 +640,41 @@ public final class Rpg {
         int casting = data.skillLevel(Skill.CASTING);
         rt.cooldownEnd.put(skill, now + Math.round(skill.cooldownTicks * stats(player).cooldownMultiplier(casting)));
         addSkillXp(player, Skill.CASTING, skill.cost * 0.5);
+    }
+
+    /** V: the specialization's ultimate, at the rank its milestones have reached (6.5.4). */
+    private static void castUltimate(ServerPlayer player, PlayerData data) {
+        Ultimate ult = Ultimate.of(data.spec);
+        if (ult == null || !player.isAlive()) {
+            return;
+        }
+        Runtime rt = runtime(player);
+        long now = player.serverLevel().getGameTime();
+        if (now < rt.ultimateEnd) {
+            return;
+        }
+        float available = switch (ult.resource) {
+            case MANA -> data.mana;
+            case RAGE -> data.rage;
+            case STAMINA -> data.stamina;
+        };
+        boolean free = player.isCreative();
+        if (!free && available < Ultimate.COST) {
+            player.displayClientMessage(Component.literal("Not enough " + ult.resource.label.toLowerCase()), true);
+            return;
+        }
+        int rank = Math.max(1, data.milestone);
+        if (!Ultimates.cast(player, ult, rank, stats(player), rt)) {
+            return;
+        }
+        if (!free) {
+            switch (ult.resource) {
+                case MANA -> data.mana -= Ultimate.COST;
+                case RAGE -> data.rage -= Ultimate.COST;
+                case STAMINA -> data.stamina -= Ultimate.COST;
+            }
+        }
+        rt.ultimateEnd = now + ult.cooldownTicks(rank);
     }
 
     /** Rage from fighting. */

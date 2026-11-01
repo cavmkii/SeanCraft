@@ -32,6 +32,11 @@ public final class RpgDamage {
     /** Hunter's Mark: target id to game time the mark ends. */
     static final Map<UUID, Long> MARKED = new HashMap<>();
 
+    /** A Warlock's hex: until when, and how much more damage the target takes. */
+    record Hex(long until, float extra) {}
+
+    static final Map<UUID, Hex> HEXED = new HashMap<>();
+
     private RpgDamage() {}
 
     /** Return false to cancel the hit entirely (dodge, parry). */
@@ -74,6 +79,14 @@ public final class RpgDamage {
         long now = level.getGameTime();
 
         // Marked targets take more from everyone.
+        Hex hex = HEXED.get(victim.getUUID());
+        if (hex != null) {
+            if (hex.until() > now) {
+                amount *= 1 + hex.extra();
+            } else {
+                HEXED.remove(victim.getUUID());
+            }
+        }
         Long markEnd = MARKED.get(victim.getUUID());
         if (markEnd != null) {
             if (markEnd > now) {
@@ -92,8 +105,21 @@ public final class RpgDamage {
                 int bows = data.skillLevel(Skill.BOWS);
                 ItemStack bow = arrow.getWeaponItem();
                 Attr[] scaling = bow != null ? Scaling.of(bow) : new Attr[] {Attr.AGI, null};
+                Rpg.Runtime rt = Rpg.runtime(attacker);
+                boolean deadeye = rt.deadeyeShots > 0;
+                if (deadeye) {
+                    rt.deadeyeShots--;
+                }
+                double crit = deadeye ? forcedCrit(attacker, victim, stats) : crit(attacker, victim, stats);
                 amount = (float) (amount * (1 + Skill.BOWS.effectValue(bows) / 100.0 + stats.projectileDamagePct() / 100
-                        + stats.scalingPct(scaling[0], scaling[1]) / 100 + crit(attacker, victim, stats)));
+                        + stats.scalingPct(scaling[0], scaling[1]) / 100 + crit));
+                // The Archer's signatures and Deadeye: arrows slow, and crits pin.
+                if (stats.has(Stat.ARROW_SLOW)) {
+                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1), attacker);
+                }
+                if (crit > 0 && (stats.has(Stat.ARROW_ROOT) || deadeye)) {
+                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 9), attacker);
+                }
                 if (bow != null && Parts.modular(bow)) {
                     amount *= Math.max(0.05f, 1 + Parts.totals(bow).damage);
                 }
@@ -112,6 +138,11 @@ public final class RpgDamage {
         if (attacker.getRandom().nextDouble() * 100 >= stats.critChance()) {
             return 0;
         }
+        return forcedCrit(attacker, victim, stats);
+    }
+
+    /** A crit that always lands (Deadeye). */
+    private static double forcedCrit(ServerPlayer attacker, LivingEntity victim, Stats stats) {
         ServerLevel level = (ServerLevel) attacker.level();
         level.sendParticles(ParticleTypes.CRIT, victim.getX(), victim.getY(0.6), victim.getZ(), 14, 0.3, 0.3, 0.3, 0.35);
         level.sendParticles(ParticleTypes.ENCHANTED_HIT, victim.getX(), victim.getY(0.6), victim.getZ(), 6, 0.3, 0.3, 0.3, 0.2);
@@ -131,6 +162,26 @@ public final class RpgDamage {
         }
         if (stats.has(Stat.BACKSTAB) && isBehind(attacker, victim)) {
             mult += stats.get(Stat.BACKSTAB) / 100;
+        }
+        Rpg.Runtime rt = Rpg.runtime(attacker);
+        long now = attacker.serverLevel().getGameTime();
+        if (data.rage >= stats.maxRage() / 2) {
+            // The Warrior's Fury.
+            mult += stats.get(Stat.RAGE_FURY) / 100;
+        }
+        if (now < rt.rampageUntil) {
+            mult += 0.2;
+        }
+        if (now < rt.riposteUntil) {
+            // The Blademaster's Riposte: the first hit after a block.
+            mult += stats.get(Stat.RIPOSTE) / 100;
+            rt.riposteUntil = 0;
+        }
+        if (rt.vanishStrike) {
+            // Out of Vanish: the first hit counts as a backstab (x1.5, 9.4).
+            rt.vanishStrike = false;
+            mult *= 1.5;
+            attacker.removeEffect(MobEffects.INVISIBILITY);
         }
         mult += crit(attacker, victim, stats);
         amount *= (float) mult;
@@ -164,7 +215,21 @@ public final class RpgDamage {
         PlayerData data = Rpg.data(player);
         if (source.getEntity() instanceof LivingEntity attacker && attacker != player) {
             Rpg.gainRage(player, 10);
+            amount *= protection(player, attacker, now);
             if (player.isBlocking() && player.isDamageSourceBlocked(source)) {
+                if (stats.get(Stat.RIPOSTE) > 0) {
+                    Rpg.runtime(player).riposteUntil = now + 30;
+                }
+                if (stats.has(Stat.TAUNT)) {
+                    // The Knight's Challenge: the attacker and monsters near you come for you.
+                    if (attacker instanceof net.minecraft.world.entity.Mob mob) {
+                        mob.setTarget(player);
+                    }
+                    for (net.minecraft.world.entity.Mob mob : player.level().getEntitiesOfClass(net.minecraft.world.entity.Mob.class,
+                            player.getBoundingBox().inflate(8), m -> m instanceof net.minecraft.world.entity.monster.Enemy)) {
+                        mob.setTarget(player);
+                    }
+                }
                 int blocking = data.skillLevel(Skill.BLOCKING);
                 Rpg.addSkillXp(player, Skill.BLOCKING, 1 + Math.min(amount, 15) * 2);
                 float reflect = amount * Skill.BLOCKING.effectValue(blocking) / 100f;
@@ -185,6 +250,32 @@ public final class RpgDamage {
             amount -= absorbed;
         }
         return amount;
+    }
+
+    /**
+     * Damage taken after allies' protection: a Knight's Guardian within 6 blocks, and a Knight's Bulwark (players behind
+     * them take half; the Knight 30% less).
+     */
+    private static float protection(ServerPlayer player, LivingEntity attacker, long now) {
+        float mult = 1;
+        for (ServerPlayer ally : player.serverLevel().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(6))) {
+            Rpg.Runtime rt = Rpg.runtime(ally);
+            if (ally == player) {
+                if (now < rt.bulwarkUntil) {
+                    mult = Math.min(mult, 0.7f);
+                }
+                continue;
+            }
+            mult = Math.min(mult, (float) (1 - Rpg.stats(ally).get(Stat.ALLY_DR) / 100));
+            if (now < rt.bulwarkUntil && ally.distanceTo(player) <= 5) {
+                Vec3 facing = ally.getLookAngle().multiply(1, 0, 1).normalize();
+                Vec3 toPlayer = player.position().subtract(ally.position()).multiply(1, 0, 1).normalize();
+                if (facing.dot(toPlayer) < 0) {
+                    mult = Math.min(mult, 0.5f);
+                }
+            }
+        }
+        return mult;
     }
 
     private static boolean isBehind(LivingEntity attacker, LivingEntity victim) {

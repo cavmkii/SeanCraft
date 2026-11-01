@@ -133,6 +133,10 @@ public class TarkovScreen extends Screen {
         if (status != null) {
             status.tick();
         }
+        if (web != null && tab == WEB) {
+            // The web's one-time reveal animation runs on ticks.
+            web.tick();
+        }
     }
 
     private double vx(double mouseX) {

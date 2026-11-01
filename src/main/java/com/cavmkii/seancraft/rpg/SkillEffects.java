@@ -361,6 +361,11 @@ public final class SkillEffects {
 
     /** Ability damage that the melee rules don't scale again. */
     static void damage(ServerPlayer player, LivingEntity target, float amount) {
+        double hex = Rpg.stats(player).get(Stat.HEX);
+        if (hex > 0) {
+            // The Warlock's Hex: the target takes more from everyone for 5 seconds.
+            RpgDamage.HEXED.put(target.getUUID(), new RpgDamage.Hex(player.serverLevel().getGameTime() + 100, (float) hex / 100));
+        }
         RpgDamage.applyingSkill = true;
         try {
             target.hurt(player.damageSources().indirectMagic(player, player), amount);
@@ -387,6 +392,8 @@ public final class SkillEffects {
     }
 
     static List<LivingEntity> enemiesAround(ServerPlayer player, Vec3 center, double radius) {
+        // The Sorcerer's Wide Casting.
+        radius *= 1 + Rpg.stats(player).get(Stat.SPELL_AREA) / 100;
         List<LivingEntity> out = new ArrayList<>();
         for (LivingEntity e : player.level().getEntitiesOfClass(LivingEntity.class, Rpg.around(center, radius))) {
             if (e == player || !e.isAlive() || e.position().distanceTo(center) > radius) {
@@ -401,7 +408,7 @@ public final class SkillEffects {
         return out;
     }
 
-    private static LivingEntity lookTarget(ServerPlayer player, double range) {
+    static LivingEntity lookTarget(ServerPlayer player, double range) {
         Vec3 eye = player.getEyePosition();
         Vec3 end = eye.add(player.getLookAngle().scale(range));
         BlockHitResult block = player.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));

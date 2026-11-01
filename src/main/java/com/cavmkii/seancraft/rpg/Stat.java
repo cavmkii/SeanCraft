@@ -42,7 +42,24 @@ public enum Stat {
     PROJECTILE_PER_AGI("%+.0f%% projectile damage per 10 Agility"),
     SPELL_PER_INT("%+.0f%% ability damage per 10 Intelligence"),
     BLEED_DURATION("Bleeds you cause last %.0f%% longer"),
-    SNEAK_SPEED("%+.0f%% speed while sneaking");
+    SNEAK_SPEED("%+.0f%% speed while sneaking"),
+    // Specialization signatures (6.2.4).
+    RAGE_STEADY("Can't be staggered while Rage is above half"),
+    RAGE_FURY("%+.0f%% melee damage while Rage is above half"),
+    ALLY_DR("Other players within 6 blocks take %.0f%% less damage"),
+    TAUNT("Blocking a hit makes the attacker and monsters near you come for you"),
+    SPIRIT_SHARE("Melee hits add %.0f%% as spirit damage"),
+    ALLY_BLEED_SLOW("Players within 8 blocks bleed %.0f%% slower"),
+    ARROW_SLOW("Your arrows slow what they hit"),
+    ARROW_ROOT("Arrow crits pin the target in place"),
+    RIPOSTE("Your first melee hit within 1.5s of blocking does %+.0f%%"),
+    QUICK_STRIKES("Sword hits leave enemies open again quickly, like a dagger's"),
+    SPELL_AREA("%+.0f%% skill area"),
+    MANA_COST("Skills cost %.0f%% less mana"),
+    HEX("Skill hits hex: the target takes %+.0f%% damage for 5s"),
+    MED_POWER("Meds apply and heal %.0f%% better"),
+    SURGERY("Surgical kits leave 15% lasting damage instead of 35%"),
+    ALLY_REGEN("You and players within 8 blocks regenerate %.0f health a second");
 
     private final String format;
 

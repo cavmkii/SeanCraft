@@ -42,6 +42,12 @@ public final class PlayerData {
     /** Attribute points waiting to be placed after a respec (6.6). */
     public int unassigned;
     public Specialization spec;
+    /**
+     * Milestones reached (6.2.5): 0 none, 1 specialization, 2 mastery (level 40 and a tier 2 trophy), 3 capstone (level 60
+     * and a tier 3 trophy). Worked out on the server, which knows the trophies; it sets the ultimate's rank and which
+     * signature nodes can be taken.
+     */
+    public int milestone;
     /** The whole web is shown once a specialization has been chosen (6.2.3); a respec keeps it. */
     public boolean revealed;
     int webVersion = WEB_VERSION;
@@ -230,7 +236,11 @@ public final class PlayerData {
         if (node == null || origin == null || isAllocated(id) || freePoints() <= 0) {
             return false;
         }
-        if (node.kind == WebNode.Kind.GATE) {
+        if (node.kind == WebNode.Kind.SIGNATURE) {
+            if (node.sigSpec != spec || node.sigTier > milestone) {
+                return false;
+            }
+        } else if (node.kind == WebNode.Kind.GATE) {
             if (spec != null || node.spec.origin != origin || level < Specialization.LEVEL) {
                 return false;
             }
@@ -271,6 +281,7 @@ public final class PlayerData {
         buf.writeVarInt(origin == null ? -1 : origin.ordinal());
         buf.writeVarInt(spec == null ? -1 : spec.ordinal());
         buf.writeBoolean(revealed);
+        buf.writeVarInt(milestone);
         buf.writeVarInt(unassigned);
         for (Attr a : Attr.values()) {
             buf.writeDouble(attrPoints.getOrDefault(a, 0.0));
@@ -303,6 +314,7 @@ public final class PlayerData {
         int sp = buf.readVarInt();
         d.spec = sp < 0 ? null : Specialization.values()[sp];
         d.revealed = buf.readBoolean();
+        d.milestone = buf.readVarInt();
         d.unassigned = buf.readVarInt();
         for (Attr a : Attr.values()) {
             d.attrPoints.put(a, buf.readDouble());
