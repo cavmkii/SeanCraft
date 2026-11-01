@@ -41,7 +41,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * Boss dungeons (design doc 8.4.10, 10). Each boss with a home gets one site in the overworld, in its home biome and
  * inside its tier's distance band from world spawn. The site is chosen when the server starts and the arena is built
- * the first time a player comes near: a 40-block ring in the boss's style with the Summoning Pedestal in the middle.
+ * the first time a player comes near: a designer's structure template if there is one, otherwise a 40-block ring in the
+ * boss's style with the Summoning Pedestal in the middle.
  */
 public final class BossSites extends SavedData {
     private static final String NAME = "seancraft_boss_sites";
@@ -310,7 +311,8 @@ public final class BossSites extends SavedData {
             }
         }
         Random random = new Random(s.pos.asLong());
-        BlockPos pedestal = switch (style) {
+        var template = level.getStructureManager().get(SeanCraft.id("dungeon/" + boss));
+        BlockPos pedestal = template.isPresent() ? fromTemplate(level, s.pos, def, template.get(), random) : switch (style) {
             case "cavern" -> cavern(level, s.pos, random);
             case "photo_shoot" -> photoShoot(level, s.pos, random);
             default -> beach(level, s.pos, random);
@@ -319,6 +321,24 @@ public final class BossSites extends SavedData {
         s.pos = pedestal;
         s.built = true;
         SeanCraft.LOG.info("Built {}'s dungeon at {}", boss, pedestal.toShortString());
+    }
+
+    /**
+     * A designer's dungeon (8.4.10): a structure saved with structure blocks as data/seancraft/structure/dungeon/<boss>.nbt
+     * replaces the built-in arena. Its bottom layer is the floor, set at ground level (or at the site's depth underground),
+     * centred on the site. The pedestal goes wherever the template has one, or in the middle of the floor.
+     */
+    private static BlockPos fromTemplate(ServerLevel level, BlockPos c, BossDef def, net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate template,
+            Random random) {
+        var size = template.getSize();
+        boolean underground = def != null && def.home() != null && def.home().underground();
+        int floor = underground ? c.getY() - 1
+                : Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c.getX(), c.getZ()), level.getSeaLevel() + 1) - 1;
+        BlockPos origin = new BlockPos(c.getX() - size.getX() / 2, floor, c.getZ() - size.getZ() / 2);
+        var settings = new net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings();
+        template.placeInWorld(level, origin, origin, settings, net.minecraft.util.RandomSource.create(random.nextLong()), 2);
+        var pedestals = template.filterBlocks(origin, settings, BossContent.PEDESTAL);
+        return pedestals.isEmpty() ? new BlockPos(c.getX(), floor, c.getZ()) : pedestals.get(0).pos();
     }
 
     private static void set(ServerLevel level, BlockPos pos, BlockState state) {

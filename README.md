@@ -228,6 +228,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
   - Mark: a sandy landing on a beach or river mouth. Daylan: a photo-shoot clearing in a cherry grove. Bo Daddy: a lit cavern dug in at the edge of the deep dark. It's walled in, so you tunnel to it.
   - No Hideout Bench within 100 blocks of a dungeon.
+  - **Custom dungeons.** Build one in a creative world and save it with a structure block named `seancraft:dungeon/<boss>` (`mark`, `daylan` or `bo_daddy`). Copy the saved `.nbt` from the world's `generated` folder into `src/main/resources/data/seancraft/structure/dungeon/`. From then on that boss's dungeon is your build instead of the built-in one. The bottom layer is the floor, set at ground level (at the site's depth for Bo Daddy), and the Summoning Pedestal goes wherever you put one in it, or in the middle if you didn't. Keep the 40-block ring in mind.
 
 - **Summoning.** Craft the boss's totem at the Hideout Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
 - **The arena** is a ring 40 blocks across around the pedestal. Everyone inside sees the boss bar.
