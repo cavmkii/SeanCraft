@@ -281,6 +281,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             boolean hover = ready && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14;
             g.fill(ax, ay, ax + 54, ay + 14, !ready ? 0xFF6A6A70 : hover ? 0xFF4C8C4C : 0xFF3A6A3A);
             g.drawString(font, "ASSEMBLE", ax + (54 - font.width("ASSEMBLE")) / 2, ay + 3, ready ? 0xFFFFFFFF : 0xFFAAAAAA, false);
+            String problem = menu.assemblyProblem();
+            if (!ready && problem != null && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14) {
+                g.renderTooltip(font, Component.literal(problem), mouseX, mouseY);
+            }
         }
     }
 

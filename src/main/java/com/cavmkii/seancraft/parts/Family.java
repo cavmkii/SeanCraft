@@ -49,7 +49,7 @@ public enum Family {
         };
     }
 
-    /** Family and standard tier of a vanilla item: tier 1 copper (chainmail) up to 5 netherite. */
+    /** Family and standard tier of a vanilla item: tier 1 copper (stone, chainmail) up to 5 netherite. */
     public record Stock(Family family, int metal, int wood, int hide) {
         public Map<PartSlot, PartDef> parts() {
             Map<PartSlot, PartDef> map = new EnumMap<>(PartSlot.class);
@@ -71,26 +71,19 @@ public enum Family {
     private static final Map<Item, Stock> STOCK = new java.util.HashMap<>();
 
     static {
-        tiered(SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD, Items.DIAMOND_SWORD, Items.NETHERITE_SWORD);
-        tiered(AXE, Items.IRON_AXE, Items.GOLDEN_AXE, Items.DIAMOND_AXE, Items.NETHERITE_AXE);
+        tiers(SWORD, Items.STONE_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD, Items.DIAMOND_SWORD, Items.NETHERITE_SWORD);
+        tiers(AXE, Items.STONE_AXE, Items.IRON_AXE, Items.GOLDEN_AXE, Items.DIAMOND_AXE, Items.NETHERITE_AXE);
         STOCK.put(Items.BOW, new Stock(BOW, 1, 1, 1));
         STOCK.put(Items.CROSSBOW, new Stock(CROSSBOW, 2, 2, 1));
         STOCK.put(Items.SHIELD, new Stock(SHIELD, 2, 1, 2));
-        armor(HELMET, Items.CHAINMAIL_HELMET, Items.IRON_HELMET, Items.GOLDEN_HELMET, Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
-        armor(CHEST, Items.CHAINMAIL_CHESTPLATE, Items.IRON_CHESTPLATE, Items.GOLDEN_CHESTPLATE, Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
-        armor(LEGS, Items.CHAINMAIL_LEGGINGS, Items.IRON_LEGGINGS, Items.GOLDEN_LEGGINGS, Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
-        armor(BOOTS, Items.CHAINMAIL_BOOTS, Items.IRON_BOOTS, Items.GOLDEN_BOOTS, Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
+        tiers(HELMET, Items.CHAINMAIL_HELMET, Items.IRON_HELMET, Items.GOLDEN_HELMET, Items.DIAMOND_HELMET, Items.NETHERITE_HELMET);
+        tiers(CHEST, Items.CHAINMAIL_CHESTPLATE, Items.IRON_CHESTPLATE, Items.GOLDEN_CHESTPLATE, Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
+        tiers(LEGS, Items.CHAINMAIL_LEGGINGS, Items.IRON_LEGGINGS, Items.GOLDEN_LEGGINGS, Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
+        tiers(BOOTS, Items.CHAINMAIL_BOOTS, Items.IRON_BOOTS, Items.GOLDEN_BOOTS, Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
     }
 
-    private static void tiered(Family family, Item iron, Item gold, Item diamond, Item netherite) {
-        Item[] items = {iron, gold, diamond, netherite};
-        for (int i = 0; i < items.length; i++) {
-            int t = i + 2;
-            STOCK.put(items[i], new Stock(family, t, t, t));
-        }
-    }
-
-    private static void armor(Family family, Item... items) {
+    /** Items from tier 1 up. Stone tools stand in for copper, the way chainmail does for armor. */
+    private static void tiers(Family family, Item... items) {
         for (int i = 0; i < items.length; i++) {
             int t = i + 1;
             STOCK.put(items[i], new Stock(family, t, t, t));

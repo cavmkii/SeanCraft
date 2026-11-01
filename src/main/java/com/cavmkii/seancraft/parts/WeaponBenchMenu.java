@@ -56,6 +56,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     private final SimpleContainer parts = new SimpleContainer(PARTS);
     private final boolean server;
     private boolean loading;
+    /** The part slots show an item's installed parts (modify mode) rather than loose parts for a build. */
+    private boolean mirroring;
     /** Family picked to build, as an index into {@link #BUILDABLE}, or -1. Synced to the client. */
     private final net.minecraft.world.inventory.DataSlot building = net.minecraft.world.inventory.DataSlot.standalone();
 
@@ -249,21 +251,17 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         if (!buildMode() || family == null) {
             return ItemStack.EMPTY;
         }
+        if (assemblyProblem() != null) {
+            return ItemStack.EMPTY;
+        }
         Map<PartSlot, Parts.Installed> map = new EnumMap<>(PartSlot.class);
         int metal = -1;
         for (int i = 0; i < family.slots.size(); i++) {
             PartSlot slot = family.slots.get(i);
             ItemStack stack = parts.getItem(i);
-            if (!(stack.getItem() instanceof PartItem part)) {
-                return ItemStack.EMPTY;
-            }
-            if (slot == PartSlot.PLATE && stack.getCount() < platesFor(family)) {
-                return ItemStack.EMPTY;
-            }
-            if (slot == PartSlot.HEAD || slot == PartSlot.PLATE || (slot == PartSlot.GUARD && family == Family.SWORD)) {
-                if (metal >= 0 && metal != part.def.tier()) {
-                    return ItemStack.EMPTY; // blade and guard must be the same metal
-                }
+            PartItem part = (PartItem) stack.getItem();
+            if (slot == PartSlot.HEAD || slot == PartSlot.PLATE) {
+                // The blade, head or plates pick the item; the other parts can be any material.
                 metal = part.def.tier();
             }
             map.put(slot, new Parts.Installed(part.def, Parts.level(stack)));
@@ -274,11 +272,30 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             default -> Family.itemFor(family, metal);
         };
         if (result == null) {
-            return ItemStack.EMPTY; // e.g. copper has no sword
+            return ItemStack.EMPTY;
         }
         ItemStack out = new ItemStack(result);
         Parts.setInstalled(out, map);
         return out;
+    }
+
+    /** Why ASSEMBLE can't run yet, for the screen, or null when it can. */
+    public String assemblyProblem() {
+        Family family = family();
+        if (!buildMode() || family == null) {
+            return "Pick what to build";
+        }
+        for (int i = 0; i < family.slots.size(); i++) {
+            PartSlot slot = family.slots.get(i);
+            ItemStack stack = parts.getItem(i);
+            if (!(stack.getItem() instanceof PartItem)) {
+                return "Needs a " + family.slotName(slot).toLowerCase();
+            }
+            if (slot == PartSlot.PLATE && stack.getCount() < platesFor(family)) {
+                return "Needs " + platesFor(family) + " " + family.slotName(slot).toLowerCase();
+            }
+        }
+        return null;
     }
 
     public ItemStack weapon() {
@@ -306,6 +323,11 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         loading = true;
         try {
             ItemStack w = weapon();
+            if (w.isEmpty() && !mirroring) {
+                // Build mode: the part slots hold loose parts, so a click on the empty item slot leaves them alone.
+                return;
+            }
+            mirroring = !w.isEmpty();
             Map<PartSlot, Parts.Installed> installed = Parts.installed(w);
             if (!w.isEmpty() && w.get(Parts.INSTALLED) == null && Parts.modular(w)) {
                 // Loot and old items get their standard parts fitted the first time.

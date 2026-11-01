@@ -187,7 +187,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **BUILD tab.**
   1. With the left slot empty, pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
   2. Empty slots show a faded example of the part that goes there. Hover one for its name, and the plate slot shows how many plates it takes.
-  3. Drop the parts in and hit ASSEMBLE.
+  3. Drop the parts in and hit ASSEMBLE. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If ASSEMBLE is grey, hover it to see what's missing.
 - The standard parts give you exactly the vanilla item. Other materials change damage, swing speed, durability, armor and weight.
 - Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it.
 
