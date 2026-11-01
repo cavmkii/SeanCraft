@@ -1,0 +1,79 @@
+{
+  "name": "Bo Daddy Harris",
+  "tier": 1,
+  "health": 2000,
+  "resist": {},
+  "phases": [
+    { "name": "Bo Daddy Harris", "from": 1.0, "approach": true, "speed": 0.9 },
+    { "name": "Silky Bo Daddy", "from": 0.5, "keep": [6, 11], "speed": 0.7 }
+  ],
+  "attacks": [
+    {
+      "id": "baritone_roar", "name": "Baritone Roar", "phases": [1, 2], "range": [0, 10],
+      "windup": 1.0, "active": 0.1, "recovery": 1.5, "cooldown": 8, "weight": 3,
+      "action": "roar", "body": "spread", "damage": 25, "split": { "blunt": 1 }, "radius": 10, "breath": 1.5, "stagger": true,
+      "counter": "Back out, then punish while he is out of breath"
+    },
+    {
+      "id": "western_swing", "name": "Western Swing", "phases": [1], "range": [0, 4],
+      "windup": 1.0, "active": 0.2, "recovery": 1.0, "cooldown": 6, "weight": 3,
+      "action": "arc", "damage": 40, "split": { "blunt": 1 }, "radius": 4, "angle": 150, "stagger": true,
+      "counter": "Back off or parry"
+    },
+    {
+      "id": "lasso", "name": "Lasso", "phases": [1], "range": [6, 14],
+      "windup": 0.8, "active": 0.2, "recovery": 0.6, "cooldown": 10, "weight": 4,
+      "action": "lasso", "width": 1.2, "pull": 5,
+      "counter": "Sidestep the loop"
+    },
+    {
+      "id": "line_dance", "name": "Line Dance", "phases": [1], "range": [0, 8],
+      "windup": 0.6, "active": 2.8, "recovery": 1.0, "cooldown": 12, "weight": 2,
+      "action": "dance", "body": "legs", "damage": 15, "split": { "blunt": 1 }, "radius": 8,
+      "counter": "Watch his feet, not the music"
+    },
+    {
+      "id": "silky_croon", "name": "Silky Croon", "phases": [2], "range": [0, 12],
+      "windup": 1.2, "active": 0.2, "recovery": 1.0, "cooldown": 9, "weight": 3,
+      "action": "croon", "body": "spread", "damage": 15, "split": { "blunt": 1 }, "radius": 12, "angle": 60, "slow": 0.4, "slow_time": 4,
+      "counter": "Leave the cone"
+    },
+    {
+      "id": "slow_jam", "name": "Slow Jam", "phases": [2], "range": [0, 20],
+      "windup": 1.0, "active": 0.2, "recovery": 0.8, "cooldown": 14, "weight": 2,
+      "action": "jam", "radius": 4, "duration": 8,
+      "counter": "Fight outside it"
+    },
+    {
+      "id": "rose_toss", "name": "Rose Toss", "phases": [2], "range": [6, 20],
+      "windup": 0.6, "active": 0.1, "recovery": 0.4, "cooldown": 5, "weight": 3,
+      "action": "rose", "damage": 15, "split": { "pierce": 1 },
+      "counter": "Dodge or block"
+    },
+    {
+      "id": "the_drop", "name": "The Drop", "phases": [2], "range": [0, 14],
+      "windup": 1.5, "active": 0.1, "recovery": 2.0, "cooldown": 16, "weight": 2,
+      "action": "drop", "body": "spread", "damage": 40, "split": { "blunt": 1 }, "radius": 14, "breath": 2.5, "stagger": true,
+      "counter": "Get out of range, then punish hard"
+    }
+  ],
+  "lines": {
+    "intro": "You know I'm coming swinging for the fences and everything.",
+    "breath": "*deep breath*... Ooooooh...",
+    "out_of_breath": "*gasping* ...definitely legendary...",
+    "lasso": "Come take a ride.",
+    "dance": "Get back to the bed, go for another round and do it all over again.",
+    "transition": "Gotta switch it up now. Definitely, definitely gotta switch it up.",
+    "rnb": "You know Bo Daddy. Don't try to make me act a fool.",
+    "rose": "Ooh, you drive me crazy.",
+    "jam": "Yeah, we just take things so slow.",
+    "drop": "I wanna make you my wife. Ooh, my wife.",
+    "fire": "Man, I just asked for sunny and 75. It's too damn hot to deal with all this today.",
+    "frost": "Why does it have to be so cold? Can't go anywhere, can't do anything, ooh, no, no, no.",
+    "meter": "The whole cave is singing along now.",
+    "shrieker": "Hey, that was part of the set.",
+    "low": "Can't take no more of this rain.",
+    "death": "Ooooooooooooooh...",
+    "retired": "Bo Daddy Harris · 0 monthly listeners"
+  }
+}

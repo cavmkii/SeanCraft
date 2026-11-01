@@ -228,10 +228,30 @@ The first boss is in. Boss dungeons come later, so for now an op places the aren
   - While he braces between attacks, hits from the front do half damage, so go around him.
   - He takes 150% from slash.
   - Drops: Mark's Reel (a grapple rod), the Old Salt trophy and a Stale Logbook on your first kill, and copper, rabbit hide and bones.
+- **Daylan Little** (tier 1). Totem: 4 copper ingots, an emerald, a glow ink sac and a cherry sapling.
+  - Influencer: he hangs back behind six bought followers. Each one cuts his damage taken by 10%, they dive at you now and then, and any hit pops one. The boss bar shows his follower count dropping. He heals off them with Humble Brag, so pop them first.
+  - He only types a post when nobody's within 6 blocks. That's 2 seconds of free hits, then 5 text bubbles fly out in a fan.
+  - Ring Light Flash blinds you if you're looking at him. Turn away.
+  - At 67% he soft launches a political career: a speech that pulls everyone in. He can't be hurt during it.
+  - Firefighter: he hoses you back 8 blocks (it also puts out fire and fire resistance), chops hard up close, and cones off a zone that gets blasted with water. He takes half damage from fire in this phase.
+  - At 33% the hard launch pulls twice as hard, then knocks everyone outward.
+  - Policeman: he whistles "Freeze!", and anyone who moves more than half a block during the check gets a ticket (hurt and slowed). He also tases, cuffs you in place (a sword or axe swing breaks the cuffs), swings a nightstick, and puts up a riot shield that blocks arrows from the front, so flank him.
+  - You can only be stunned, cuffed or slowed once at a time, plus a second after it ends.
+  - He takes 150% from slash.
+  - Drops: the Follower Lantern (carry it and Darkness can't touch you), and on your first kill the Clout trophy and a Blue Check (use it to put a ✔ after your name in chat). Also copper, rabbit hide and sometimes emeralds.
+- **Bo Daddy Harris** (tier 1). Totem: 4 copper ingots, a note block, a leather and a poppy.
+  - Outlaw Country: he walks you down with a guitar swing, lassos you back if you run, and does a line dance with three stomps. The stomps land off the beat, so watch his feet, not the music.
+  - Before every Baritone Roar he takes a big breath in. Get out of the ring of sound, then punish him: right after a roar he's out of breath and takes 150% from everything for a second and a half. Fire and frost hits keep him complaining (and out of breath) a bit longer.
+  - At half health he switches it up to Silky R&B: a croon that slows you, Slow Jam zones on the ground, roses thrown at anyone hanging back, and the Drop, a huge ring that leaves him out of breath the longest.
+  - His heavy hits stagger you for a moment.
+  - Three sculk shriekers sit around the stage. Every roar and Drop fills them up, and once they're full the whole arena pulses with Darkness every 5 seconds until someone breaks a shrieker. The Follower Lantern blocks it.
+  - Drops: the Subwoofer (shows every mob within 32 blocks through walls for 5 seconds, 30 second cooldown), and on your first kill the Too Much Soul trophy and the "Twinkle (Bo Daddy Cover)" music disc. Also copper, leather and sometimes amethyst.
 - **Trophy powers.** Craft a Trophy Rack at the Hideout Bench (6 planks, an item frame, 2 iron) and put it in a hideout.
   - Use it with a trophy to put the trophy on the rack. Use it empty-handed to choose that trophy's power, and sneak to take a trophy back.
   - Press Y to use your power: 5 minutes on, then 20 minutes to recharge.
-  - Old Salt's power is Tailwind: faster swimming.
+  - Old Salt (Mark): Tailwind, faster swimming.
+  - Clout (Daylan): half again as much skill and class XP.
+  - Too Much Soul (Bo Daddy): Bass Drop. You can't be staggered, and your heavy hits (40 damage or more) stagger mobs.
 
 ### Joe and Sean
 

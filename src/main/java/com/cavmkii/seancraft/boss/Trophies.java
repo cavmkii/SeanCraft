@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -50,7 +49,9 @@ import com.mojang.serialization.MapCodec;
  */
 public final class Trophies {
     public enum Power {
-        TAILWIND("Tailwind", "Faster swimming");
+        TAILWIND("Tailwind", "Faster swimming"),
+        CLOUT("Clout", "Half again as much skill and class XP"),
+        BASS_DROP("Bass Drop", "No staggers, and your heavy hits stagger");
 
         public final String label;
         public final String effect;
@@ -60,6 +61,11 @@ public final class Trophies {
         Power(String label, String effect) {
             this.label = label;
             this.effect = effect;
+        }
+
+        /** The effect mid-sentence: first letter lowercased, so "XP" stays "XP". */
+        public String lower() {
+            return Character.toLowerCase(effect.charAt(0)) + effect.substring(1);
         }
     }
 
@@ -111,6 +117,32 @@ public final class Trophies {
         return player.getAttachedOrElse(BossContent.POWER, State.NONE);
     }
 
+    /** True while this power is switched on for the player. */
+    public static boolean active(Player player, Power power) {
+        State s = state(player);
+        return s.power() == power && player.level().getGameTime() < s.activeUntil();
+    }
+
+    /** XP multiplier from Clout. */
+    public static double xpMultiplier(Player player) {
+        return active(player, Power.CLOUT) ? 1.5 : 1;
+    }
+
+    /** Hits taken at or above this (a tier 1 heavy hit) count as heavy for Bass Drop. */
+    static final float HEAVY_HIT = 40;
+
+    /** Bass Drop: a heavy melee hit staggers the mob it lands on (bosses and players excepted). */
+    public static void afterHit(net.minecraft.world.entity.LivingEntity victim, net.minecraft.world.damagesource.DamageSource source, float dealt) {
+        if (dealt >= HEAVY_HIT && source.getEntity() instanceof ServerPlayer player && source.getDirectEntity() == player
+                && !(victim instanceof Player) && !(victim instanceof BossEntity) && active(player, Power.BASS_DROP)) {
+            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 12, 9, false, false));
+            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 12, 4, false, false));
+            if (victim.level() instanceof ServerLevel level) {
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.SONIC_BOOM, victim.getX(), victim.getY(0.6), victim.getZ(), 1, 0, 0, 0, 0);
+            }
+        }
+    }
+
     static void use(ServerPlayer player) {
         State s = state(player);
         Power power = s.power();
@@ -127,7 +159,7 @@ public final class Trophies {
         }
         player.setAttached(BossContent.POWER, new State(s.selected(), now + power.ticks, now + power.cooldown));
         player.serverLevel().playSound(null, player.blockPosition(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 0.6f, 1.4f);
-        player.displayClientMessage(Component.literal(power.label + ": " + power.effect.toLowerCase(Locale.ROOT) + " for 5 minutes.")
+        player.displayClientMessage(Component.literal(power.label + ": " + power.lower() + " for 5 minutes.")
                 .withStyle(ChatFormatting.GOLD), true);
         tick(player);
     }
@@ -152,7 +184,7 @@ public final class Trophies {
 
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
-            lines.add(Component.literal("Power: " + power.label + " (" + power.effect.toLowerCase(Locale.ROOT) + ")").withStyle(ChatFormatting.GOLD));
+            lines.add(Component.literal("Power: " + power.label + " (" + power.lower() + ")").withStyle(ChatFormatting.GOLD));
             lines.add(Component.literal("Put it on a Trophy Rack in a hideout to choose it.").withStyle(ChatFormatting.GRAY));
         }
     }
@@ -230,7 +262,7 @@ public final class Trophies {
             int i = powers.indexOf(s.power());
             Power next = powers.get((i + 1) % powers.size());
             player.setAttached(BossContent.POWER, new State(next.name(), s.activeUntil(), s.readyAt()));
-            player.displayClientMessage(Component.literal("Active power: " + next.label + " (" + next.effect.toLowerCase(Locale.ROOT)
+            player.displayClientMessage(Component.literal("Active power: " + next.label + " (" + next.lower()
                     + "). Use it with the trophy power key.").withStyle(ChatFormatting.GOLD), true);
             return InteractionResult.SUCCESS;
         }

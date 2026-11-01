@@ -1,11 +1,7 @@
 package com.cavmkii.seancraft.boss;
 
-import com.cavmkii.seancraft.SeanCraft;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -16,9 +12,6 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -30,10 +23,6 @@ import net.minecraft.world.phys.Vec3;
  * the front.
  */
 public class Mark extends BossEntity {
-    private static final net.minecraft.resources.ResourceLocation ROOTED = SeanCraft.id("mark_net");
-    /** Players caught in the net, until the game time they're free. */
-    private static final Map<UUID, Long> NETTED = new HashMap<>();
-
     public Mark(EntityType<? extends Mark> type, Level level) {
         super(type, level);
         setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.FISHING_ROD));
@@ -180,57 +169,7 @@ public class Mark extends BossEntity {
             double dx = player.getX() - aim.x;
             double dz = player.getZ() - aim.z;
             if (dx * dx + dz * dz <= r * r && Math.abs(player.getY() - aim.y) < 3) {
-                root(player, level.getGameTime() + ticks);
-            }
-        }
-    }
-
-    private static void root(ServerPlayer player, long until) {
-        NETTED.put(player.getUUID(), until);
-        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        AttributeInstance jump = player.getAttribute(Attributes.JUMP_STRENGTH);
-        if (speed != null) {
-            speed.addOrReplacePermanentModifier(new AttributeModifier(ROOTED, -1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
-        }
-        if (jump != null) {
-            jump.addOrReplacePermanentModifier(new AttributeModifier(ROOTED, -1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
-        }
-        player.displayClientMessage(net.minecraft.network.chat.Component.literal("Caught in the net! A slash cuts it."), true);
-    }
-
-    private static void free(ServerPlayer player) {
-        NETTED.remove(player.getUUID());
-        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        AttributeInstance jump = player.getAttribute(Attributes.JUMP_STRENGTH);
-        if (speed != null) {
-            speed.removeModifier(ROOTED);
-        }
-        if (jump != null) {
-            jump.removeModifier(ROOTED);
-        }
-    }
-
-    /** Called every second for every player: nets run out (and never outlive a server restart or a death). */
-    public static void tickNets(ServerPlayer player) {
-        Long until = NETTED.get(player.getUUID());
-        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
-        boolean modified = speed != null && speed.getModifier(ROOTED) != null;
-        if ((until == null && modified) || (until != null && (player.serverLevel().getGameTime() >= until || !player.isAlive()))) {
-            free(player);
-        }
-    }
-
-    /** A slash swing cuts a netted player free (A.3). */
-    public static void onSwing(ServerPlayer player) {
-        if (!NETTED.containsKey(player.getUUID())) {
-            return;
-        }
-        ItemStack weapon = player.getMainHandItem();
-        if (weapon.is(net.minecraft.tags.ItemTags.SWORDS) || weapon.is(net.minecraft.tags.ItemTags.AXES)) {
-            free(player);
-            for (Mark mark : player.serverLevel().getEntitiesOfClass(Mark.class, player.getBoundingBox().inflate(Arenas.RADIUS * 2))) {
-                mark.say("net_cut");
-                break;
+                Restraint.root(player, ticks, true, "Caught in the net! A slash cuts it.");
             }
         }
     }

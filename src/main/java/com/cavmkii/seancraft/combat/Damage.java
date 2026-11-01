@@ -206,6 +206,7 @@ public final class Damage {
                 total *= ARMOR_K / (points + ARMOR_K);
             }
         }
+        com.cavmkii.seancraft.boss.Trophies.afterHit(victim, source, total);
         return total;
     }
 

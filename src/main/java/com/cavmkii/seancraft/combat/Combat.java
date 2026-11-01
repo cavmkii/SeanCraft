@@ -85,7 +85,7 @@ public final class Combat {
 
     /** Better Combat started a swing (server side). Charges for it, or marks it weak if the bar can't cover it. */
     public static void onSwing(ServerPlayer player) {
-        com.cavmkii.seancraft.boss.Mark.onSwing(player);
+        com.cavmkii.seancraft.boss.Restraint.onSwing(player);
         if (player.isCreative()) {
             return;
         }

@@ -227,6 +227,11 @@ public final class Health {
         if (fall) {
             return player.getRandom().nextBoolean() ? BodyPart.LEFT_LEG : BodyPart.RIGHT_LEG;
         }
+        if (source.getEntity() instanceof com.cavmkii.seancraft.boss.BossEntity boss && boss.hitting != null) {
+            // Boss stomps land on the legs and blasts anywhere, not at the height of its eyes.
+            return boss.hitting.equals("legs") ? (player.getRandom().nextBoolean() ? BodyPart.LEFT_LEG : BodyPart.RIGHT_LEG)
+                    : Body.weighted(player.getRandom());
+        }
         Entity direct = source.getDirectEntity();
         if (direct == null || direct.distanceToSqr(player) > 100) {
             return direct == null ? null : Body.weighted(player.getRandom());

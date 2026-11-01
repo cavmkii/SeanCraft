@@ -19,7 +19,10 @@ public final class ClientBoss {
     private ClientBoss() {}
 
     public static void init() {
-        EntityRendererRegistry.register(BossContent.MARK, MarkRenderer::new);
+        EntityRendererRegistry.register(BossContent.MARK, ctx -> new BossRenderer<>(ctx, "mark"));
+        EntityRendererRegistry.register(BossContent.BO_DADDY, ctx -> new BossRenderer<>(ctx, "bo_daddy_country", "bo_daddy_rnb"));
+        EntityRendererRegistry.register(BossContent.DAYLAN, ctx -> new BossRenderer<>(ctx, "daylan_influencer", "daylan_firefighter", "daylan_police"));
+        EntityRendererRegistry.register(BossContent.FOLLOWER, ctx -> new ThrownItemRenderer<>(ctx, 0.8f, true));
         EntityRendererRegistry.register(BossContent.BOSS_SHOT, ctx -> new ThrownItemRenderer<>(ctx, 1.2f, true));
         KeyBindingHelper.registerKeyBinding(USE_POWER);
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
