@@ -34,6 +34,10 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 | Handle | `handle_planks`, `handle_log`, `handle_bone`, `handle_blaze`, `handle_breeze` |
 | Wrap | `wrap_string`, `wrap_leather`, `wrap_rabbit`, `wrap_membrane`, `wrap_scute` |
 | Padding | `padding_string`, `padding_leather`, `padding_rabbit`, `padding_membrane`, `padding_scute` |
+| Long blade, knife blade, mace head, spearhead, halberd head | `long_blade_<metal>`, `knife_blade_<metal>`, `mace_head_<metal>`, `spearhead_<metal>`, `halberd_head_<metal>` (metal: copper, iron, gold, diamond, netherite) |
+| Haft | `haft_planks`, `haft_log`, `haft_bone`, `haft_blaze`, `haft_breeze` |
+
+**Weapons:** `<metal>_dagger`, `<metal>_mace`, `<metal>_warhammer`, `<metal>_greatsword`, `<metal>_halberd`, `<metal>_spear`, `<metal>_pike` (metal: copper, iron, gold, diamond, netherite), and `wooden_club`. These and the new parts above already have simple generated icons; drop in your own PNG with the same name to replace one.
 
 **Meds:** `bandage`, `tourniquet`, `splint`, `painkillers`, `field_kit`, `surgical_kit`, `surgery_case`, `antidote`
 

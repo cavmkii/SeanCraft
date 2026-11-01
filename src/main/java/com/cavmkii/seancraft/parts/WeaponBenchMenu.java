@@ -36,6 +36,16 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             case SWORD -> new int[][] {{109, 24}, {109, 77}, {109, 57}, {109, 98}};
             // Head off the top of the haft, wrap low on it.
             case AXE -> new int[][] {{86, 26}, {109, 62}, {109, 94}};
+            // Knife blade on top, short grip under the little guard.
+            case DAGGER -> new int[][] {{109, 34}, {109, 80}};
+            // Head at the top of the handle (mace) or haft (warhammer), wrap low down.
+            case MACE -> new int[][] {{109, 26}, {109, 64}, {109, 94}};
+            case WARHAMMER -> new int[][] {{109, 25}, {109, 62}, {109, 96}};
+            // Like the sword, longer.
+            case GREATSWORD -> new int[][] {{109, 26}, {109, 80}, {109, 60}, {109, 99}};
+            // The axe blade off the side of the haft.
+            case HALBERD -> new int[][] {{128, 28}, {109, 64}, {109, 96}};
+            case SPEAR, PIKE -> new int[][] {{109, 20}, {109, 60}, {109, 94}};
             // Limbs arc on the right, grip in the middle, string on the left.
             case BOW -> new int[][] {{124, 22}, {128, 58}, {92, 58}};
             // Limbs across the top, stock down the middle, string between the limb tips.
@@ -62,7 +72,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     private final net.minecraft.world.inventory.DataSlot building = net.minecraft.world.inventory.DataSlot.standalone();
 
     /** What the bench can build from scratch. Bows keep their vanilla recipe. */
-    public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.CROSSBOW, Family.SHIELD,
+    public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.DAGGER, Family.MACE, Family.WARHAMMER,
+            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.CROSSBOW, Family.SHIELD,
             Family.HELMET, Family.CHEST, Family.LEGS, Family.BOOTS};
     public static final int ASSEMBLE_BUTTON = 200;
     public static final int PICK_BUTTON = 100;
@@ -124,9 +135,15 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     private int firstInventorySlot;
 
     /** Which parts the PARTS tab can make right now, as bits over {@link PartDef#ALL}; 16 per data slot. */
-    private final net.minecraft.world.inventory.DataSlot[] affordable = {
-            net.minecraft.world.inventory.DataSlot.standalone(), net.minecraft.world.inventory.DataSlot.standalone(),
-            net.minecraft.world.inventory.DataSlot.standalone()};
+    private final net.minecraft.world.inventory.DataSlot[] affordable = affordableSlots();
+
+    private static net.minecraft.world.inventory.DataSlot[] affordableSlots() {
+        net.minecraft.world.inventory.DataSlot[] slots = new net.minecraft.world.inventory.DataSlot[(PartDef.ALL.size() + 15) / 16];
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = net.minecraft.world.inventory.DataSlot.standalone();
+        }
+        return slots;
+    }
     private int affordTick;
 
     public boolean canMake(int partIndex) {

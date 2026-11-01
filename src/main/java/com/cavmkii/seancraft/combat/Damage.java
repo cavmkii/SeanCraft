@@ -105,6 +105,7 @@ public final class Damage {
     private Damage() {}
 
     public static void init() {
+        Traits.init();
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (entity instanceof LivingEntity living && !(entity instanceof Player) && !(entity instanceof com.cavmkii.seancraft.boss.BossEntity)) {
                 scaleHealth(living);
@@ -169,6 +170,7 @@ public final class Damage {
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return amount;
         }
+        amount = Traits.beforeHit(victim, source, amount);
         Split split = boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
         BodyPart part = null;
         if (victim instanceof ServerPlayer player) {
@@ -192,7 +194,7 @@ public final class Damage {
             }
             float dealt = amount * share * resistance(victim, type);
             if (type.physical() && armor > 0) {
-                float x = type == Type.PIERCE ? armor * (1 - PIERCE_IGNORES) : armor;
+                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source));
                 dealt *= ARMOR_K / (x + ARMOR_K);
             }
             if (type.elemental() && victim instanceof ServerPlayer player) {
@@ -269,12 +271,14 @@ public final class Damage {
         Parts.Installed head = Parts.installed(weapon).get(PartSlot.HEAD);
         if (head != null) {
             PartKind kind = head.part().kind();
-            if (kind == PartKind.BLADE) {
-                split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);
-            } else if (kind == PartKind.AXE_HEAD) {
-                split.set(Type.SLASH, 0.7f).set(Type.CHOP, 0.3f);
-            } else {
-                split.set(Type.BLUNT, 1);
+            switch (kind) {
+                case BLADE -> split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);
+                case LONG_BLADE -> split.set(Type.SLASH, 1);
+                case KNIFE_BLADE -> split.set(Type.PIERCE, 0.6f).set(Type.SLASH, 0.4f);
+                case AXE_HEAD -> split.set(Type.SLASH, 0.7f).set(Type.CHOP, 0.3f);
+                case SPEARHEAD -> split.set(Type.PIERCE, 1);
+                case HALBERD_HEAD -> split.set(Type.SLASH, 0.6f).set(Type.PIERCE, 0.4f);
+                default -> split.set(Type.BLUNT, 1);
             }
         } else if (weapon.is(ItemTags.SWORDS)) {
             split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);

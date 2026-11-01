@@ -74,15 +74,18 @@ public record PartDef(String id, PartKind kind, int tier) {
     }
 
     /**
-     * What the Weapon Bench takes to make this part: 2 of its material (3 for axe heads, limbs and padding), a stick
-     * more for a guard. Netherite is the diamond part plus 2 netherite scrap.
+     * What the Weapon Bench takes to make this part (4.3): 2 of its material; 1 for a knife blade; 3 for axe and mace
+     * heads, limbs, hafts and padding; 4 for long blades and halberd heads; a stick more for a guard. Netherite is the
+     * diamond part plus 2 netherite scrap.
      */
     public List<Cost> costs() {
         if (kind.material == PartKind.Material.METAL && tier == 5) {
             return List.of(Cost.of(PartItems.get(of(kind, 4)), 1), Cost.of(Items.NETHERITE_SCRAP, 2));
         }
         int n = switch (kind) {
-            case AXE_HEAD, LIMBS, PADDING -> 3;
+            case KNIFE_BLADE -> 1;
+            case AXE_HEAD, MACE_HEAD, LIMBS, HAFT, PADDING -> 3;
+            case LONG_BLADE, HALBERD_HEAD -> 4;
             default -> 2;
         };
         Cost main = switch (kind.material) {
@@ -109,8 +112,8 @@ public record PartDef(String id, PartKind kind, int tier) {
 
     public float durability(int level) {
         return switch (kind) {
-            case BLADE, AXE_HEAD, LIMBS, PLATE -> at(0.05f * tier, 0.05f, level);
-            case HANDLE, PADDING -> at(0.04f * tier, 0.04f, level);
+            case BLADE, LONG_BLADE, KNIFE_BLADE, AXE_HEAD, MACE_HEAD, SPEARHEAD, HALBERD_HEAD, LIMBS, PLATE -> at(0.05f * tier, 0.05f, level);
+            case HANDLE, HAFT, PADDING -> at(0.04f * tier, 0.04f, level);
             default -> 0;
         };
     }
@@ -118,7 +121,7 @@ public record PartDef(String id, PartKind kind, int tier) {
     /** Negative = cheaper attacks, which in Minecraft means faster swings. */
     public float stamina(int level) {
         return switch (kind) {
-            case HANDLE -> at(-0.03f * tier, -0.015f, level);
+            case HANDLE, HAFT -> at(-0.03f * tier, -0.015f, level);
             case WRAP -> at(-0.02f * tier, -0.01f, level);
             default -> 0;
         };

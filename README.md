@@ -179,16 +179,23 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Weapons and armor from parts
 
-- Swords, axes, crossbows, shields and metal armor are made from parts: blades, axe heads, limbs, handles, guards, wraps, plates and padding. The vanilla recipes for them are gone. Bows keep their vanilla recipe.
-- Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table itself is vanilla only.
-- **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
-  - Most parts cost 2 of their material. Axe heads, limbs and padding cost 3, and a guard needs a stick as well.
+- Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone. Bows keep their vanilla recipe.
+- Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
+- **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Heads are on the first page and everything else on the second (click the arrow under the grid). Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
+  - Most parts cost 2 of their material. A knife blade costs 1. Axe heads, mace heads, limbs, hafts and padding cost 3. Long blades and halberd heads cost 4. A guard needs a stick as well.
   - Netherite parts are the diamond part plus 2 netherite scrap.
 - **BUILD tab.**
   1. With the left slot empty, pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
   2. Empty slots show a faded example of the part that goes there. Hover one for its name, and the plate slot shows how many plates it takes.
   3. Drop the parts in and hit ASSEMBLE. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If ASSEMBLE is grey, hover it to see what's missing.
 - The standard parts give you exactly the vanilla item. Other materials change damage, swing speed, durability, armor and weight.
+- **Weapon families.** Each one has its own moveset (from Better Combat), damage type and base numbers. At iron:
+  - Dagger (knife blade, handle): 20 damage, 2 swings a second, pierce and slash. Quick strikes leave enemies open again fast, and hits from behind do 50% more.
+  - Mace (mace head, handle, wrap): 35, blunt. Warhammer (mace head, haft, wrap): 45, slow, blunt, two-handed, ignores an extra 25% of armor. Both can knock a raised shield out of use, like the axe.
+  - Greatsword (long blade, long grip, guard, wrap): 50, slash, wide two-handed sweeps.
+  - Halberd (halberd head, haft, wrap): 45, slash and pierce, reach.
+  - Spear (spearhead, haft, wrap): 32, pierce, reach, ignores an extra 25% of armor. Pike: 40, pierce, even longer reach.
+  - Materials scale damage: copper ×0.85, iron ×1, gold ×1.1, diamond ×1.2, netherite ×1.35.
 - Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it.
 
 ### Character

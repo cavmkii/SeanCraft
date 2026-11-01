@@ -201,7 +201,10 @@ public final class Parts {
                 ? EquipmentSlotGroup.bySlot(armor.getEquipmentSlot()) : EquipmentSlotGroup.MAINHAND;
         if (stock.family() == Family.SWORD) {
             // The family's Better Combat moveset (data/seancraft/weapon_attributes/sword.json), for every material.
+            // The newer families carry theirs on the item (WeaponItems).
             stack.set(net.bettercombat.api.component.BetterCombatDataComponents.WEAPON_PRESET_ID, com.cavmkii.seancraft.SeanCraft.id("sword"));
+        }
+        if (stock.family() == Family.SWORD || stock.family() == Family.GREATSWORD) {
             extra(builder, Attributes.SWEEPING_DAMAGE_RATIO, "parts_sweep", t.block, group);
             extra(builder, Attributes.ATTACK_KNOCKBACK, "parts_knockback", t.parry * 2, group);
         }
