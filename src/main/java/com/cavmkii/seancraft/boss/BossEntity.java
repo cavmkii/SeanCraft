@@ -78,8 +78,8 @@ public abstract class BossEntity extends PathfinderMob {
     /** The split of the attack being dealt, read by the damage pipeline. */
     public Map<Damage.Type, Float> dealing;
     /**
-     * Where the attack being dealt lands on a player, if not where a swing from its eyes would: "legs" for stomps,
-     * "spread" for blasts that catch the whole body. Read by body-part location.
+     * Where the attack being dealt lands on a player: "legs" for stomps, "spread" for blasts that catch the whole body,
+     * "overhead" for the melee that can reach the head (other melee can't). Read by body-part location.
      */
     public String hitting;
     private final ServerBossEvent bar = new ServerBossEvent(Component.literal("Boss"), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);

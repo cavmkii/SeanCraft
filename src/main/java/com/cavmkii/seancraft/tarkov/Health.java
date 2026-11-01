@@ -227,11 +227,21 @@ public final class Health {
         if (fall) {
             return player.getRandom().nextBoolean() ? BodyPart.LEFT_LEG : BodyPart.RIGHT_LEG;
         }
-        if (source.getEntity() instanceof com.cavmkii.seancraft.boss.BossEntity boss && boss.hitting != null) {
+        com.cavmkii.seancraft.boss.BossEntity boss = source.getEntity() instanceof com.cavmkii.seancraft.boss.BossEntity b ? b : null;
+        if (boss != null && ("legs".equals(boss.hitting) || "spread".equals(boss.hitting))) {
             // Boss stomps land on the legs and blasts anywhere, not at the height of its eyes.
             return boss.hitting.equals("legs") ? (player.getRandom().nextBoolean() ? BodyPart.LEFT_LEG : BodyPart.RIGHT_LEG)
                     : Body.weighted(player.getRandom());
         }
+        BodyPart part = locateByHeight(player, source);
+        if (part == BodyPart.HEAD && boss != null && source.getDirectEntity() == boss && !"overhead".equals(boss.hitting)) {
+            // A boss's melee only reaches the head with an overhead attack; a tier 1 hit would otherwise kill outright.
+            return BodyPart.THORAX;
+        }
+        return part;
+    }
+
+    private static BodyPart locateByHeight(ServerPlayer player, DamageSource source) {
         Entity direct = source.getDirectEntity();
         if (direct == null || direct.distanceToSqr(player) > 100) {
             return direct == null ? null : Body.weighted(player.getRandom());

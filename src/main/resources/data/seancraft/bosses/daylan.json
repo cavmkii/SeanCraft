@@ -42,7 +42,7 @@
     {
       "id": "axe_chop", "name": "Axe Chop", "phases": [2], "range": [0, 4],
       "windup": 1.2, "active": 0.2, "recovery": 1.5, "cooldown": 6, "weight": 3,
-      "action": "chop", "damage": 40, "split": { "slash": 1 }, "radius": 4, "angle": 90,
+      "action": "chop", "body": "overhead", "damage": 40, "split": { "slash": 1 }, "radius": 4, "angle": 90,
       "counter": "Sidestep, then punish"
     },
     {
