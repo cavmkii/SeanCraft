@@ -16,7 +16,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Weapon Bench. Modify: put a weapon or armor piece in the left slot and its parts appear on its outline; take a part
+ * Weapon Bench (design doc 4.5). Modify: put a weapon or armor piece in the left slot and its parts appear on its outline; take a part
  * out to remove it, put one in to fit it. Build: with the left slot empty, pick what to make and drop the parts into
  * its outline, then ASSEMBLE. The arrow buttons level a part up with its own material. The PARTS tab makes the parts
  * themselves from materials you carry and the stash.
@@ -71,9 +71,9 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     /** Family picked to build, as an index into {@link #BUILDABLE}, or -1. Synced to the client. */
     private final net.minecraft.world.inventory.DataSlot building = net.minecraft.world.inventory.DataSlot.standalone();
 
-    /** What the bench can build from scratch. Bows keep their vanilla recipe. */
+    /** What the bench can build from scratch: every part-built family (4.4). */
     public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.DAGGER, Family.MACE, Family.WARHAMMER,
-            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.CROSSBOW, Family.SHIELD,
+            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.CROSSBOW, Family.SHIELD,
             Family.HELMET, Family.CHEST, Family.LEGS, Family.BOOTS};
     public static final int ASSEMBLE_BUTTON = 200;
     public static final int PICK_BUTTON = 100;
@@ -284,6 +284,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             map.put(slot, new Parts.Installed(part.def, Parts.level(stack)));
         }
         net.minecraft.world.item.Item result = switch (family) {
+            case BOW -> net.minecraft.world.item.Items.BOW;
             case CROSSBOW -> net.minecraft.world.item.Items.CROSSBOW;
             case SHIELD -> net.minecraft.world.item.Items.SHIELD;
             default -> Family.itemFor(family, metal);

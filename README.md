@@ -179,7 +179,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Weapons and armor from parts
 
-- Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone. Bows keep their vanilla recipe.
+- Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
 - Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
 - **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Heads are on the first page and everything else on the second (click the arrow under the grid). Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
   - Most parts cost 2 of their material. A knife blade costs 1. Axe heads, mace heads, limbs, hafts and padding cost 3. Long blades and halberd heads cost 4. A guard needs a stick as well.

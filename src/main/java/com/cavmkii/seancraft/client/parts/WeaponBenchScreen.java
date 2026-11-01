@@ -38,7 +38,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int TAB_Y = 3;
     /** One icon per buildable family: its iron item (or its only item), in the menu's order. */
     private static final Item[] PICK_ICONS = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
-            .map(f -> f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD : Family.itemFor(f, 2)).toArray(Item[]::new);
+            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD : Family.itemFor(f, 2)).toArray(Item[]::new);
     private static final String[] PICK_NAMES = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
             .map(f -> f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
             .toArray(String[]::new);
