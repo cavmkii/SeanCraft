@@ -206,10 +206,17 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - Village chests almost always have meds and some supplies. Other vanilla chests have meds about half the time.
 - Small supply caches (a barrel and some mossy slabs) are scattered around the overworld.
 - Portals work like normal.
+- **Hazards.** Some places hurt to be in. You can go in early, but it drains about 1% of your health a second (a minute and a half from full) until you have the right key or drink the right potion. A potion covers you for 3 minutes, however long the effect itself lasts. While it's draining you, the edges of your screen glow and the effect list says what fixes it.
+  - **Darkness:** the deep dark, and anywhere below Y 0 that isn't lit (a lit tunnel is fine). Key: Daylan's Follower Lantern. Potion: Night Vision.
+  - **Heat:** deserts. Potion: Fire Resistance. The key comes from a tier 2 boss that isn't in yet.
+  - **Cold:** frozen biomes out in the Far lands (not the snowy taiga), and the frozen and jagged peaks anywhere. Potion: Warmth, brewed from an awkward potion and a magma block. Its key is also from a tier 2 boss.
+  - Boss arenas never have a hazard, so every dungeon can be reached.
 
 ### Bosses
 
-The first boss is in. Boss dungeons come later, so for now an op places the arena's Summoning Pedestal with `/seancraft pedestal` (it's also in the creative tab).
+- **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
+  - Mark: a sandy landing on a beach or river mouth. Daylan: a photo-shoot clearing in a cherry grove. Bo Daddy: a lit cavern dug in at the edge of the deep dark. It's walled in, so you tunnel to it.
+  - No Hideout Bench within 100 blocks of a dungeon.
 
 - **Summoning.** Craft the boss's totem at the Hideout Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
 - **The arena** is a ring 40 blocks across around the pedestal. Everyone inside sees the boss bar.
@@ -228,10 +235,30 @@ The first boss is in. Boss dungeons come later, so for now an op places the aren
   - While he braces between attacks, hits from the front do half damage, so go around him.
   - He takes 150% from slash.
   - Drops: Mark's Reel (a grapple rod), the Old Salt trophy and a Stale Logbook on your first kill, and copper, rabbit hide and bones.
+- **Daylan Little** (tier 1). Totem: 4 copper ingots, an emerald, a glow ink sac and a cherry sapling.
+  - Influencer: he hangs back behind six bought followers. Each one cuts his damage taken by 10%, they dive at you now and then, and any hit pops one. The boss bar shows his follower count dropping. He heals off them with Humble Brag, so pop them first.
+  - He only types a post when nobody's within 6 blocks. That's 2 seconds of free hits, then 5 text bubbles fly out in a fan.
+  - Ring Light Flash blinds you if you're looking at him. Turn away.
+  - At 67% he soft launches a political career: a speech that pulls everyone in. He can't be hurt during it.
+  - Firefighter: he hoses you back 8 blocks (it also puts out fire and fire resistance), chops hard up close, and cones off a zone that gets blasted with water. He takes half damage from fire in this phase.
+  - At 33% the hard launch pulls twice as hard, then knocks everyone outward.
+  - Policeman: he whistles "Freeze!", and anyone who moves more than half a block during the check gets a ticket (hurt and slowed). He also tases, cuffs you in place (a sword or axe swing breaks the cuffs), swings a nightstick, and puts up a riot shield that blocks arrows from the front, so flank him.
+  - You can only be stunned, cuffed or slowed once at a time, plus a second after it ends.
+  - He takes 150% from slash.
+  - Drops: the Follower Lantern (carry it and Darkness can't touch you), and on your first kill the Clout trophy and a Blue Check (use it to put a ✔ after your name in chat). Also copper, rabbit hide and sometimes emeralds.
+- **Bo Daddy Harris** (tier 1). Totem: 4 copper ingots, a note block, a leather and a poppy.
+  - Outlaw Country: he walks you down with a guitar swing, lassos you back if you run, and does a line dance with three stomps. The stomps land off the beat, so watch his feet, not the music.
+  - Before every Baritone Roar he takes a big breath in. Get out of the ring of sound, then punish him: right after a roar he's out of breath and takes 150% from everything for a second and a half. Fire and frost hits keep him complaining (and out of breath) a bit longer.
+  - At half health he switches it up to Silky R&B: a croon that slows you, Slow Jam zones on the ground, roses thrown at anyone hanging back, and the Drop, a huge ring that leaves him out of breath the longest.
+  - His heavy hits stagger you for a moment.
+  - Three sculk shriekers sit around the stage. Every roar and Drop fills them up, and once they're full the whole arena pulses with Darkness every 5 seconds until someone breaks a shrieker. The Follower Lantern blocks it.
+  - Drops: the Subwoofer (shows every mob within 32 blocks through walls for 5 seconds, 30 second cooldown), and on your first kill the Too Much Soul trophy and the "Twinkle (Bo Daddy Cover)" music disc. Also copper, leather and sometimes amethyst.
 - **Trophy powers.** Craft a Trophy Rack at the Hideout Bench (6 planks, an item frame, 2 iron) and put it in a hideout.
   - Use it with a trophy to put the trophy on the rack. Use it empty-handed to choose that trophy's power, and sneak to take a trophy back.
   - Press Y to use your power: 5 minutes on, then 20 minutes to recharge.
-  - Old Salt's power is Tailwind: faster swimming.
+  - Old Salt (Mark): Tailwind, faster swimming.
+  - Clout (Daylan): half again as much skill and class XP.
+  - Too Much Soul (Bo Daddy): Bass Drop. You can't be staggered, and your heavy hits (40 damage or more) stagger mobs.
 
 ### Joe and Sean
 
@@ -259,7 +286,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
-  - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you) and `/seancraft reload` need op.
+  - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 

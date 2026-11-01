@@ -1,0 +1,106 @@
+{
+  "name": "Daylan Little",
+  "tier": 1,
+  "home": { "biomes": ["minecraft:cherry_grove"], "style": "photo_shoot" },
+  "health": 2000,
+  "resist": { "slash": 1.5, "spirit": 0.5 },
+  "phases": [
+    { "name": "Daylan Little", "from": 1.0, "keep": [8, 14], "speed": 0.9 },
+    { "name": "Volunteer Daylan", "from": 0.67, "keep": [4, 9], "speed": 0.9 },
+    { "name": "Officer Daylan", "from": 0.33, "keep": [5, 10], "speed": 0.9 }
+  ],
+  "attacks": [
+    {
+      "id": "bought_followers", "name": "Bought Followers", "phases": [1], "range": [0, 40],
+      "windup": 1.0, "active": 0.1, "recovery": 0.5, "cooldown": 18, "weight": 6,
+      "action": "followers",
+      "counter": "Kill the wisps; any hit destroys one"
+    },
+    {
+      "id": "generated_post", "name": "Generated Post", "phases": [1], "range": [6, 20],
+      "windup": 2.0, "active": 0.1, "recovery": 0.8, "cooldown": 10, "weight": 3,
+      "action": "post", "damage": 10, "split": { "spirit": 1 }, "count": 5, "angle": 50,
+      "counter": "Hit him hard while he types"
+    },
+    {
+      "id": "humble_brag", "name": "Humble Brag", "phases": [1], "range": [0, 40],
+      "windup": 1.0, "active": 5.0, "recovery": 1.0, "cooldown": 15, "weight": 2,
+      "action": "brag",
+      "counter": "Kill followers first"
+    },
+    {
+      "id": "ring_light_flash", "name": "Ring Light Flash", "phases": [1], "range": [0, 8],
+      "windup": 0.8, "active": 0.1, "recovery": 0.6, "cooldown": 9, "weight": 3,
+      "action": "flash", "radius": 8, "angle": 90, "blind": 2,
+      "counter": "Turn away when he turns the light"
+    },
+    {
+      "id": "hose_blast", "name": "Hose Blast", "phases": [2], "range": [0, 12],
+      "windup": 0.8, "active": 0.2, "recovery": 1.0, "cooldown": 7, "weight": 4,
+      "action": "hose", "body": "spread", "damage": 15, "split": { "blunt": 1 }, "width": 1.5, "push": 8,
+      "counter": "Sidestep the stream"
+    },
+    {
+      "id": "axe_chop", "name": "Axe Chop", "phases": [2], "range": [0, 4],
+      "windup": 1.2, "active": 0.2, "recovery": 1.5, "cooldown": 6, "weight": 3,
+      "action": "chop", "body": "overhead", "damage": 40, "split": { "slash": 1 }, "radius": 4, "angle": 90,
+      "counter": "Sidestep, then punish"
+    },
+    {
+      "id": "fire_drill", "name": "Fire Drill", "phases": [2], "range": [0, 16],
+      "windup": 1.5, "active": 0.1, "recovery": 1.0, "cooldown": 12, "weight": 2,
+      "action": "drill", "body": "spread", "damage": 25, "split": { "blunt": 1 }, "radius": 4,
+      "counter": "Leave the coned zone"
+    },
+    {
+      "id": "freeze", "name": "Freeze!", "phases": [3], "range": [6, 40],
+      "windup": 1.0, "active": 1.5, "recovery": 0.5, "cooldown": 14, "weight": 3,
+      "action": "freeze", "body": "spread", "damage": 25, "split": { "blunt": 1 }, "slow": 0.4, "slow_time": 3,
+      "counter": "Stop moving at the whistle"
+    },
+    {
+      "id": "taser", "name": "Taser", "phases": [3], "range": [4, 14],
+      "windup": 0.8, "active": 0.1, "recovery": 0.8, "cooldown": 8, "weight": 3,
+      "action": "taser", "damage": 15, "split": { "lightning": 1 }, "width": 1.0, "stun": 0.6,
+      "counter": "Sidestep the prongs"
+    },
+    {
+      "id": "handcuffs", "name": "Handcuffs", "phases": [3], "range": [3, 12],
+      "windup": 1.0, "active": 0.1, "recovery": 0.6, "cooldown": 12, "weight": 3,
+      "action": "cuffs", "width": 1.0, "root": 2,
+      "counter": "Dodge, or cut free"
+    },
+    {
+      "id": "nightstick", "name": "Nightstick", "phases": [3], "range": [0, 4],
+      "windup": 1.0, "active": 0.2, "recovery": 1.2, "cooldown": 6, "weight": 3,
+      "action": "nightstick", "damage": 40, "split": { "blunt": 1 }, "radius": 4, "angle": 90,
+      "counter": "Sidestep, then punish"
+    },
+    {
+      "id": "riot_shield", "name": "Riot Shield", "phases": [3], "range": [0, 40],
+      "windup": 0.6, "active": 0.1, "recovery": 0.2, "cooldown": 16, "weight": 2,
+      "action": "shield", "stance": 4,
+      "counter": "Flank him, or switch to melee"
+    }
+  ],
+  "lines": {
+    "intro": "Hey guys! Don't forget to like and subscribe.",
+    "followers": "Shout out to my forty thousand followers!",
+    "typing": "*mumbling* Write me a caption that sounds humble.",
+    "post": "Just sharing my journey.",
+    "brag": "Honestly, so blessed.",
+    "flash": "Sorry, is the lighting bad? It's for the content.",
+    "soft_launch": "I've been thinking a lot about where this country is headed. Both sides make some really good points.",
+    "firefighter": "Stand back, I'm a volunteer.",
+    "hard_launch": "Today I am officially announcing... that both sides have a point.",
+    "policeman": "New week, new me. Badge number pending.",
+    "freeze": "Freeze!",
+    "ticket": "That's a ticket.",
+    "taser": "Stop resisting!",
+    "cuffs": "You have the right to remain silent.",
+    "cut_free": "Those were rentals.",
+    "low": "This isn't the real me.",
+    "death": "*scrolling* ...three followers. That's still a community.",
+    "retired": "Daylan Little · 3 followers"
+  }
+}

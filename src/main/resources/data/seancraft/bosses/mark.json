@@ -1,6 +1,7 @@
 {
   "name": "Mark",
   "tier": 1,
+  "home": { "biomes": ["#minecraft:is_beach", "#minecraft:is_river"], "style": "beach" },
   "health": 2000,
   "resist": { "slash": 1.5 },
   "phases": [
@@ -35,7 +36,7 @@
   ],
   "lines": {
     "intro": "I've been fishing this spot since before you were born.",
-    "net_cut": "That net was older than you.",
+    "cut_free": "That net was older than you.",
     "transition": "Forty years. Forty years.",
     "taunt": "Why did they call you first?",
     "low": "I'll be filing a grievance.",

@@ -1,6 +1,7 @@
 package com.cavmkii.seancraft.client.tarkov;
 
 import com.cavmkii.seancraft.food.Food;
+import com.cavmkii.seancraft.hazard.Hazards;
 import com.cavmkii.seancraft.tarkov.Body;
 import com.cavmkii.seancraft.tarkov.BodyPart;
 import com.cavmkii.seancraft.tarkov.Injury;
@@ -35,6 +36,7 @@ final class EffectHud {
     private static List<Wound> wounds() {
         TarkovNet.BodySync body = ClientTarkov.body;
         List<Wound> out = new ArrayList<>();
+        hazard(out);
         for (BodyPart p : BodyPart.values()) {
             int i = p.ordinal();
             int c = body.conditions()[i];
@@ -58,6 +60,27 @@ final class EffectHud {
             }
         }
         return out;
+    }
+
+    /** The biome hazard you're in: draining you, or held off by its key or a potion pass (9.3.3). */
+    private static void hazard(List<Wound> out) {
+        Hazards.Hazard h = ClientHazard.hazard;
+        if (h == null) {
+            return;
+        }
+        ItemStack icon = new ItemStack(switch (h) {
+            case DARKNESS -> Items.SCULK;
+            case HEAT -> Items.BLAZE_POWDER;
+            case COLD -> Items.SNOWBALL;
+        });
+        switch (ClientHazard.state) {
+            case Hazards.DRAINING -> out.add(new Wound(icon, h.label + " - draining health", h.potion + " or " + Hazards.keyName(h), 0xFFFF7040));
+            case Hazards.PASS -> {
+                int s = ClientHazard.passLeft();
+                out.add(new Wound(icon, h.label + " - " + h.potion + " " + s / 60 + ":" + String.format("%02d", s % 60), "", 0xFFB0D8B0));
+            }
+            default -> out.add(new Wound(icon, h.label + " - " + Hazards.keyName(h), "", 0xFF9A9AA4));
+        }
     }
 
     /** What the injuries are doing to you right now, as one or two short lines. */

@@ -1,0 +1,5 @@
+{
+  "music_disc.twinkle": {
+    "sounds": [{ "name": "seancraft:records/twinkle", "stream": true }]
+  }
+}

@@ -77,6 +77,11 @@ public abstract class BossEntity extends PathfinderMob {
     protected Vec3 aim = Vec3.ZERO;
     /** The split of the attack being dealt, read by the damage pipeline. */
     public Map<Damage.Type, Float> dealing;
+    /**
+     * Where the attack being dealt lands on a player: "legs" for stomps, "spread" for blasts that catch the whole body,
+     * "overhead" for the melee that can reach the head (other melee can't). Read by body-part location.
+     */
+    public String hitting;
     private final ServerBossEvent bar = new ServerBossEvent(Component.literal("Boss"), BossEvent.BossBarColor.RED, BossEvent.BossBarOverlay.NOTCHED_10);
 
     protected BossEntity(EntityType<? extends BossEntity> type, Level level) {
@@ -141,7 +146,7 @@ public abstract class BossEntity extends PathfinderMob {
     private void applyPhase(boolean announce) {
         BossDef.Phase p = phaseDef();
         entityData.set(PHASE, phase);
-        bar.setName(Component.literal(p.name()));
+        bar.setName(Component.literal(barName()));
         bar.setColor(phase == 0 ? BossEvent.BossBarColor.YELLOW : BossEvent.BossBarColor.RED);
         setCustomName(Component.literal(p.name()));
         var scale = getAttribute(Attributes.SCALE);
@@ -193,6 +198,9 @@ public abstract class BossEntity extends PathfinderMob {
             return false;
         }
         amount = incoming(source, amount);
+        if (amount <= 0) {
+            return false;
+        }
         feedback(source);
         if (attacker instanceof ServerPlayer player) {
             lastDamage.put(player.getUUID(), level().getGameTime());
@@ -201,7 +209,7 @@ public abstract class BossEntity extends PathfinderMob {
         return super.hurt(source, amount * getMaxHealth() / totalHealth());
     }
 
-    /** A boss's own rules for an incoming hit, before the pipeline (Mark's Tenure, for example). */
+    /** A boss's own rules for an incoming hit, before the pipeline (Mark's Tenure, for example). Zero blocks it. */
     protected float incoming(DamageSource source, float amount) {
         return amount;
     }
@@ -297,6 +305,7 @@ public abstract class BossEntity extends PathfinderMob {
                     say("transition");
                 }
                 level.sendParticles(ParticleTypes.CLOUD, getX(), getY(0.5), getZ(), 3, 0.4, 0.6, 0.4, 0.02);
+                transitionTick(phase + 1, stateTicks);
                 if (stateTicks >= TRANSITION_TICKS) {
                     phase++;
                     applyPhase(true);
@@ -360,6 +369,9 @@ public abstract class BossEntity extends PathfinderMob {
 
     private void updateBar(ServerLevel level) {
         bar.setProgress(Mth.clamp(getHealth() / getMaxHealth(), 0, 1));
+        if (tickCount % 10 == 0) {
+            bar.setName(Component.literal(barName()));
+        }
         for (ServerPlayer p : level.players()) {
             boolean in = Arenas.inRing(center, p.position()) && p.isAlive();
             if (in && !bar.getPlayers().contains(p)) {
@@ -452,6 +464,9 @@ public abstract class BossEntity extends PathfinderMob {
             if (!anyRange && (dist < a.minRange() || dist > a.maxRange())) {
                 continue;
             }
+            if (!allowed(a, target)) {
+                continue;
+            }
             valid.add(a);
             weights += a.weight();
         }
@@ -466,6 +481,19 @@ public abstract class BossEntity extends PathfinderMob {
             }
         }
         return valid.get(0);
+    }
+
+    /** A boss's own conditions on an attack, beyond range and cooldown (Daylan only types with nobody close). */
+    protected boolean allowed(BossDef.Attack attack, LivingEntity target) {
+        return true;
+    }
+
+    /** Each tick of the invulnerable transition into phase {@code next} (0-based). */
+    protected void transitionTick(int next, int tick) {}
+
+    /** The boss bar's text; the phase name unless a boss shows more (Daylan's follower count). */
+    protected String barName() {
+        return phaseDef().name();
     }
 
     private void beginAttack(BossDef.Attack attack, LivingEntity target, long now) {
@@ -499,11 +527,62 @@ public abstract class BossEntity extends PathfinderMob {
         if (!hitThisAttack.add(player.getUUID())) {
             return false;
         }
-        dealing = attack.split();
+        hitting = attack.extra().has("body") ? attack.extra().get("body").getAsString() : null;
+        boolean landed = strike(player, damage, attack.split());
+        if (landed && attack.flag("stagger")) {
+            Restraint.stagger(player);
+        }
+        return landed;
+    }
+
+    /** Damage a player as this boss with a given type split, outside the once-per-attack rule (minions, zones). */
+    protected boolean strike(ServerPlayer player, float damage, Map<Damage.Type, Float> split) {
+        dealing = split;
         try {
             return player.hurt(damageSources().mobAttack(this), damage * damageMultiplier());
         } finally {
             dealing = null;
+            hitting = null;
+        }
+    }
+
+    /** Lets the current attack hit everyone again (each stomp of a multi-hit attack is its own hit). */
+    protected void resetHits() {
+        hitThisAttack.clear();
+    }
+
+    /** Within {@code radius} of the boss and inside an arc of {@code angle} degrees in front of it (or touching it). */
+    protected boolean inArc(ServerPlayer player, float radius, float angle) {
+        Vec3 look = getLookAngle().multiply(1, 0, 1).normalize();
+        Vec3 to = player.position().subtract(position()).multiply(1, 0, 1);
+        if (to.length() > radius + 0.6 || Math.abs(player.getY() - getY()) > 3) {
+            return false;
+        }
+        double off = Math.acos(Math.max(-1, Math.min(1, to.normalize().dot(look))));
+        return to.length() < 1 || off <= Math.toRadians(angle / 2);
+    }
+
+    /** Within {@code radius} of a point, level with it give or take 3 blocks. */
+    protected static boolean near(ServerPlayer player, Vec3 point, float radius) {
+        double dx = player.getX() - point.x;
+        double dz = player.getZ() - point.z;
+        return dx * dx + dz * dz <= radius * radius && Math.abs(player.getY() - point.y) < 3;
+    }
+
+    /** Within {@code width} of the line from the boss's eyes toward {@code target}, up to {@code reach} along it. */
+    protected boolean onLine(ServerPlayer player, Vec3 target, float reach, float width) {
+        Vec3 from = getEyePosition();
+        Vec3 dir = target.subtract(from).normalize();
+        Vec3 at = player.position().add(0, 1, 0);
+        double along = at.subtract(from).dot(dir);
+        return along >= 0 && along <= reach && at.distanceTo(from.add(dir.scale(along))) <= width;
+    }
+
+    /** Particles in a flat ring, for zones and shockwaves. */
+    protected void ring(ServerLevel level, net.minecraft.core.particles.ParticleOptions particle, Vec3 at, double radius, int points) {
+        for (int i = 0; i < points; i++) {
+            double a = Math.PI * 2 * i / points;
+            level.sendParticles(particle, at.x + Math.cos(a) * radius, at.y + 0.15, at.z + Math.sin(a) * radius, 1, 0, 0, 0, 0);
         }
     }
 

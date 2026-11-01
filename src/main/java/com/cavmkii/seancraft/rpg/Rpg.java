@@ -137,7 +137,7 @@ public final class Rpg {
         }
         PlayerData data = data(player);
         int before = data.skillLevel(skill);
-        amount *= com.cavmkii.seancraft.food.Rest.skillMultiplier(player);
+        amount *= com.cavmkii.seancraft.food.Rest.skillMultiplier(player) * com.cavmkii.seancraft.boss.Trophies.xpMultiplier(player);
         data.skillXp.merge(skill, amount, Double::sum);
         int after = data.skillLevel(skill);
         if (after != before) {
@@ -154,6 +154,7 @@ public final class Rpg {
         if (data.level >= PlayerData.MAX_LEVEL) {
             return;
         }
+        amount = Math.round(amount * com.cavmkii.seancraft.boss.Trophies.xpMultiplier(player));
         data.xp += amount;
         boolean levelled = false;
         while (data.level < PlayerData.MAX_LEVEL && data.xp >= PlayerData.xpToNext(data.level)) {

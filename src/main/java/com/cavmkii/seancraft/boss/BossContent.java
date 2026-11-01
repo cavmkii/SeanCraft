@@ -52,6 +52,12 @@ import net.minecraft.world.phys.Vec3;
 public final class BossContent {
     public static final EntityType<Mark> MARK = Registry.register(BuiltInRegistries.ENTITY_TYPE, SeanCraft.id("mark"),
             EntityType.Builder.<Mark>of(Mark::new, MobCategory.MONSTER).sized(0.6f, 1.95f).clientTrackingRange(10).fireImmune().build("mark"));
+    public static final EntityType<BoDaddy> BO_DADDY = Registry.register(BuiltInRegistries.ENTITY_TYPE, SeanCraft.id("bo_daddy"),
+            EntityType.Builder.<BoDaddy>of(BoDaddy::new, MobCategory.MONSTER).sized(0.6f, 1.95f).clientTrackingRange(10).fireImmune().build("bo_daddy"));
+    public static final EntityType<Daylan> DAYLAN = Registry.register(BuiltInRegistries.ENTITY_TYPE, SeanCraft.id("daylan"),
+            EntityType.Builder.<Daylan>of(Daylan::new, MobCategory.MONSTER).sized(0.6f, 1.95f).clientTrackingRange(10).build("daylan"));
+    public static final EntityType<Follower> FOLLOWER = Registry.register(BuiltInRegistries.ENTITY_TYPE, SeanCraft.id("follower"),
+            EntityType.Builder.<Follower>of(Follower::new, MobCategory.MISC).sized(0.5f, 0.5f).clientTrackingRange(8).fireImmune().build("follower"));
     public static final EntityType<BossShot> BOSS_SHOT = Registry.register(BuiltInRegistries.ENTITY_TYPE, SeanCraft.id("boss_shot"),
             EntityType.Builder.<BossShot>of(BossShot::new, MobCategory.MISC).sized(0.4f, 0.4f).clientTrackingRange(8).updateInterval(2).build("boss_shot"));
 
@@ -75,6 +81,26 @@ public final class BossContent {
     public static final Item MARKS_REEL = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("marks_reel"),
             new ReelItem(new Item.Properties().durability(160).rarity(Rarity.RARE)));
 
+    public static final Item BO_DADDY_TOTEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("bo_daddy_totem"),
+            new TotemItem(() -> BO_DADDY, new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final Item TROPHY_TOO_MUCH_SOUL = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("trophy_too_much_soul"),
+            new Trophies.TrophyItem(Trophies.Power.BASS_DROP, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final Item SUBWOOFER = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("subwoofer"),
+            new BossItems.Subwoofer(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final net.minecraft.resources.ResourceKey<net.minecraft.world.item.JukeboxSong> TWINKLE_SONG = net.minecraft.resources.ResourceKey.create(
+            net.minecraft.core.registries.Registries.JUKEBOX_SONG, SeanCraft.id("twinkle"));
+    public static final Item TWINKLE_DISC = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("music_disc_twinkle"),
+            new Item(new Item.Properties().stacksTo(1).rarity(Rarity.RARE).jukeboxPlayable(TWINKLE_SONG)));
+
+    public static final Item DAYLAN_TOTEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("daylan_totem"),
+            new TotemItem(() -> DAYLAN, new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+    public static final Item TROPHY_CLOUT = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("trophy_clout"),
+            new Trophies.TrophyItem(Trophies.Power.CLOUT, new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final Item FOLLOWER_LANTERN = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("follower_lantern"),
+            new BossItems.FollowerLantern(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final Item BLUE_CHECK = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("blue_check"),
+            new BossItems.BlueCheck(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
+
     /** Bosses each player has beaten, for first-kill rewards. Kept through death. */
     public static final AttachmentType<Set<String>> BEATEN = AttachmentRegistry.<Set<String>>builder()
             .persistent(Codec.STRING.listOf().xmap(HashSet::new, List::copyOf))
@@ -90,13 +116,18 @@ public final class BossContent {
 
     public static void init() {
         FabricDefaultAttributeRegistry.register(MARK, BossEntity.bossAttributes());
+        FabricDefaultAttributeRegistry.register(BO_DADDY, BossEntity.bossAttributes());
+        FabricDefaultAttributeRegistry.register(DAYLAN, BossEntity.bossAttributes());
+        FabricDefaultAttributeRegistry.register(FOLLOWER, Follower.attributes());
         BossDef.init();
         Arenas.init();
         Trophies.init();
+        BossSites.init();
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTickCount() % 20 == 0) {
-                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                    Mark.tickNets(player);
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                Restraint.tick(player);
+                if (server.getTickCount() % 20 == 0) {
+                    BossItems.FollowerLantern.tick(player);
                 }
             }
         });
@@ -123,6 +154,10 @@ public final class BossContent {
         public TotemItem(Supplier<EntityType<? extends BossEntity>> boss, Properties properties) {
             super(properties);
             this.boss = boss;
+        }
+
+        public EntityType<? extends BossEntity> boss() {
+            return boss.get();
         }
 
         @Override

@@ -25,7 +25,13 @@ import net.minecraft.server.packs.resources.ResourceManager;
  * {@code data/<namespace>/bosses/<id>.json}. Each attack names an action the boss's code knows how to perform.
  */
 public record BossDef(String id, String name, int tier, float health, Map<Damage.Type, Float> resist, List<Phase> phases,
-        List<Attack> attacks, Map<String, String> lines) {
+        List<Attack> attacks, Map<String, String> lines, Home home) {
+
+    /**
+     * Where the boss's dungeon goes (10): biome ids or #tags, whether it's underground (searched at deep-dark depth
+     * instead of the surface), and which arena style to build.
+     */
+    public record Home(List<String> biomes, boolean underground, String style) {}
 
     /** A phase starts once health falls to {@code from} (a fraction). */
     public record Phase(String name, float from, float scale, float speed, int keepMin, int keepMax, boolean approach) {}
@@ -46,6 +52,10 @@ public record BossDef(String id, String name, int tier, float health, Map<Damage
 
     public static BossDef get(String id) {
         return DEFS.get(id);
+    }
+
+    public static java.util.Collection<BossDef> all() {
+        return DEFS.values();
     }
 
     public String line(String key) {
@@ -101,8 +111,15 @@ public record BossDef(String id, String name, int tier, float health, Map<Damage
         if (json.has("lines")) {
             json.getAsJsonObject("lines").entrySet().forEach(e -> lines.put(e.getKey(), e.getValue().getAsString()));
         }
+        Home home = null;
+        if (json.has("home")) {
+            JsonObject h = json.getAsJsonObject("home");
+            List<String> biomes = new ArrayList<>();
+            h.getAsJsonArray("biomes").forEach(b -> biomes.add(b.getAsString()));
+            home = new Home(biomes, h.has("underground") && h.get("underground").getAsBoolean(), h.get("style").getAsString());
+        }
         return new BossDef(id, json.get("name").getAsString(), json.get("tier").getAsInt(), json.get("health").getAsFloat(),
-                types(json.getAsJsonObject("resist")), phases, attacks, lines);
+                types(json.getAsJsonObject("resist")), phases, attacks, lines, home);
     }
 
     private static int seconds(JsonObject a, String key) {

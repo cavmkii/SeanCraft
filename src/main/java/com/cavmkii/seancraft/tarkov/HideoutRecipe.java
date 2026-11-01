@@ -23,6 +23,10 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
                 List.of(Cost.of(Items.ARROW, 4), Cost.tag(net.minecraft.tags.ItemTags.COALS, 1, "Coal or charcoal"), Cost.of(Items.STRING, 1)), null, 0));
         ALL.add(new HideoutRecipe("mark_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.MARK_TOTEM),
                 List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.FISHING_ROD, 1), Cost.of(Items.COD, 1), Cost.of(Items.WRITABLE_BOOK, 1)), null, 0));
+        ALL.add(new HideoutRecipe("daylan_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.DAYLAN_TOTEM),
+                List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.EMERALD, 1), Cost.of(Items.GLOW_INK_SAC, 1), Cost.of(Items.CHERRY_SAPLING, 1)), null, 0));
+        ALL.add(new HideoutRecipe("bo_daddy_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.BO_DADDY_TOTEM),
+                List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.NOTE_BLOCK, 1), Cost.of(Items.LEATHER, 1), Cost.of(Items.POPPY, 1)), null, 0));
         ALL.add(new HideoutRecipe("trophy_rack", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.TROPHY_RACK_ITEM),
                 List.of(Cost.planks(6), Cost.of(Items.ITEM_FRAME, 1), Cost.of(Items.IRON_INGOT, 2)), null, 0));
         ALL.add(new HideoutRecipe("fob_table", () -> new ItemStack(TarkovContent.FOB_TABLE_ITEM),

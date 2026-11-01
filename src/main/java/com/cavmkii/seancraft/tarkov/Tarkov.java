@@ -574,8 +574,10 @@ public final class Tarkov {
                 status = TarkovNet.Entry.READY;
                 note = "Craft";
             }
+            String description = result.getItem() instanceof com.cavmkii.seancraft.boss.BossContent.TotemItem totem
+                    ? com.cavmkii.seancraft.boss.BossSites.hint(player, totem) : describe(result);
             entries.add(new TarkovNet.Entry(TarkovNet.Entry.RECIPE, recipe.id(), result.getHoverName().getString()
-                    + (result.getCount() > 1 ? " x" + result.getCount() : ""), describe(result), id(result.getItem()), status, note,
+                    + (result.getCount() > 1 ? " x" + result.getCount() : ""), description, id(result.getItem()), status, note,
                     costLines(player, h, recipe.costs()), 0));
         }
         int chests = Stash.containers(level, h).size();
@@ -638,6 +640,13 @@ public final class Tarkov {
             }
             Stash.consume(player, h, recipe.costs());
             ItemStack result = recipe.result().get();
+            if (result.getItem() instanceof com.cavmkii.seancraft.boss.BossContent.TotemItem totem) {
+                // A map to the boss's dungeon comes with its totem (8.4.1).
+                ItemStack map = com.cavmkii.seancraft.boss.BossSites.map(player.server.overworld(), totem);
+                if (!map.isEmpty() && !player.getInventory().add(map)) {
+                    player.drop(map, false);
+                }
+            }
             if (!player.getInventory().add(result)) {
                 player.drop(result, false);
             }

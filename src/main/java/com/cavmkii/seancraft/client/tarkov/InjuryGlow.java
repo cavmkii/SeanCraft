@@ -9,7 +9,8 @@ import net.minecraft.util.Mth;
 
 /**
  * A glow around the screen edges while you're hurt: red and pulsing while you bleed (faster the worse it is),
- * white for a fracture, grey for a destroyed part. Stronger with severity, and they stack.
+ * white for a fracture, grey for a destroyed part, the hazard's colour while a biome hazard drains you. Stronger with
+ * severity, and they stack.
  */
 final class InjuryGlow {
     private InjuryGlow() {}
@@ -32,6 +33,14 @@ final class InjuryGlow {
         }
         bleed = Math.min(1, bleed);
         float t = mc.player.tickCount + delta.getGameTimeDeltaPartialTick(true);
+        boolean hazard = ClientHazard.hazard != null && ClientHazard.state == com.cavmkii.seancraft.hazard.Hazards.DRAINING;
+        if (hazard) {
+            // A slow throb in the hazard's colour while it drains you.
+            float throb = 0.5f + 0.5f * Mth.sin(t * 0.08f);
+            g.flush();
+            edges(g, ClientHazard.hazard.glow, 0.45f + 0.25f * throb, 0.6f + 0.2f * throb);
+            g.flush();
+        }
         // Draw the bands as their own batch, so they don't mix with the item icons drawn later this frame.
         g.flush();
         if (destroyed > 0) {

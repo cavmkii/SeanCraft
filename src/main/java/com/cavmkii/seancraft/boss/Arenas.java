@@ -45,6 +45,14 @@ public final class Arenas {
     public static void init() {
         ServerTickEvents.END_SERVER_TICK.register(Arenas::tick);
         PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) -> {
+            if (state.is(net.minecraft.world.level.block.Blocks.SCULK_SHRIEKER) && level instanceof net.minecraft.server.level.ServerLevel server) {
+                // Bo Daddy's shriekers are props: breaking one resets his meter (A.5).
+                Fight f = at(level, Vec3.atCenterOf(pos));
+                if (f != null && server.getEntity(f.boss) instanceof BoDaddy bo) {
+                    bo.shriekerBroken();
+                    return true;
+                }
+            }
             if (locked(level, pos, player)) {
                 player.displayClientMessage(Component.literal("Not while the boss is alive.").withStyle(ChatFormatting.RED), true);
                 return false;
