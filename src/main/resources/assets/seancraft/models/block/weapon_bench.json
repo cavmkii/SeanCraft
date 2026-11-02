@@ -1,12 +1,9 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/orientable_with_bottom",
   "textures": {
-    "particle": "minecraft:block/smithing_table_front",
-    "north": "minecraft:block/smithing_table_front",
-    "south": "minecraft:block/smithing_table_front",
-    "east": "minecraft:block/smithing_table_side",
-    "west": "minecraft:block/smithing_table_side",
-    "up": "minecraft:block/smithing_table_top",
-    "down": "minecraft:block/smithing_table_bottom"
+    "top": "seancraft:block/weapon_bench_top",
+    "bottom": "seancraft:block/weapon_bench_bottom",
+    "side": "seancraft:block/weapon_bench_side",
+    "front": "seancraft:block/weapon_bench_front"
   }
 }

@@ -1,1 +1,7 @@
-{ "variants": { "": { "model": "seancraft:block/summoning_pedestal" } } }
+{
+  "variants": {
+    "": {
+      "model": "seancraft:block/summoning_pedestal"
+    }
+  }
+}

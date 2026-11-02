@@ -13,7 +13,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.BlockGetter;
 
 /** The Altar of Regret: use it to clear your passive web. It costs your life. */
-public class AltarBlock extends Block {
+public class AltarBlock extends com.cavmkii.seancraft.FacingBlock {
     private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 12, 15);
 
     public AltarBlock(Properties properties) {

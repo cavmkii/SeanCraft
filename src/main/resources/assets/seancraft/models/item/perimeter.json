@@ -1,3 +1,1 @@
-{
-  "parent": "minecraft:block/chiseled_stone_bricks"
-}
+{"parent": "seancraft:block/perimeter"}

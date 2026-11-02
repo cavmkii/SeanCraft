@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "minecraft:block/smithing_table"
+    "facing=north": {
+      "model": "seancraft:block/workshop"
+    },
+    "facing=east": {
+      "model": "seancraft:block/workshop",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/workshop",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/workshop",
+      "y": 270
     }
   }
 }

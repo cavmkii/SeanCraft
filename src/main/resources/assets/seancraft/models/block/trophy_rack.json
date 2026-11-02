@@ -1,9 +1,9 @@
 {
-  "parent": "minecraft:block/cube",
+  "parent": "minecraft:block/orientable_with_bottom",
   "textures": {
-    "particle": "minecraft:block/chiseled_bookshelf_side",
-    "north": "minecraft:block/chiseled_bookshelf_occupied", "south": "minecraft:block/chiseled_bookshelf_occupied",
-    "east": "minecraft:block/chiseled_bookshelf_side", "west": "minecraft:block/chiseled_bookshelf_side",
-    "up": "minecraft:block/chiseled_bookshelf_top", "down": "minecraft:block/chiseled_bookshelf_top"
+    "top": "seancraft:block/trophy_rack_top",
+    "bottom": "seancraft:block/trophy_rack_bottom",
+    "side": "seancraft:block/trophy_rack_side",
+    "front": "seancraft:block/trophy_rack_front"
   }
 }

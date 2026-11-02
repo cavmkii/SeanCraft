@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /** The Hideout Bench. Everything within its radius is safe from raid rules. Use it for modules and hideout crafting. */
-public class HideoutBlock extends Block {
+public class HideoutBlock extends com.cavmkii.seancraft.FacingBlock {
     public HideoutBlock(Properties properties) {
         super(properties);
     }

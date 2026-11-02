@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "minecraft:block/lectern"
+    "facing=north": {
+      "model": "seancraft:block/intel"
+    },
+    "facing=east": {
+      "model": "seancraft:block/intel",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/intel",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/intel",
+      "y": 270
     }
   }
 }

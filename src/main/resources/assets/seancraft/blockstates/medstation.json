@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "minecraft:block/brewing_stand"
+    "facing=north": {
+      "model": "seancraft:block/medstation"
+    },
+    "facing=east": {
+      "model": "seancraft:block/medstation",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/medstation",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/medstation",
+      "y": 270
     }
   }
 }

@@ -1,1 +1,19 @@
-{ "variants": { "": { "model": "seancraft:block/hideout_bench" } } }
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/hideout_bench"
+    },
+    "facing=east": {
+      "model": "seancraft:block/hideout_bench",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/hideout_bench",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/hideout_bench",
+      "y": 270
+    }
+  }
+}

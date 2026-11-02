@@ -1,1 +1,19 @@
-{ "variants": { "": { "model": "seancraft:block/trophy_rack" } } }
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/trophy_rack"
+    },
+    "facing=east": {
+      "model": "seancraft:block/trophy_rack",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/trophy_rack",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/trophy_rack",
+      "y": 270
+    }
+  }
+}
