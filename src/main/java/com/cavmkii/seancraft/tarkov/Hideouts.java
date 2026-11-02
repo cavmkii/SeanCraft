@@ -159,10 +159,12 @@ public final class Hideouts extends SavedData {
             }
         }
         if (level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
+            double spawnSpacing = Math.max(Cfg.spawnRadius + 16, Cfg.spawnPointSpacing);
             for (BlockPos p : SpawnPoints.get(level).points) {
                 double d = Math.sqrt(Vec3.atCenterOf(p).distanceToSqr(at));
-                if (d < spacing) {
-                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spacing + ").";
+                if (d < spawnSpacing) {
+                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spawnSpacing + "). Head "
+                            + away(Vec3.atCenterOf(p), at) + " another " + (int) Math.ceil(spawnSpacing - d) + ".";
                 }
             }
         }
@@ -173,6 +175,15 @@ public final class Hideouts extends SavedData {
             return "You already have " + Cfg.maxHideouts + " hideouts. Break one of your Hideout Benches to move it.";
         }
         return null;
+    }
+
+    /** The compass direction leading away from {@code from}, as seen at {@code at}. */
+    private static String away(Vec3 from, Vec3 at) {
+        double dx = at.x - from.x;
+        double dz = at.z - from.z;
+        String ns = Math.abs(dz) > Math.abs(dx) * 0.4 ? (dz > 0 ? "south" : "north") : "";
+        String ew = Math.abs(dx) > Math.abs(dz) * 0.4 ? (dx > 0 ? "east" : "west") : "";
+        return ns.isEmpty() ? ew : ew.isEmpty() ? ns : ns + "-" + ew;
     }
 
     void remove(BlockPos pos) {

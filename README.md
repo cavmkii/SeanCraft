@@ -51,7 +51,7 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
 - **FOB tables.** Made at the Hideout Bench from 8 planks, 4 sticks and a campfire. While you're in the same chunk as one, the raid timer stops. Each raid only gets 15 minutes of that, shared between every table, and it fills back up when you extract. It doesn't count while a monster is within 16 blocks or for 10 seconds after you get hit. One per chunk, and not in a safe zone. It's not a safe zone itself, and it has no stash.
 - **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
 - **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
-  - Hideouts have to be at least 500 blocks from each other and from spawn points.
+  - Hideouts have to be at least 500 blocks from each other, and 150 from a spawn point. If you try too close to a spawn point, the message says which way to go and how much further.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
 - **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
@@ -353,7 +353,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - **Common changes:**
   - `Raid.DeathRule`: `LOSE_EVERYTHING`, `KEEP_SECURE` (normal drops, but you keep the pouch), or `VANILLA`.
   - `Raid.DistanceScaling`: turn the distance bands off.
-  - `Raid.HideoutSpacing` (500), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
+  - `Raid.HideoutSpacing` (500, between hideouts), `Raid.SpawnPointSpacing` (150, from spawn points), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
   - `Raid.ThreatMinutes`: when each threat level starts (default `5,20,40,60`).
   - `Spawn.*`: number of spawn points, distance, safe radius, restock time.
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
