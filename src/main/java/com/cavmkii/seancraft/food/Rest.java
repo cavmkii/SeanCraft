@@ -124,8 +124,10 @@ public final class Rest {
                 comfort = comfort(level, player.blockPosition());
             }
             int minutes = minutes(comfort);
-            if (rested == null || rested.getDuration() < minutes * 1200) {
-                player.addEffect(new MobEffectInstance(RESTED, minutes * 1200, 0, true, false, true));
+            // INT makes Rested last longer (6.3).
+            int ticks = (int) Math.round(minutes * 1200 * com.cavmkii.seancraft.rpg.Rpg.stats(player).preparation());
+            if (rested == null || rested.getDuration() < ticks) {
+                player.addEffect(new MobEffectInstance(RESTED, ticks, 0, true, false, true));
                 player.displayClientMessage(Component.literal("Rested (comfort " + comfort + "): " + minutes + " minutes")
                         .withStyle(ChatFormatting.GOLD), true);
             }

@@ -53,8 +53,6 @@ public final class Parts {
         public float stamina;
         public float block;
         public float parry;
-        public float spirit;
-        public float fire;
         public float armor;
         public float weight;
         public boolean modified;
@@ -65,6 +63,7 @@ public final class Parts {
 
     public static void init() {
         // Loading the class registers the components.
+        MaterialTraits.init();
     }
 
     public static boolean modular(ItemStack stack) {
@@ -161,8 +160,6 @@ public final class Parts {
         t.stamina += sign * p.stamina(level);
         t.block += sign * p.block(level);
         t.parry += sign * p.parry(level);
-        t.spirit += sign * p.spirit(level);
-        t.fire += sign * p.fire(level);
         t.armor += sign * p.armor(level);
         t.weight += sign * p.weight(level);
     }
@@ -178,6 +175,8 @@ public final class Parts {
         }
         Totals t = totals(stack);
         Item item = stack.getItem();
+        java.util.List<PartDef> fitted = installed(stack).values().stream().map(Installed::part).toList();
+        Double rawSpeed = MaterialTraits.rawSpeed(item);
         // Swords and axes keep their modifiers in the item's default components; armor computes them.
         ItemAttributeModifiers defaults = item.components().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
         if (defaults.modifiers().isEmpty()) {
@@ -187,11 +186,15 @@ public final class Parts {
         for (ItemAttributeModifiers.Entry e : defaults.modifiers()) {
             AttributeModifier m = e.modifier();
             double amount = m.amount();
+            if (m.id().equals(MaterialTraits.PLATED_ID)) {
+                continue;
+            }
             if (e.attribute().equals(Attributes.ATTACK_DAMAGE)) {
                 amount = amount * Math.max(0.05, 1 + t.damage);
             } else if (e.attribute().equals(Attributes.ATTACK_SPEED)) {
-                double speed = 4 + amount;
-                amount = speed * Math.max(0.3, 1 - t.stamina) - 4;
+                boolean base = rawSpeed != null && m.id().equals(Item.BASE_ATTACK_SPEED_ID);
+                double speed = 4 + (base ? rawSpeed : amount);
+                amount = speed * Math.max(0.3, 1 - t.stamina) * (base ? MaterialTraits.speed(fitted) : 1) - 4;
             } else if (e.attribute().equals(Attributes.ARMOR) || e.attribute().equals(Attributes.ARMOR_TOUGHNESS)) {
                 amount = amount * Math.max(0, 1 + t.armor);
             }
@@ -201,19 +204,28 @@ public final class Parts {
                 ? EquipmentSlotGroup.bySlot(armor.getEquipmentSlot()) : EquipmentSlotGroup.MAINHAND;
         if (stock.family() == Family.SWORD) {
             // The family's Better Combat moveset (data/seancraft/weapon_attributes/sword.json), for every material.
+            // The newer families carry theirs on the item (WeaponItems).
             stack.set(net.bettercombat.api.component.BetterCombatDataComponents.WEAPON_PRESET_ID, com.cavmkii.seancraft.SeanCraft.id("sword"));
+        }
+        if (stock.family() == Family.SWORD || stock.family() == Family.GREATSWORD) {
             extra(builder, Attributes.SWEEPING_DAMAGE_RATIO, "parts_sweep", t.block, group);
             extra(builder, Attributes.ATTACK_KNOCKBACK, "parts_knockback", t.parry * 2, group);
+        }
+        if (stock.family().armor() && item instanceof ArmorItem && MaterialTraits.plated(fitted)) {
+            builder.add(Attributes.ARMOR, new AttributeModifier(MaterialTraits.PLATED_ID, 2, AttributeModifier.Operation.ADD_VALUE), group);
         }
         if (stock.family().armor() && Math.abs(t.weight) > 1.0e-4) {
             extra(builder, Attributes.MOVEMENT_SPEED, "parts_weight", -t.weight * 0.25, group);
         }
         stack.set(DataComponents.ATTRIBUTE_MODIFIERS, builder.build());
 
-        Integer vanillaMax = item.components().get(DataComponents.MAX_DAMAGE);
+        Integer vanillaMax = MaterialTraits.rawMax(item);
+        if (vanillaMax == null) {
+            vanillaMax = item.components().get(DataComponents.MAX_DAMAGE);
+        }
         if (vanillaMax != null) {
             int oldMax = stack.getMaxDamage();
-            int newMax = Math.max(1, Math.round(vanillaMax * Math.max(0.1f, 1 + t.durability)));
+            int newMax = Math.max(1, Math.round(vanillaMax * Math.max(0.1f, 1 + t.durability) * MaterialTraits.durability(fitted)));
             int damage = stack.getDamageValue();
             stack.set(DataComponents.MAX_DAMAGE, newMax);
             stack.setDamageValue(Math.min(newMax - 1, Math.round(damage * newMax / (float) Math.max(1, oldMax))));

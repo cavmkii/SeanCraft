@@ -31,7 +31,35 @@ public enum Stat {
     NO_FALL("No fall damage"),
     MIND_OVER_MATTER("%.0f%% of damage taken comes from mana first"),
     GHOST("Sneaking makes you invisible"),
-    HOLY_AURA("Burn nearby monsters every second");
+    HOLY_AURA("Burn nearby monsters every second"),
+    // Lineage resistance (6.2.6, 9.3.2): elemental resistance points.
+    FIRE_RES("%+.0f fire resistance"),
+    FROST_RES("%+.0f frost resistance"),
+    LIGHTNING_RES("%+.0f lightning resistance"),
+    POISON_RES("%+.0f poison resistance"),
+    // Scaling (6.2.6): a bonus that grows with an attribute, in percent per 10 points.
+    MELEE_PER_STR("%+.0f%% melee damage per 10 Strength"),
+    PROJECTILE_PER_AGI("%+.0f%% projectile damage per 10 Agility"),
+    SPELL_PER_INT("%+.0f%% ability damage per 10 Intelligence"),
+    BLEED_DURATION("Bleeds you cause last %.0f%% longer"),
+    SNEAK_SPEED("%+.0f%% speed while sneaking"),
+    // Specialization signatures (6.2.4).
+    RAGE_STEADY("Can't be staggered while Rage is above half"),
+    RAGE_FURY("%+.0f%% melee damage while Rage is above half"),
+    ALLY_DR("Other players within 6 blocks take %.0f%% less damage"),
+    TAUNT("Blocking a hit makes the attacker and monsters near you come for you"),
+    SPIRIT_SHARE("Melee hits add %.0f%% as spirit damage"),
+    ALLY_BLEED_SLOW("Players within 8 blocks bleed %.0f%% slower"),
+    ARROW_SLOW("Your arrows slow what they hit"),
+    ARROW_ROOT("Arrow crits pin the target in place"),
+    RIPOSTE("Your first melee hit within 1.5s of blocking does %+.0f%%"),
+    QUICK_STRIKES("Sword hits leave enemies open again quickly, like a dagger's"),
+    SPELL_AREA("%+.0f%% skill area"),
+    MANA_COST("Skills cost %.0f%% less mana"),
+    HEX("Skill hits hex: the target takes %+.0f%% damage for 5s"),
+    MED_POWER("Meds apply and heal %.0f%% better"),
+    SURGERY("Surgical kits leave 15% lasting damage instead of 35%"),
+    ALLY_REGEN("You and players within 8 blocks regenerate %.0f health a second");
 
     private final String format;
 

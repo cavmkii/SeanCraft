@@ -71,7 +71,7 @@ public final class Combat {
 
     /**
      * A quarter of the weapon's base damage, on the 9.5 scale (vanilla damage x 5). Read from the weapon itself, so
-     * injuries, effects and skills change what a swing does but not what it costs.
+     * injuries, effects and skills change what a swing does but not what it costs. AGI makes AGI weapons cheaper (6.5.1).
      */
     public static float swingCost(ServerPlayer player) {
         double[] damage = {player.getAttributeBaseValue(Attributes.ATTACK_DAMAGE)};
@@ -80,7 +80,9 @@ public final class Combat {
                 damage[0] += modifier.amount();
             }
         });
-        return (float) (damage[0] * 5 / 4);
+        double efficiency = com.cavmkii.seancraft.rpg.Rpg.stats(player).staminaEfficiency()
+                * com.cavmkii.seancraft.rpg.Scaling.agiShare(player.getMainHandItem());
+        return (float) (damage[0] * 5 / 4 * (1 - efficiency));
     }
 
     /** Better Combat started a swing (server side). Charges for it, or marks it weak if the bar can't cover it. */

@@ -23,11 +23,11 @@ final class RpgHud {
             return;
         }
         PlayerData data = ClientRpg.data;
-        int unlocked = data.unlockedSlots();
         boolean any = false;
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             any |= data.slot(s) != null;
         }
+        any |= data.spec != null;
         // Clear of Combat Roll's roll counter, which sits just right of the vanilla hotbar, unless the screen is too narrow.
         int x0 = Math.min(g.guiWidth() / 2 + 91 + 28, g.guiWidth() - PlayerData.SLOTS * SLOT - 2);
         int y0 = g.guiHeight() - SLOT - 2;
@@ -41,11 +41,14 @@ final class RpgHud {
         }
         g.fill(x0 - 2, y0 - 2, x0 + PlayerData.SLOTS * SLOT + 1, y0 + SLOT + 1, 0x90000000);
         for (int s = 0; s < PlayerData.SLOTS; s++) {
-            drawSlot(g, mc.font, x0 + s * SLOT, y0, s, s < unlocked);
+            drawSlot(g, mc.font, x0 + s * SLOT, y0, s, data.slotOpen(s));
         }
 
         // Stamina (swings and rolls spend it), plus whatever the slotted skills use, stacked above the ability bar.
         Set<Resource> used = EnumSet.of(Resource.STAMINA);
+        if (data.spec != null && com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) != null) {
+            used.add(com.cavmkii.seancraft.rpg.Ultimate.of(data.spec).resource);
+        }
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             ActiveSkill skill = data.slot(s);
             if (skill != null) {
@@ -73,16 +76,18 @@ final class RpgHud {
         unspent(g, mc.font, x0, y - 1, data);
     }
 
-    /** A small reminder while you have web points to spend; nothing when you don't. */
+    /** A small reminder to pick an origin, or while you have web or attribute points to spend; nothing otherwise. */
     private static void unspent(GuiGraphics g, Font font, int x, int y, PlayerData data) {
-        int free = data.freePoints();
-        if (free <= 0) {
+        String text = data.origin == null ? "Choose your origin (K)"
+                : data.freePoints() > 0 ? "Unspent web points: " + data.freePoints() + " (K)"
+                : data.unassigned > 0 ? "Unplaced attribute points: " + data.unassigned + " (K)" : null;
+        if (text == null) {
             return;
         }
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
         g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(font, "Unspent web points: " + free + " (K)", 0, 0, 0xFFFFE060, true);
+        g.drawString(font, text, 0, 0, 0xFFFFE060, true);
         g.pose().popPose();
     }
 
@@ -90,13 +95,16 @@ final class RpgHud {
         g.fill(x, y, x + SLOT - 1, y + SLOT - 1, open ? 0xFF2A2A2A : 0xFF151515);
         g.fill(x + 1, y + 1, x + SLOT - 2, y + SLOT - 2, open ? 0xFF3C3C3C : 0xFF1C1C1C);
         if (!open) {
-            String need = String.valueOf(PlayerData.SLOT_LEVELS[slot]);
-            g.drawString(font, need, x + (SLOT - font.width(need)) / 2, y + 6, 0xFF666666, false);
+            // The ultimate slot, until a specialization opens it.
+            g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, 0xFF666666, false);
             return;
         }
         ActiveSkill skill = ClientRpg.data.slot(slot);
-        if (skill != null) {
-            g.renderItem(new ItemStack(skill.icon), x + 1, y + 1);
+        com.cavmkii.seancraft.rpg.Ultimate ult = slot == PlayerData.ULTIMATE_SLOT && ClientRpg.data.spec != null
+                ? com.cavmkii.seancraft.rpg.Ultimate.of(ClientRpg.data.spec) : null;
+        net.minecraft.world.item.Item icon = skill != null ? skill.icon : ult != null ? ult.icon : null;
+        if (icon != null) {
+            g.renderItem(new ItemStack(icon), x + 1, y + 1);
             int cd = ClientRpg.cooldowns[slot];
             int total = Math.max(1, ClientRpg.cooldownTotals[slot]);
             if (cd > 0) {

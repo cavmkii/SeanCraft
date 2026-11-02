@@ -29,6 +29,14 @@ public final class ItemSize {
         if (item instanceof TridentItem) {
             return new int[] {1, 4};
         }
+        if (item instanceof com.cavmkii.seancraft.parts.WeaponItems.PartWeapon weapon) {
+            // Daggers are short, the polearms and greatswords long.
+            return switch (weapon.family) {
+                case DAGGER -> new int[] {1, 2};
+                case GREATSWORD, HALBERD, SPEAR, PIKE, WARHAMMER -> new int[] {1, 4};
+                default -> new int[] {1, 3};
+            };
+        }
         if (item instanceof SwordItem || item instanceof AxeItem || item instanceof MaceItem) {
             return new int[] {1, 3};
         }

@@ -33,6 +33,15 @@ public abstract class LivingEntityMixin {
         return Damage.apply(self, source, RpgDamage.modify(self, source, amount));
     }
 
+    /** Rabbit-hide wraps and padding (the Quiet trait, 4.4.1): a sneaking player is harder for mobs to spot. */
+    @Inject(method = "getVisibilityPercent", at = @At("RETURN"), cancellable = true)
+    private void seancraft$quiet(net.minecraft.world.entity.Entity looker, CallbackInfoReturnable<Double> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self instanceof Player) {
+            cir.setReturnValue(cir.getReturnValue() * com.cavmkii.seancraft.parts.MaterialTraits.quiet(self));
+        }
+    }
+
     /** Armor is applied in SeanCraft's pipeline instead. The armor still wears as it would have at vanilla scale. */
     @Inject(method = "getDamageAfterArmorAbsorb", at = @At("HEAD"), cancellable = true)
     private void seancraft$noVanillaArmor(DamageSource source, float amount, CallbackInfoReturnable<Float> cir) {

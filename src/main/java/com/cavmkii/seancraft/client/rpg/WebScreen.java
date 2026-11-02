@@ -23,8 +23,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * The passive web. Drag to pan, scroll to zoom, click a connected node to take it. Click a learned
- * active skill, then an ability slot at the bottom, to slot it; right-click a slot to empty it.
+ * The passive web (design doc 6.2). First you pick an origin. Until you choose a specialization you see your starter
+ * web, with a faint outline of the rest; choosing one plays a one-time zoom-out to the whole ring. Drag to pan, scroll to
+ * zoom, click a connected node to take it, Shift-click a learned skill to rank it up. Click a learned skill, then a slot
+ * at the bottom, to slot it (in a hideout); right-click a slot to empty it.
  */
 public class WebScreen extends Screen {
     private static final int PANEL = 128;
@@ -37,6 +39,12 @@ public class WebScreen extends Screen {
     private double pressX;
     private double pressY;
     private ActiveSkill selected;
+    /** The one-time reveal (6.2.3) has played this session. */
+    private static boolean revealSeen;
+    /** Ticks into the reveal animation, or -1. */
+    private int reveal = -1;
+    private static final int REVEAL_TICKS = 50;
+    private static final double STARTER_ZOOM = 1.4;
 
     public WebScreen() {
         super(Component.literal("Passive Web"));
@@ -47,8 +55,64 @@ public class WebScreen extends Screen {
         return false;
     }
 
+    @Override
+    protected void init() {
+        super.init();
+        PlayerData data = ClientRpg.data;
+        if (data.origin != null && !data.revealed) {
+            // The starter web, centred.
+            zoom = STARTER_ZOOM;
+            double[] c = starterCenter(data);
+            panX = -c[0] * scale();
+            panY = -c[1] * scale();
+        } else if (data.revealed && !revealSeen) {
+            reveal = 0;
+        }
+    }
+
+    @Override
+    public void tick() {
+        PlayerData data = ClientRpg.data;
+        if (data.revealed && !revealSeen && reveal < 0) {
+            reveal = 0;
+        }
+        if (reveal >= 0) {
+            // Zoom out from your starter web to the whole ring.
+            double t = Math.min(1, ++reveal / (double) REVEAL_TICKS);
+            double ease = t * t * (3 - 2 * t);
+            double[] c = starterCenter(data);
+            zoom = STARTER_ZOOM + (1 - STARTER_ZOOM) * ease;
+            panX = -c[0] * scale() * (1 - ease);
+            panY = -c[1] * scale() * (1 - ease);
+            if (t >= 1) {
+                reveal = -1;
+                revealSeen = true;
+            }
+        }
+    }
+
+    /** The middle of your starter web, in web units. */
+    private static double[] starterCenter(PlayerData data) {
+        double x = 0;
+        double y = 0;
+        int n = 0;
+        for (WebNode node : PassiveWeb.NODES) {
+            if (PassiveWeb.inStarter(node, data.origin)) {
+                x += node.x;
+                y += node.y;
+                n++;
+            }
+        }
+        return n == 0 ? new double[] {0, 0} : new double[] {x / n, y / n};
+    }
+
+    /** Whether a node shows fully: everything once the web is open, otherwise your starter web. */
+    private static boolean visible(WebNode n, PlayerData data) {
+        return data.revealed || PassiveWeb.inStarter(n, data.origin);
+    }
+
     private double scale() {
-        double fit = Math.min(width - PANEL - 10, height - SLOT - 20) / 2.0 / 8.4;
+        double fit = Math.min(width - PANEL - 10, height - SLOT - 20) / 2.0 / 10.6;
         return fit * zoom;
     }
 
@@ -70,7 +134,8 @@ public class WebScreen extends Screen {
 
     private double size(WebNode n) {
         double base = switch (n.kind) {
-            case START -> 5;
+            case ORIGIN, GATE -> 5;
+            case SIGNATURE -> 4;
             case SMALL -> 2.5;
             case NOTABLE -> 3.5;
             case ACTIVE -> 4.5;
@@ -83,6 +148,10 @@ public class WebScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, width, height, 0xF0101014);
         PlayerData data = ClientRpg.data;
+        if (data.origin == null) {
+            renderOrigins(g, mouseX, mouseY);
+            return;
+        }
 
         // Links.
         for (WebNode n : PassiveWeb.NODES) {
@@ -94,6 +163,9 @@ public class WebScreen extends Screen {
                 boolean a = data.isAllocated(n.id);
                 boolean b = data.isAllocated(m.id);
                 int color = a && b ? 0xFFE0C060 : a || b ? 0xFF8A8A8A : 0xFF45454C;
+                if (!visible(n, data) || !visible(m, data)) {
+                    color = 0x2045454C;
+                }
                 line(g, sx(n), sy(n), sx(m), sy(m), color);
             }
         }
@@ -107,9 +179,18 @@ public class WebScreen extends Screen {
             if (x < PANEL - r || x > width + r || y < -r || y > height + r) {
                 continue;
             }
+            if (!visible(n, data)) {
+                // A glimpse of what's beyond the starter web (6.2.2): outlines only.
+                int gx = (int) Math.round(x);
+                int gy = (int) Math.round(y);
+                int gr = (int) Math.max(1, Math.round(r * 0.7));
+                g.fill(gx - gr, gy - gr, gx + gr, gy + gr, 0x18FFFFFF);
+                continue;
+            }
             boolean allocated = data.isAllocated(n.id);
-            boolean available = data.canAllocate(n.id);
-            int color = n.archetype != null ? n.archetype.color : 0xFFDDDDDD;
+            boolean available = data.canAllocate(n.id) || data.canRankUp(n.id);
+            int color = n.kind == WebNode.Kind.GATE ? 0xFFF2F2F2 : n.kind == WebNode.Kind.SIGNATURE ? 0xFFE8B030
+                    : n.archetype != null ? n.archetype.color : 0xFFDDDDDD;
             int border = allocated ? 0xFFFFE080 : available ? 0xFFFFFFFF : 0xFF4A4A50;
             int fill = allocated ? color : (color & 0x00FFFFFF) | (available ? 0x90000000 : 0x40000000);
             if (n.active != null && n.active == selected) {
@@ -143,8 +224,17 @@ public class WebScreen extends Screen {
         } else if (hoveredSlot >= 0) {
             ActiveSkill skill = data.slot(hoveredSlot);
             List<Component> lines = new ArrayList<>();
-            if (hoveredSlot >= data.unlockedSlots()) {
-                lines.add(Component.literal("Unlocks at level " + PlayerData.SLOT_LEVELS[hoveredSlot]).withStyle(ChatFormatting.GRAY));
+            if (hoveredSlot == PlayerData.ULTIMATE_SLOT) {
+                com.cavmkii.seancraft.rpg.Ultimate ult = data.spec != null ? com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) : null;
+                if (ult == null) {
+                    lines.add(Component.literal("Ultimate (V)").withStyle(ChatFormatting.GOLD));
+                    lines.add(Component.literal("Comes with your specialization.").withStyle(ChatFormatting.GRAY));
+                } else {
+                    lines.add(Component.literal(ult.label + " (V), rank " + Math.max(1, data.milestone) + "/3").withStyle(ChatFormatting.GOLD));
+                    lines.add(Component.literal(ult.description).withStyle(ChatFormatting.GRAY));
+                    lines.add(Component.literal("Costs " + com.cavmkii.seancraft.rpg.Ultimate.COST + " " + ult.resource.label.toLowerCase()
+                            + ". Ranks up at mastery and capstone.").withStyle(ChatFormatting.DARK_GRAY));
+                }
             } else if (skill != null) {
                 lines.add(Component.literal(skill.label).withStyle(ChatFormatting.YELLOW));
                 lines.add(Component.literal(skill.description).withStyle(ChatFormatting.GRAY));
@@ -152,6 +242,9 @@ public class WebScreen extends Screen {
             } else {
                 lines.add(Component.literal("Empty slot").withStyle(ChatFormatting.GRAY));
                 lines.add(Component.literal("Click a learned skill on the web, then this slot").withStyle(ChatFormatting.DARK_GRAY));
+            }
+            if (hoveredSlot != PlayerData.ULTIMATE_SLOT) {
+                lines.add(Component.literal("The loadout only changes in a hideout").withStyle(ChatFormatting.DARK_GRAY));
             }
             g.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
         }
@@ -167,7 +260,9 @@ public class WebScreen extends Screen {
         };
         lines.add(Component.literal(n.name).withStyle(nameColor));
         String kind = switch (n.kind) {
-            case START -> "Where every path begins";
+            case ORIGIN -> n.origin.label + " start";
+            case GATE -> "Specialization gate";
+            case SIGNATURE -> "Signature node";
             case SMALL -> "Passive";
             case NOTABLE -> "Notable passive";
             case ACTIVE -> "Active skill";
@@ -177,10 +272,25 @@ public class WebScreen extends Screen {
         for (String line : n.describe()) {
             lines.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
         }
-        if (n.kind != WebNode.Kind.START) {
-            if (data.isAllocated(n.id)) {
-                lines.add(Component.literal(n.active != null ? "Learned. Click, then click a slot below." : "Allocated")
-                        .withStyle(ChatFormatting.GREEN));
+        if (n.kind == WebNode.Kind.GATE && !data.isAllocated(n.id)) {
+            if (n.spec.origin != data.origin) {
+                lines.add(Component.literal("Only a " + n.spec.origin.label + " can take this.").withStyle(ChatFormatting.RED));
+            } else if (data.spec != null) {
+                lines.add(Component.literal("You're already a " + data.spec.label + ".").withStyle(ChatFormatting.RED));
+            } else {
+                lines.add(Component.literal("Needs level " + com.cavmkii.seancraft.rpg.Specialization.LEVEL + " (you're " + data.level
+                        + "), any tier 1 trophy, and to be in a hideout.").withStyle(ChatFormatting.GRAY));
+            }
+        }
+        if (n.kind != WebNode.Kind.ORIGIN) {
+            if (data.isAllocated(n.id) && n.active != null) {
+                int rank = data.rank(n.active);
+                lines.add(Component.literal("Rank " + rank + "/" + PlayerData.MAX_RANK + ". Click, then a slot below.").withStyle(ChatFormatting.GREEN));
+                if (data.canRankUp(n.id)) {
+                    lines.add(Component.literal("Shift-click to rank up (1 point): +15% damage, -10% cost").withStyle(ChatFormatting.GREEN));
+                }
+            } else if (data.isAllocated(n.id)) {
+                lines.add(Component.literal(n.kind == WebNode.Kind.GATE ? "Your specialization" : "Allocated").withStyle(ChatFormatting.GREEN));
             } else if (data.canAllocate(n.id)) {
                 lines.add(Component.literal("Click to allocate").withStyle(ChatFormatting.GREEN));
             } else if (data.freePoints() <= 0) {
@@ -216,19 +326,29 @@ public class WebScreen extends Screen {
         g.drawString(font, "Points: " + data.freePoints() + " free" + (data.lostPoints > 0 ? ", " + data.lostPoints + " lost" : ""), x, y,
                 data.freePoints() > 0 ? 0xFF55FF55 : 0xFFAAAAAA);
         y += lh;
-        g.drawString(font, "Path: " + path(data), x, y, 0xFFCCCCCC);
+        g.drawString(font, data.origin.label + (data.spec != null ? ", " + data.spec.label : ""), x, y, 0xFFCCCCCC);
+        y += lh;
+        g.drawString(font, "Path: " + path(data), x, y, 0xFF999999);
         y += lh + 4;
 
+        attrTop = y;
         for (Attr attr : Attr.values()) {
-            String star = stats.primary == attr ? "  (primary)" : "";
-            g.drawString(font, attr.label + ": " + String.format("%.1f", stats.attr(attr)) + star, x, y, 0xFF000000 | attr.color);
+            g.drawString(font, attr.label + ": " + String.format("%.1f", stats.attr(attr)), x, y, 0xFF000000 | attr.color);
+            if (data.unassigned > 0) {
+                g.drawString(font, "[+]", (int) ((PANEL - 8) / s) - font.width("[+]"), y, 0xFF55FF55);
+            }
             y += lh;
         }
-        g.drawString(font, String.format("+%.1f health, %.1f regen/s", stats.bonusHealth(), stats.healthRegen()), x, y, 0xFF999999);
+        if (data.unassigned > 0) {
+            g.drawString(font, data.unassigned + " attribute points to place", x, y, 0xFF55FF55);
+            y += lh;
+        }
+        g.drawString(font, String.format("Crit %.0f%% for +%.0f%%", stats.critChance(), stats.critDamage()), x, y, 0xFF999999);
         y += lh;
-        g.drawString(font, String.format("+%.0f%% attack speed, +%.0f%% move", stats.attackSpeedPct(), stats.moveSpeedPct()), x, y, 0xFF999999);
+        g.drawString(font, String.format("+%.0f health, +%.0f%% swing speed", stats.bonusHealth(), stats.attackSpeedPct()), x, y, 0xFF999999);
         y += lh;
-        g.drawString(font, String.format("+%.2f damage from %s", stats.primaryDamage(), stats.primary.label), x, y, 0xFF999999);
+        g.drawString(font, String.format("AGI stamina -%.0f%%, prep +%.0f%%", stats.staminaEfficiency() * 100, (stats.preparation() - 1) * 100), x, y,
+                0xFF999999);
         y += lh;
         g.drawString(font, String.format("Mana %.0f  Rage %.0f  Stamina %.0f", stats.maxMana(), stats.maxRage(), stats.maxStamina()), x, y,
                 0xFF999999);
@@ -243,11 +363,11 @@ public class WebScreen extends Screen {
             double to = Skill.xpForLevel(Math.min(Skill.MAX_LEVEL, level + 1));
             int w = 40;
             int bx = x + (int) ((PANEL - 8) / s) - w;
-            g.drawString(font, skill.label, x, y, 0xFF000000 | skill.attr.color);
+            g.drawString(font, skill.label, x, y, 0xFF000000 | skill.color());
             g.drawString(font, String.valueOf(level), bx - 4 - font.width(String.valueOf(level)), y, 0xFFFFFFFF);
             g.fill(bx, y + 3, bx + w, y + 6, 0xFF000000);
             if (level < Skill.MAX_LEVEL && to > from) {
-                g.fill(bx, y + 3, bx + (int) (w * Math.min(1, (xp - from) / (to - from))), y + 6, 0xFF000000 | skill.attr.color);
+                g.fill(bx, y + 3, bx + (int) (w * Math.min(1, (xp - from) / (to - from))), y + 6, 0xFF000000 | skill.color());
             }
             y += lh;
         }
@@ -292,7 +412,7 @@ public class WebScreen extends Screen {
         g.fill(slotX(0) - 2, y - 2, slotX(PlayerData.SLOTS - 1) + SLOT + 1, y + SLOT + 1, 0xC0000000);
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             int x = slotX(s);
-            boolean open = s < data.unlockedSlots();
+            boolean open = data.slotOpen(s);
             boolean hover = mouseX >= x && mouseX < x + SLOT - 1 && mouseY >= y && mouseY < y + SLOT - 1;
             if (hover) {
                 hovered = s;
@@ -302,9 +422,13 @@ public class WebScreen extends Screen {
             ActiveSkill skill = data.slot(s);
             if (open && skill != null) {
                 g.renderItem(new ItemStack(skill.icon), x + 1, y + 1);
-            } else if (!open) {
-                String need = String.valueOf(PlayerData.SLOT_LEVELS[s]);
-                g.drawString(font, need, x + (SLOT - font.width(need)) / 2, y + 6, 0xFF666666, false);
+            } else if (s == PlayerData.ULTIMATE_SLOT) {
+                com.cavmkii.seancraft.rpg.Ultimate ult = data.spec != null ? com.cavmkii.seancraft.rpg.Ultimate.of(data.spec) : null;
+                if (ult != null) {
+                    g.renderItem(new ItemStack(ult.icon), x + 1, y + 1);
+                } else {
+                    g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, 0xFF666666, false);
+                }
             }
         }
         if (selected != null) {
@@ -369,11 +493,29 @@ public class WebScreen extends Screen {
 
     private void click(double mouseX, double mouseY, int button) {
         PlayerData data = ClientRpg.data;
+        if (data.origin == null) {
+            int o = originAt(mouseX, mouseY);
+            if (o >= 0) {
+                ClientPlayNetworking.send(new RpgNet.ChooseOrigin(o));
+            }
+            return;
+        }
+        if (data.unassigned > 0 && mouseX < PANEL) {
+            // [+] beside an attribute places a point.
+            float s = 0.75f;
+            for (int i = 0; i < Attr.values().length; i++) {
+                double ly = (attrTop + i * 10) * s;
+                if (mouseY >= ly && mouseY < ly + 10 * s && mouseX >= PANEL - 30) {
+                    ClientPlayNetworking.send(new RpgNet.AssignAttribute(i));
+                    return;
+                }
+            }
+        }
         int y = slotY();
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             int x = slotX(s);
             if (mouseX >= x && mouseX < x + SLOT && mouseY >= y && mouseY < y + SLOT) {
-                if (s >= data.unlockedSlots()) {
+                if (!data.slotOpen(s)) {
                     return;
                 }
                 if (button == 1) {
@@ -391,7 +533,12 @@ public class WebScreen extends Screen {
         for (WebNode n : PassiveWeb.NODES) {
             double r = size(n) + 1;
             if (Math.abs(mouseX - sx(n)) <= r && Math.abs(mouseY - sy(n)) <= r) {
-                if (data.canAllocate(n.id) && button == 0) {
+                if (!visible(n, data)) {
+                    return;
+                }
+                if (hasShiftDown() && data.canRankUp(n.id) && button == 0) {
+                    ClientPlayNetworking.send(new RpgNet.Allocate(-1 - n.id));
+                } else if (data.canAllocate(n.id) && button == 0) {
                     ClientPlayNetworking.send(new RpgNet.Allocate(n.id));
                 } else if (data.isAllocated(n.id) && n.active != null) {
                     selected = selected == n.active ? null : n.active;
@@ -400,6 +547,54 @@ public class WebScreen extends Screen {
             }
         }
         selected = null;
+    }
+
+    /** Where the attribute lines start in the panel (in its 0.75 scale), for the [+] buttons. */
+    private int attrTop;
+
+    private static final String[] ORIGIN_BLURB = {
+            "Strength. Starts in the Warrior region with a wooden club. Becomes a Warrior, Knight or Paladin.",
+            "Agility. Starts in the Ranger region with a bow. Becomes an Archer, Blademaster or Rogue.",
+            "Intelligence. Starts in the Mage region. Becomes a Sorcerer, Warlock or Cleric."};
+
+    private int originX(int i) {
+        int w = Math.min(150, (width - 40) / 3);
+        return (width - (w * 3 + 20)) / 2 + i * (w + 10);
+    }
+
+    private int originAt(double mouseX, double mouseY) {
+        int w = Math.min(150, (width - 40) / 3);
+        for (int i = 0; i < 3; i++) {
+            if (mouseX >= originX(i) && mouseX < originX(i) + w && mouseY >= height / 2 - 50 && mouseY < height / 2 + 50) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** Character creation (6.2.1): pick one of three origins. It never changes. */
+    private void renderOrigins(GuiGraphics g, int mouseX, int mouseY) {
+        String title = "Choose your origin";
+        g.drawString(font, title, (width - font.width(title)) / 2, height / 2 - 76, 0xFFFFE080);
+        String sub = "Sets your attribute, starter web and specializations. It never changes.";
+        g.drawString(font, sub, (width - font.width(sub)) / 2, height / 2 - 64, 0xFF999999);
+        int w = Math.min(150, (width - 40) / 3);
+        int hover = originAt(mouseX, mouseY);
+        com.cavmkii.seancraft.rpg.Origin[] origins = com.cavmkii.seancraft.rpg.Origin.values();
+        for (int i = 0; i < origins.length; i++) {
+            int x = originX(i);
+            int y = height / 2 - 50;
+            int color = 0xFF000000 | origins[i].attr.color;
+            g.fill(x - 1, y - 1, x + w + 1, y + 101, hover == i ? 0xFFFFFFFF : color);
+            g.fill(x, y, x + w, y + 100, 0xFF1A1A20);
+            g.drawString(font, origins[i].label, x + 6, y + 6, color);
+            List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(ORIGIN_BLURB[i]), w - 12);
+            int ly = y + 20;
+            for (net.minecraft.util.FormattedCharSequence line : lines) {
+                g.drawString(font, line, x + 6, ly, 0xFFCCCCCC);
+                ly += 10;
+            }
+        }
     }
 
     private static void line(GuiGraphics g, double x1, double y1, double x2, double y2, int color) {

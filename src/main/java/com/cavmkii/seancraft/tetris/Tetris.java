@@ -386,7 +386,8 @@ public final class Tetris {
         List<ItemStack> carried = carried(player);
         List<RecipeHolder<?>> found = new ArrayList<>();
         for (RecipeHolder<CraftingRecipe> holder : player.server.getRecipeManager().getAllRecipesFor(RecipeType.CRAFTING)) {
-            if (player.getRecipeBook().contains(holder)) {
+            if (player.getRecipeBook().contains(holder)
+                    || !com.cavmkii.seancraft.rpg.Ladders.canCraft(player, holder.value().getResultItem(player.registryAccess()))) {
                 continue;
             }
             outer:
@@ -1551,7 +1552,7 @@ public final class Tetris {
                 continue;
             }
             ItemStack result = recipe.getResultItem(registries);
-            if (result.isEmpty()) {
+            if (result.isEmpty() || !com.cavmkii.seancraft.rpg.Ladders.canCraft(player, result)) {
                 continue;
             }
             Map<ItemStack, Integer> used = new IdentityHashMap<>();

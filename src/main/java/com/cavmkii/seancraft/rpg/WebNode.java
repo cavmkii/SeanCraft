@@ -7,7 +7,8 @@ import java.util.Map;
 
 /** One node of the passive web. Positions are in web units; the screen scales them. */
 public final class WebNode {
-    public enum Kind { START, SMALL, NOTABLE, ACTIVE, KEYSTONE }
+    /** Node types (design doc 6.2.6): an origin's start, effect nodes, notables, skills, keystones and specialization gates. */
+    public enum Kind { ORIGIN, SMALL, NOTABLE, ACTIVE, KEYSTONE, GATE, SIGNATURE }
 
     public final int id;
     public final Kind kind;
@@ -18,6 +19,13 @@ public final class WebNode {
     public final Map<Stat, Double> stats = new EnumMap<>(Stat.class);
     public final ActiveSkill active;
     public final List<Integer> links = new ArrayList<>();
+    /** For a gate, the specialization it opens. */
+    public Specialization spec;
+    /** For an origin node, whose start it is. */
+    public Origin origin;
+    /** For a signature node: whose it is, and which milestone opens it (1 specialization, 2 mastery, 3 capstone). */
+    public Specialization sigSpec;
+    public int sigTier;
 
     WebNode(int id, Kind kind, Archetype archetype, String name, double x, double y, ActiveSkill active) {
         this.id = id;
@@ -36,6 +44,14 @@ public final class WebNode {
 
     public List<String> describe() {
         List<String> lines = new ArrayList<>();
+        if (sigSpec != null) {
+            lines.add(sigSpec.label + " " + (sigTier == 1 ? "signature" : sigTier == 2 ? "mastery" : "capstone")
+                    + (sigTier == 1 ? " (opens with the specialization)" : sigTier == 2 ? " (level 40 and a tier 2 trophy)" : " (level 60 and a tier 3 trophy)"));
+        }
+        if (spec != null) {
+            lines.add(spec.role + ".");
+            lines.add("Signature: " + spec.signature + ".");
+        }
         if (active != null) {
             lines.add("Active: " + active.description);
             lines.add("Costs " + active.cost + " " + active.resource.label + ", " + active.cooldownTicks / 20.0 + "s cooldown");

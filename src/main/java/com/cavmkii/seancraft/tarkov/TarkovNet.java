@@ -99,7 +99,8 @@ public final class TarkovNet {
     }
 
     /** Server to client: open or refresh the Hideout screen. */
-    public record HideoutView(BlockPos pos, int radius, String summary, List<Entry> entries) implements CustomPacketPayload {
+    /** {@code station} is which station's screen this is: "hideout", or a module's kind (Stations.moduleKind). */
+    public record HideoutView(BlockPos pos, int radius, String summary, List<Entry> entries, String station) implements CustomPacketPayload {
         public static final Type<HideoutView> TYPE = payloadType("hideout_view");
         public static final StreamCodec<FriendlyByteBuf, HideoutView> CODEC = StreamCodec.of((buf, p) -> {
             buf.writeBlockPos(p.pos);
@@ -107,6 +108,7 @@ public final class TarkovNet {
             buf.writeUtf(p.summary);
             buf.writeVarInt(p.entries.size());
             p.entries.forEach(e -> e.write(buf));
+            buf.writeUtf(p.station);
         }, buf -> {
             BlockPos pos = buf.readBlockPos();
             int radius = buf.readVarInt();
@@ -116,7 +118,7 @@ public final class TarkovNet {
             for (int i = 0; i < n; i++) {
                 entries.add(Entry.read(buf));
             }
-            return new HideoutView(pos, radius, summary, entries);
+            return new HideoutView(pos, radius, summary, entries, buf.readUtf());
         });
         @Override public Type<HideoutView> type() { return TYPE; }
     }

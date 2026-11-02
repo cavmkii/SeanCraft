@@ -39,5 +39,6 @@ public final class PartItems {
 
     public static void init() {
         Parts.init();
+        WeaponItems.init();
     }
 }

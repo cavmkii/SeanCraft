@@ -361,6 +361,11 @@ public final class SkillEffects {
 
     /** Ability damage that the melee rules don't scale again. */
     static void damage(ServerPlayer player, LivingEntity target, float amount) {
+        double hex = Rpg.stats(player).get(Stat.HEX);
+        if (hex > 0) {
+            // The Warlock's Hex: the target takes more from everyone for 5 seconds.
+            RpgDamage.HEXED.put(target.getUUID(), new RpgDamage.Hex(player.serverLevel().getGameTime() + 100, (float) hex / 100));
+        }
         RpgDamage.applyingSkill = true;
         try {
             target.hurt(player.damageSources().indirectMagic(player, player), amount);
@@ -369,11 +374,17 @@ public final class SkillEffects {
         }
     }
 
-    /** Multiplier from the skill's attribute (2% per point), ability-damage nodes and Casting. */
+    /** The rank of the skill being cast (6.5.2), set around each cast. */
+    static int rank = 1;
+
+    /**
+     * Multiplier from the skill's attribute (+1% per point, 6.3.1), ability-damage nodes, Casting and the skill's rank
+     * (+15% a rank).
+     */
     private static double power(ServerPlayer player, Stats stats, Attr attr) {
         int casting = Rpg.data(player).skillLevel(Skill.CASTING);
-        double spell = attr == Attr.INT ? stats.spellPowerPct() : stats.get(Stat.SPELL_DAMAGE);
-        return (1 + stats.attr(attr) * 0.02) * (1 + spell / 100) * (1 + Skill.CASTING.effectValue(casting) / 100.0);
+        return (1 + stats.attr(attr) * 0.01) * (1 + stats.spellDamagePct() / 100) * (1 + Skill.CASTING.effectValue(casting) / 100.0)
+                * (1 + 0.15 * (rank - 1));
     }
 
     private static double weaponDamage(ServerPlayer player) {
@@ -381,6 +392,8 @@ public final class SkillEffects {
     }
 
     static List<LivingEntity> enemiesAround(ServerPlayer player, Vec3 center, double radius) {
+        // The Sorcerer's Wide Casting.
+        radius *= 1 + Rpg.stats(player).get(Stat.SPELL_AREA) / 100;
         List<LivingEntity> out = new ArrayList<>();
         for (LivingEntity e : player.level().getEntitiesOfClass(LivingEntity.class, Rpg.around(center, radius))) {
             if (e == player || !e.isAlive() || e.position().distanceTo(center) > radius) {
@@ -395,7 +408,7 @@ public final class SkillEffects {
         return out;
     }
 
-    private static LivingEntity lookTarget(ServerPlayer player, double range) {
+    static LivingEntity lookTarget(ServerPlayer player, double range) {
         Vec3 eye = player.getEyePosition();
         Vec3 end = eye.add(player.getLookAngle().scale(range));
         BlockHitResult block = player.level().clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));

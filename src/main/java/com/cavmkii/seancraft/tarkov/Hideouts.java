@@ -27,13 +27,39 @@ public final class Hideouts extends SavedData {
         public final int[][] given = new int[Module.values().length][];
         /** Who placed the bench; it counts against their hideout limit. Null for benches placed before owners existed. */
         public java.util.UUID owner;
+        /** Where each module's block stands, or null: a module only works while its block is in the hideout (2.5). */
+        public final BlockPos[] modules = new BlockPos[Module.values().length];
 
         Hideout(BlockPos pos) {
             this.pos = pos;
         }
 
+        /** A module's level, or 0 while its block isn't placed here. */
         public int level(Module module) {
-            return levels[module.ordinal()];
+            return modules[module.ordinal()] != null ? levels[module.ordinal()] : 0;
+        }
+
+        /**
+         * A module's block went down here. It brings its own level; a hideout from before module blocks keeps the
+         * level it had if that's higher.
+         */
+        void place(Module module, BlockPos at, int carried) {
+            int i = module.ordinal();
+            modules[i] = at.immutable();
+            levels[i] = Math.max(levels[i], carried);
+        }
+
+        /** A module's block was broken: the hideout loses the module and the block takes the level with it. */
+        int pickUp(Module module) {
+            int i = module.ordinal();
+            int kept = levels[i];
+            modules[i] = null;
+            levels[i] = 0;
+            given[i] = null;
+            if (building == i) {
+                building = -1;
+            }
+            return kept;
         }
 
         /** Contributions toward a module's next level, sized to its cost list. */
@@ -179,6 +205,9 @@ public final class Hideouts extends SavedData {
                 if (c.contains("given_" + m.name())) {
                     h.given[m.ordinal()] = c.getIntArray("given_" + m.name());
                 }
+                if (c.contains("module_" + m.name())) {
+                    h.modules[m.ordinal()] = BlockPos.of(c.getLong("module_" + m.name()));
+                }
             }
             data.list.add(h);
         }
@@ -201,6 +230,9 @@ public final class Hideouts extends SavedData {
             for (Module m : Module.values()) {
                 if (h.given[m.ordinal()] != null) {
                     c.putIntArray("given_" + m.name(), h.given[m.ordinal()]);
+                }
+                if (h.modules[m.ordinal()] != null) {
+                    c.putLong("module_" + m.name(), h.modules[m.ordinal()].asLong());
                 }
             }
             list.add(c);

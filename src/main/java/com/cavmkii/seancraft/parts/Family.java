@@ -11,6 +11,13 @@ import net.minecraft.world.item.Items;
 public enum Family {
     SWORD(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), PartKind.BLADE),
     AXE(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.AXE_HEAD),
+    DAGGER(List.of(PartSlot.HEAD, PartSlot.HANDLE), PartKind.KNIFE_BLADE),
+    MACE(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.MACE_HEAD),
+    WARHAMMER(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.MACE_HEAD, PartKind.HAFT),
+    GREATSWORD(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), PartKind.LONG_BLADE, PartKind.HAFT),
+    HALBERD(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.HALBERD_HEAD, PartKind.HAFT),
+    SPEAR(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.SPEARHEAD, PartKind.HAFT),
+    PIKE(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.SPEARHEAD, PartKind.HAFT),
     BOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     CROSSBOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     SHIELD(List.of(PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), null),
@@ -21,10 +28,17 @@ public enum Family {
 
     public final List<PartSlot> slots;
     public final PartKind head;
+    /** What fills the handle slot: a handle, or a haft for the long weapons (4.4). */
+    public final PartKind grip;
 
     Family(List<PartSlot> slots, PartKind head) {
+        this(slots, head, PartKind.HANDLE);
+    }
+
+    Family(List<PartSlot> slots, PartKind head, PartKind grip) {
         this.slots = slots;
         this.head = head;
+        this.grip = grip;
     }
 
     public boolean armor() {
@@ -35,13 +49,18 @@ public enum Family {
         if (!slots.contains(part.kind().slot)) {
             return false;
         }
-        return part.kind().slot != PartSlot.HEAD || part.kind() == head;
+        return switch (part.kind().slot) {
+            case HEAD -> part.kind() == head;
+            case HANDLE -> part.kind() == grip;
+            default -> true;
+        };
     }
 
     public String slotName(PartSlot slot) {
         return switch (slot) {
-            case HEAD -> head == PartKind.BLADE ? "Blade" : head == PartKind.AXE_HEAD ? "Axe head" : "Limbs";
-            case HANDLE -> this == AXE ? "Haft" : this == CROSSBOW ? "Stock" : this == SHIELD ? "Handle" : "Grip";
+            case HEAD -> head == null ? "Head" : head.label;
+            case HANDLE -> grip == PartKind.HAFT ? (this == GREATSWORD ? "Long grip" : "Haft")
+                    : this == AXE ? "Haft" : this == CROSSBOW ? "Stock" : this == SHIELD ? "Handle" : "Grip";
             case GUARD -> this == SHIELD ? "Rim" : "Guard";
             case PLATE -> this == HELMET ? "Shell" : this == LEGS ? "Greaves" : "Plates";
             case PADDING -> this == HELMET ? "Liner" : "Padding";
@@ -58,7 +77,7 @@ public enum Family {
                     case HEAD -> PartDef.of(family.head, metal);
                     case GUARD -> PartDef.of(PartKind.GUARD, metal);
                     case PLATE -> PartDef.of(PartKind.PLATE, metal);
-                    case HANDLE -> PartDef.of(PartKind.HANDLE, wood);
+                    case HANDLE -> PartDef.of(family.grip, wood);
                     case PADDING -> PartDef.of(PartKind.PADDING, hide);
                     case WRAP -> PartDef.of(PartKind.WRAP, hide);
                 };
@@ -83,7 +102,7 @@ public enum Family {
     }
 
     /** Items from tier 1 up. Stone tools stand in for copper, the way chainmail does for armor. */
-    private static void tiers(Family family, Item... items) {
+    static void tiers(Family family, Item... items) {
         for (int i = 0; i < items.length; i++) {
             int t = i + 1;
             STOCK.put(items[i], new Stock(family, t, t, t));
@@ -92,6 +111,10 @@ public enum Family {
 
     public static Stock stock(ItemStack stack) {
         return STOCK.get(stack.getItem());
+    }
+
+    public static Stock stock(Item item) {
+        return STOCK.get(item);
     }
 
     /** The vanilla item a family makes at a metal tier, for crafting from parts. */

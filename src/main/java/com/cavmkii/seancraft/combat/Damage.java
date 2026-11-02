@@ -1,6 +1,7 @@
 package com.cavmkii.seancraft.combat;
 
 import com.cavmkii.seancraft.SeanCraft;
+import com.cavmkii.seancraft.parts.MaterialTraits;
 import com.cavmkii.seancraft.parts.PartKind;
 import com.cavmkii.seancraft.parts.PartSlot;
 import com.cavmkii.seancraft.parts.Parts;
@@ -52,6 +53,11 @@ public final class Damage {
     public static final double PLAYER_BASE_HEALTH = 300;
     static final float ARMOR_K = 20;
     static final float PIERCE_IGNORES = 0.25f;
+    /** Enchantments as pipeline terms (9.7.1): increased damage per level, spirit share per level, armor ignored per level. */
+    static final float SHARPNESS_INCREASED = 0.10f;
+    static final float BANE_INCREASED = 0.15f;
+    static final float SMITE_SHARE = 0.25f;
+    static final float BREACH_PENETRATION = 0.15f;
     /** Resistance points per level of Fire, Blast or Projectile Protection on a piece (9.7.1). */
     static final float PROTECTION_POINTS = 4;
     /** Armor points per level of Protection, on the parts that piece covers (9.7.1). */
@@ -105,6 +111,7 @@ public final class Damage {
     private Damage() {}
 
     public static void init() {
+        Traits.init();
         ServerEntityEvents.ENTITY_LOAD.register((entity, level) -> {
             if (entity instanceof LivingEntity living && !(entity instanceof Player) && !(entity instanceof com.cavmkii.seancraft.boss.BossEntity)) {
                 scaleHealth(living);
@@ -169,7 +176,9 @@ public final class Damage {
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return amount;
         }
-        Split split = boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
+        amount = Traits.beforeHit(victim, source, amount);
+        amount *= enchantIncreased(victim, source);
+        Split split = FORCED.get() != null ? fromMap(FORCED.get()) : boss != null && boss.dealing != null ? fromMap(boss.dealing) : split(source);
         BodyPart part = null;
         if (victim instanceof ServerPlayer player) {
             part = Health.locate(player, source, source.is(DamageTypeTags.IS_FALL));
@@ -192,7 +201,7 @@ public final class Damage {
             }
             float dealt = amount * share * resistance(victim, type);
             if (type.physical() && armor > 0) {
-                float x = type == Type.PIERCE ? armor * (1 - PIERCE_IGNORES) : armor;
+                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source), breach(source));
                 dealt *= ARMOR_K / (x + ARMOR_K);
             }
             if (type.elemental() && victim instanceof ServerPlayer player) {
@@ -248,9 +257,8 @@ public final class Damage {
                 // Flame: a smaller fire share than a fire arrow's.
                 split.add(Type.FIRE, 0.15f);
             }
-            if (arrow instanceof ThrownTrident) {
-                materialElements(split, arrow.getWeaponItem());
-            }
+            // A trident's own material, or the bow's limbs and grip.
+            materialElements(split, arrow.getWeaponItem());
             return split;
         }
         if (direct instanceof Projectile) {
@@ -269,12 +277,14 @@ public final class Damage {
         Parts.Installed head = Parts.installed(weapon).get(PartSlot.HEAD);
         if (head != null) {
             PartKind kind = head.part().kind();
-            if (kind == PartKind.BLADE) {
-                split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);
-            } else if (kind == PartKind.AXE_HEAD) {
-                split.set(Type.SLASH, 0.7f).set(Type.CHOP, 0.3f);
-            } else {
-                split.set(Type.BLUNT, 1);
+            switch (kind) {
+                case BLADE -> split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);
+                case LONG_BLADE -> split.set(Type.SLASH, 1);
+                case KNIFE_BLADE -> split.set(Type.PIERCE, 0.6f).set(Type.SLASH, 0.4f);
+                case AXE_HEAD -> split.set(Type.SLASH, 0.7f).set(Type.CHOP, 0.3f);
+                case SPEARHEAD -> split.set(Type.PIERCE, 1);
+                case HALBERD_HEAD -> split.set(Type.SLASH, 0.6f).set(Type.PIERCE, 0.4f);
+                default -> split.set(Type.BLUNT, 1);
             }
         } else if (weapon.is(ItemTags.SWORDS)) {
             split.set(Type.SLASH, 0.8f).set(Type.PIERCE, 0.2f);
@@ -296,21 +306,80 @@ public final class Damage {
         if (fireAspect > 0) {
             split.add(Type.FIRE, 0.15f * fireAspect);
         }
+        if (attacker instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // The Paladin's Smite signature: a spirit share on every melee hit.
+            double share = com.cavmkii.seancraft.rpg.Rpg.stats(sp).get(com.cavmkii.seancraft.rpg.Stat.SPIRIT_SHARE);
+            if (share > 0) {
+                split.add(Type.SPIRIT, (float) share / 100);
+            }
+        }
+        if (attacker instanceof Player) {
+            // Smite: added spirit, which only hurts what's weak to it (9.7.1).
+            int smite = level(attacker, weapon, Enchantments.SMITE);
+            if (smite > 0) {
+                split.add(Type.SPIRIT, SMITE_SHARE * smite);
+            }
+        }
         return split;
     }
 
-    /** Gold adds +15% as spirit and netherite +20% as fire, on top of the physical damage (9.1). */
+    private static final ThreadLocal<java.util.Map<Type, Float>> FORCED = new ThreadLocal<>();
+
+    /** Sets the split for hits dealt on this thread until cleared with null (ultimates that deal one damage type). */
+    public static void forced(java.util.Map<Type, Float> split) {
+        FORCED.set(split);
+    }
+
+    /** Sharpness, and Bane of Arthropods against arthropods, as increased damage on a player's melee hit (9.7.1). */
+    private static float enchantIncreased(LivingEntity victim, DamageSource source) {
+        if (!(source.getEntity() instanceof Player player) || source.getDirectEntity() != player) {
+            return 1;
+        }
+        ItemStack weapon = player.getMainHandItem();
+        float increased = SHARPNESS_INCREASED * level(player, weapon, Enchantments.SHARPNESS);
+        if (victim.getType().is(net.minecraft.tags.EntityTypeTags.ARTHROPOD)) {
+            increased += BANE_INCREASED * level(player, weapon, Enchantments.BANE_OF_ARTHROPODS);
+        }
+        return 1 + increased;
+    }
+
+    /** Breach: extra share of armor a player's melee hit ignores. */
+    private static float breach(DamageSource source) {
+        if (!(source.getEntity() instanceof Player player) || source.getDirectEntity() != player) {
+            return 0;
+        }
+        return BREACH_PENETRATION * level(player, player.getMainHandItem(), Enchantments.BREACH);
+    }
+
+    /**
+     * Material traits that add an element on top of the physical damage (4.4.1): copper +10% lightning, gold +15%
+     * spirit, netherite +20% fire, a blaze-rod handle +5% fire. Unmodular gold and netherite tools count by name.
+     */
     static void materialElements(Split split, ItemStack weapon) {
         if (weapon == null || weapon.isEmpty()) {
             return;
         }
-        Parts.Installed head = Parts.installed(weapon).get(PartSlot.HEAD);
-        String id = BuiltInRegistries.ITEM.getKey(weapon.getItem()).getPath();
-        int tier = head != null ? head.part().tier() : id.startsWith("golden_") ? 3 : id.startsWith("netherite_") ? 5 : 0;
-        if (tier == 3) {
-            split.add(Type.SPIRIT, 0.15f);
-        } else if (tier == 5) {
-            split.add(Type.FIRE, 0.20f);
+        if (!Parts.modular(weapon)) {
+            String id = BuiltInRegistries.ITEM.getKey(weapon.getItem()).getPath();
+            if (id.startsWith("golden_")) {
+                split.add(Type.SPIRIT, 0.15f);
+            } else if (id.startsWith("netherite_")) {
+                split.add(Type.FIRE, 0.20f);
+            }
+            return;
+        }
+        for (Parts.Installed inst : Parts.installed(weapon).values()) {
+            MaterialTraits.Trait trait = MaterialTraits.of(inst.part());
+            if (trait == null) {
+                continue;
+            }
+            switch (trait) {
+                case CONDUCTIVE -> split.add(Type.LIGHTNING, 0.10f);
+                case BLESSED -> split.add(Type.SPIRIT, 0.15f);
+                case INFERNAL -> split.add(Type.FIRE, 0.20f);
+                case SMOLDERING -> split.add(Type.FIRE, 0.05f);
+                default -> { }
+            }
         }
     }
 
@@ -324,6 +393,12 @@ public final class Damage {
      * hurts the undead and players; chop and pickaxe only work on things made of wood and stone.
      */
     static float resistance(LivingEntity victim, Type type) {
+        float r = baseResistance(victim, type);
+        // Doom (the Warlock's ultimate): weaknesses count double.
+        return r > 1 && com.cavmkii.seancraft.rpg.Rpg.doomed(victim) ? r * 2 : r;
+    }
+
+    private static float baseResistance(LivingEntity victim, Type type) {
         if (victim instanceof com.cavmkii.seancraft.boss.BossEntity boss) {
             return boss.resistance(type);
         }
@@ -406,7 +481,8 @@ public final class Damage {
 
     /** Elemental resistance points (9.3.2). For now from Fire Protection; food, web nodes and trophy powers come later. */
     static float elementPoints(ServerPlayer player, Type type) {
-        return type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0;
+        float web = (float) com.cavmkii.seancraft.rpg.Rpg.stats(player).resistance(type);
+        return web + (type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0);
     }
 
     /** Blast and Projectile Protection: resistance points against explosions and projectiles. */

@@ -36,18 +36,30 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int ASSEMBLE_X = 4;
     private static final int ASSEMBLE_Y = 100;
     private static final int TAB_Y = 3;
-    private static final Item[] PICK_ICONS = {Items.IRON_SWORD, Items.IRON_AXE, Items.CROSSBOW, Items.SHIELD, Items.IRON_HELMET,
-            Items.IRON_CHESTPLATE, Items.IRON_LEGGINGS, Items.IRON_BOOTS};
-    private static final String[] PICK_NAMES = {"Sword", "Axe", "Crossbow", "Shield", "Helmet", "Chestplate", "Leggings", "Boots"};
+    /** One icon per buildable family: its iron item (or its only item), in the menu's order. */
+    private static final Item[] PICK_ICONS = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
+            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD : Family.itemFor(f, 2)).toArray(Item[]::new);
+    private static final String[] PICK_NAMES = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
+            .map(f -> f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
+            .toArray(String[]::new);
+    private static final int PICK_PITCH = 14;
 
     // PARTS tab: kinds across, materials (tiers) down.
     private static final int GRID_X = 6;
     private static final int GRID_Y = 28;
     private static final int COL = 21;
     private static final int ROW = 18;
-    private static final String[] KIND_SHORT = {"Blade", "Axe hd", "Limbs", "Guard", "Plates", "Handle", "Wrap", "Pad"};
+    private static final String[] KIND_SHORT = {"Blade", "Long", "Knife", "Axe", "Mace", "Spear", "Halb.", "Limbs", "Guard", "Plates",
+            "Handle", "Haft", "Wrap", "Pad"};
+    /** The PARTS tab's two pages: striking parts, then everything else. Each is a list of kind ordinals. */
+    private static final PartKind[][] PAGES = {
+            {PartKind.BLADE, PartKind.LONG_BLADE, PartKind.KNIFE_BLADE, PartKind.AXE_HEAD, PartKind.MACE_HEAD, PartKind.SPEARHEAD,
+                    PartKind.HALBERD_HEAD, PartKind.LIMBS},
+            {PartKind.GUARD, PartKind.PLATE, PartKind.HANDLE, PartKind.HAFT, PartKind.WRAP, PartKind.PADDING}};
+    private static final String[] PAGE_NAMES = {"Heads", "Other parts"};
 
     private boolean partsTab;
+    private int page;
 
     public WeaponBenchScreen(WeaponBenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -57,11 +69,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     }
 
     private int pickX(int i) {
-        return leftPos + PICK_X + (i % 3) * 18;
+        return leftPos + PICK_X + (i % 4) * PICK_PITCH;
     }
 
     private int pickY(int i) {
-        return topPos + PICK_Y + (i / 3) * 18;
+        return topPos + PICK_Y + (i / 4) * PICK_PITCH;
     }
 
     private int tabX(int t) {
@@ -134,7 +146,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static PartKind exampleKind(Family family, PartSlot slot) {
         return switch (slot) {
             case HEAD -> family.head;
-            case HANDLE -> PartKind.HANDLE;
+            case HANDLE -> family.grip;
             case GUARD -> PartKind.GUARD;
             case WRAP -> PartKind.WRAP;
             case PLATE -> PartKind.PLATE;
@@ -155,6 +167,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         int[][] rects = switch (family) {
             case SWORD -> new int[][] {{115, 16, 121, 20}, {112, 20, 124, 58}, {86, 59, 150, 71}, {113, 71, 123, 96}, {108, 96, 128, 116}};
             case AXE -> new int[][] {{113, 18, 123, 114}, {80, 20, 113, 52}, {76, 25, 80, 47}};
+            case DAGGER -> new int[][] {{115, 24, 119, 30}, {112, 30, 122, 70}, {100, 70, 134, 76}, {113, 76, 121, 100}, {110, 100, 124, 106}};
+            case MACE -> new int[][] {{100, 20, 134, 50}, {96, 28, 100, 42}, {134, 28, 138, 42}, {113, 16, 121, 20}, {113, 50, 121, 112}};
+            case WARHAMMER -> new int[][] {{84, 20, 150, 46}, {80, 24, 84, 42}, {113, 46, 121, 116}};
+            case GREATSWORD -> new int[][] {{115, 16, 121, 20}, {111, 20, 125, 56}, {80, 56, 156, 64}, {113, 64, 123, 96}, {108, 96, 128, 116}};
+            case HALBERD -> new int[][] {{114, 16, 120, 26}, {113, 26, 121, 116}, {121, 22, 152, 52}, {148, 18, 154, 56}, {104, 30, 113, 38}};
+            case SPEAR -> new int[][] {{115, 16, 121, 20}, {111, 20, 125, 40}, {114, 40, 122, 116}};
+            case PIKE -> new int[][] {{116, 16, 120, 18}, {113, 18, 123, 40}, {115, 40, 121, 116}, {111, 40, 125, 42}};
             case BOW -> new int[][] {{116, 16, 126, 22}, {124, 20, 134, 34}, {132, 32, 140, 50}, {134, 50, 144, 74}, {132, 74, 140, 92},
                     {124, 90, 134, 104}, {116, 102, 126, 110}, {100, 20, 102, 108}, {101, 18, 118, 20}, {101, 106, 118, 108}};
             case CROSSBOW -> new int[][] {{70, 30, 164, 38}, {66, 34, 72, 44}, {162, 34, 168, 44}, {112, 38, 124, 114}, {72, 44, 110, 46},
@@ -176,10 +195,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         g.drawString(font, title, titleLabelX, titleLabelY, 0xFF404040, false);
-        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
         if (partsTab) {
             return;
         }
+        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
         ItemStack weapon = menu.weapon();
         Family family = menu.family();
         if (Parts.modular(weapon)) {
@@ -260,9 +279,20 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             int px = pickX(i);
             int py = pickY(i);
             boolean selected = menu.buildingIndex() == i;
-            boolean hover = mouseX >= px && mouseX < px + 17 && mouseY >= py && mouseY < py + 17;
-            g.fill(px, py, px + 17, py + 17, selected ? 0xFF3A6A3A : hover ? 0xFF9A9AAA : 0xFF7A7A88);
-            g.renderItem(new ItemStack(PICK_ICONS[i]), px, py);
+            boolean hover = mouseX >= px && mouseX < px + PICK_PITCH - 1 && mouseY >= py && mouseY < py + PICK_PITCH - 1;
+            g.fill(px, py, px + PICK_PITCH - 1, py + PICK_PITCH - 1, selected ? 0xFF3A6A3A : hover ? 0xFF9A9AAA : 0xFF7A7A88);
+            g.pose().pushPose();
+            g.pose().translate(px + 0.5f, py + 0.5f, 0);
+            g.pose().scale(0.75f, 0.75f, 1);
+            g.renderItem(new ItemStack(PICK_ICONS[i]), 0, 0);
+            g.pose().popPose();
+            if (menu.lockReason(WeaponBenchMenu.BUILDABLE[i]) != null) {
+                // Not on the player's ladders yet (4.7).
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 300);
+                g.fill(px, py, px + PICK_PITCH - 1, py + PICK_PITCH - 1, 0xB0303038);
+                g.pose().popPose();
+            }
         }
         ItemStack preview = menu.assemblyResult();
         boolean ready = !preview.isEmpty();
@@ -288,8 +318,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         }
     }
 
+    /** Index into {@link PartDef#ALL} of the part kind {@code kind} at tier {@code t} (0-4). */
+    private static int partIndex(PartKind kind, int t) {
+        return t * PartKind.values().length + kind.ordinal();
+    }
+
     private int partAt(double mouseX, double mouseY) {
-        int kinds = PartKind.values().length;
+        PartKind[] kinds = PAGES[page];
         double lx = mouseX - leftPos - GRID_X;
         double ly = mouseY - topPos - GRID_Y;
         if (lx < 0 || ly < 0) {
@@ -297,30 +332,46 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         }
         int k = (int) (lx / COL);
         int t = (int) (ly / ROW);
-        if (k >= kinds || t >= 5 || lx - k * COL > 18 || ly - t * ROW > 17) {
+        if (k >= kinds.length || t >= 5 || lx - k * COL > 18 || ly - t * ROW > 17) {
             return -1;
         }
-        return t * kinds + k;
+        return partIndex(kinds[k], t);
+    }
+
+    private int pageButtonX() {
+        return leftPos + GRID_X;
+    }
+
+    private int pageButtonY() {
+        return topPos + GRID_Y + 5 * ROW + 2;
     }
 
     private void renderParts(GuiGraphics g, int mouseX, int mouseY) {
-        int kinds = PartKind.values().length;
-        for (int k = 0; k < kinds; k++) {
+        PartKind[] kinds = PAGES[page];
+        for (int k = 0; k < kinds.length; k++) {
             g.pose().pushPose();
             g.pose().translate(leftPos + GRID_X + k * COL, topPos + GRID_Y - 6, 0);
             g.pose().scale(0.5f, 0.5f, 1);
-            g.drawString(font, KIND_SHORT[k], 0, 0, 0xFF404040, false);
+            g.drawString(font, KIND_SHORT[kinds[k].ordinal()], 0, 0, 0xFF404040, false);
             g.pose().popPose();
         }
+        // Page switch: heads, or everything else.
+        String label = "< " + PAGE_NAMES[page] + " (" + (page + 1) + "/" + PAGES.length + ") >";
+        int bx = pageButtonX();
+        int by = pageButtonY();
+        boolean over = mouseX >= bx && mouseX < bx + font.width(label) + 6 && mouseY >= by && mouseY < by + 11;
+        g.fill(bx, by, bx + font.width(label) + 6, by + 11, over ? 0xFF9A9AA6 : 0xFFADADB6);
+        g.drawString(font, label, bx + 3, by + 2, 0xFF303030, false);
         int hovered = partAt(mouseX, mouseY);
-        for (int i = 0; i < PartDef.ALL.size(); i++) {
-            int k = i % kinds;
-            int t = i / kinds;
-            int px = leftPos + GRID_X + k * COL;
-            int py = topPos + GRID_Y + t * ROW;
-            boolean can = menu.canMake(i);
-            g.fill(px, py, px + 18, py + 17, hovered == i ? 0xFF9A9AAA : can ? 0xFF4C7C4C : 0xFF6A6A74);
-            g.renderItem(new ItemStack(PartItems.get(PartDef.ALL.get(i))), px + 1, py);
+        for (int k = 0; k < kinds.length; k++) {
+            for (int t = 0; t < 5; t++) {
+                int i = partIndex(kinds[k], t);
+                int px = leftPos + GRID_X + k * COL;
+                int py = topPos + GRID_Y + t * ROW;
+                boolean can = menu.canMake(i);
+                g.fill(px, py, px + 18, py + 17, hovered == i ? 0xFF9A9AAA : can ? 0xFF4C7C4C : 0xFF6A6A74);
+                g.renderItem(new ItemStack(PartItems.get(PartDef.ALL.get(i))), px + 1, py);
+            }
         }
         if (hovered >= 0) {
             PartDef def = PartDef.ALL.get(hovered);
@@ -329,7 +380,8 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             for (Cost c : def.costs()) {
                 lines.add(Component.literal("  " + c.count() + " " + c.label()).withStyle(net.minecraft.ChatFormatting.GRAY));
             }
-            lines.add(Component.literal(menu.canMake(hovered) ? "Click: make one. Shift: make 5." : "Not enough materials")
+            boolean headLocked = menu.headLocked(PartDef.ALL.get(hovered));
+            lines.add(Component.literal(headLocked ? "Locked: unlock a weapon that uses it first" : menu.canMake(hovered) ? "Click: make one. Shift: make 5." : "Not enough materials")
                     .withStyle(menu.canMake(hovered) ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.RED));
             g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
         }
@@ -337,6 +389,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        menu.viewer = com.cavmkii.seancraft.client.rpg.ClientRpg.data;
         super.render(g, mouseX, mouseY, partialTick);
         StationTabs.render(g, font, leftPos, topPos - 14, imageWidth, StationTabs.WEAPON_BENCH, mouseX, mouseY);
         if (partsTab) {
@@ -347,8 +400,14 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         renderTooltip(g, mouseX, mouseY);
         if (menu.buildMode()) {
             for (int i = 0; i < PICK_ICONS.length; i++) {
-                if (mouseX >= pickX(i) && mouseX < pickX(i) + 17 && mouseY >= pickY(i) && mouseY < pickY(i) + 17) {
-                    g.renderTooltip(font, Component.literal("Build a " + PICK_NAMES[i].toLowerCase()), mouseX, mouseY);
+                if (mouseX >= pickX(i) && mouseX < pickX(i) + PICK_PITCH - 1 && mouseY >= pickY(i) && mouseY < pickY(i) + PICK_PITCH - 1) {
+                    String locked = menu.lockReason(WeaponBenchMenu.BUILDABLE[i]);
+                    if (locked != null) {
+                        g.renderTooltip(font, List.of(Component.literal(PICK_NAMES[i] + " (locked)"),
+                                Component.literal(locked).withStyle(net.minecraft.ChatFormatting.GRAY)), java.util.Optional.empty(), mouseX, mouseY);
+                    } else {
+                        g.renderTooltip(font, Component.literal("Build a " + PICK_NAMES[i].toLowerCase()), mouseX, mouseY);
+                    }
                 }
             }
         }
@@ -388,6 +447,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             }
         }
         if (partsTab) {
+            String label = "< " + PAGE_NAMES[page] + " (" + (page + 1) + "/" + PAGES.length + ") >";
+            if (mouseX >= pageButtonX() && mouseX < pageButtonX() + font.width(label) + 6 && mouseY >= pageButtonY() && mouseY < pageButtonY() + 11) {
+                page = (page + 1) % PAGES.length;
+                return true;
+            }
             int i = partAt(mouseX, mouseY);
             if (i >= 0) {
                 minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
@@ -398,7 +462,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         }
         if (menu.buildMode()) {
             for (int i = 0; i < PICK_ICONS.length; i++) {
-                if (mouseX >= pickX(i) && mouseX < pickX(i) + 17 && mouseY >= pickY(i) && mouseY < pickY(i) + 17) {
+                if (mouseX >= pickX(i) && mouseX < pickX(i) + PICK_PITCH - 1 && mouseY >= pickY(i) && mouseY < pickY(i) + PICK_PITCH - 1) {
                     minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.PICK_BUTTON + i);
                     return true;
                 }

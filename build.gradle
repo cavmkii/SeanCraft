@@ -41,9 +41,11 @@ processResources {
     filesMatching('assets/seancraft/models/item/*.json') { details ->
         def name = details.name.replace('.json', '')
         if (new File(itemTextures, name + '.png').exists()) {
+            // Weapons keep their handheld pose; everything else is a flat item.
+            def parent = details.file.text.contains('handheld') ? 'minecraft:item/handheld' : 'minecraft:item/generated'
             def first = true
             details.filter { line ->
-                def out = first ? "{\"parent\": \"minecraft:item/generated\", \"textures\": {\"layer0\": \"seancraft:item/${name}\"}}" : ''
+                def out = first ? "{\"parent\": \"${parent}\", \"textures\": {\"layer0\": \"seancraft:item/${name}\"}}" : ''
                 first = false
                 return out
             }

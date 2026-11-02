@@ -29,6 +29,24 @@ public final class TarkovContent {
     public static final Item FOB_TABLE_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("fob_table"),
             new FobTableBlock.Item(FOB_TABLE, new Item.Properties()));
 
+    /** A module block's level, carried while it's picked up (2.5). */
+    public static final net.minecraft.core.component.DataComponentType<Integer> MODULE_LEVEL = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE, SeanCraft.id("module_level"),
+            net.minecraft.core.component.DataComponentType.<Integer>builder().persistent(com.mojang.serialization.Codec.INT)
+                    .networkSynchronized(net.minecraft.network.codec.ByteBufCodecs.VAR_INT).build());
+    public static final java.util.Map<Module, Block> MODULE_BLOCKS = new java.util.EnumMap<>(Module.class);
+    public static final java.util.Map<Module, Item> MODULE_ITEMS = new java.util.EnumMap<>(Module.class);
+
+    static {
+        for (Module module : Module.values()) {
+            String id = module.name().toLowerCase(java.util.Locale.ROOT);
+            Block block = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id(id), new ModuleBlock(module,
+                    BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noLootTable().noOcclusion()));
+            MODULE_BLOCKS.put(module, block);
+            MODULE_ITEMS.put(module, Registry.register(BuiltInRegistries.ITEM, SeanCraft.id(id), new ModuleBlock.Item(block, new Item.Properties())));
+        }
+    }
+
     public static final Item SECURE_BETA = secure("secure_beta", SecureTier.BETA);
     public static final Item SECURE_GAMMA = secure("secure_gamma", SecureTier.GAMMA);
     public static final Item SECURE_KAPPA = secure("secure_kappa", SecureTier.KAPPA);

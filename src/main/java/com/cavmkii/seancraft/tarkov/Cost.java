@@ -24,6 +24,11 @@ public record Cost(Item item, TagKey<Item> tag, int count, String label) {
         return tag(ItemTags.LOGS, count, "Logs");
     }
 
+    /** The same ingredient, that share of the amount, rounded up. */
+    public Cost times(float share) {
+        return new Cost(item, tag, Math.max(1, (int) Math.ceil(count * share)), label);
+    }
+
     public boolean matches(ItemStack stack) {
         return !stack.isEmpty() && (item != null ? stack.is(item) : stack.is(tag));
     }

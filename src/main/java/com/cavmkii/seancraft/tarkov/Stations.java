@@ -22,9 +22,9 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The crafting stations inside a hideout, one of each kind (the closest to the bench), so their screens can tab
- * between each other: the Hideout Bench, a Weapon Bench, a crafting table. Opening one from a tab works from
- * anywhere in the same hideout.
+ * The stations inside a hideout, one of each kind (the closest to the bench), so their screens can tab between each
+ * other (2.5.3): the Hideout Bench, a Weapon Bench, a crafting table and each module. Opening one from a tab works
+ * from anywhere in the same hideout.
  */
 public final class Stations {
     public static final String HIDEOUT = "hideout";
@@ -42,8 +42,16 @@ public final class Stations {
         ServerPlayNetworking.registerGlobalReceiver(TarkovNet.OpenStation.TYPE, (p, ctx) -> open(ctx.player(), p.pos()));
     }
 
+    /** A module block's station kind, like "module_workshop". */
+    public static String moduleKind(Module module) {
+        return "module_" + module.name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     private static String kindOf(BlockState state) {
         Block block = state.getBlock();
+        if (block instanceof ModuleBlock module) {
+            return moduleKind(module.module);
+        }
         return block == PartItems.WEAPON_BENCH ? WEAPON_BENCH : block == Blocks.CRAFTING_TABLE ? CRAFTING_TABLE : null;
     }
 
@@ -119,7 +127,12 @@ public final class Stations {
         }
         if (pos.equals(h.pos)) {
             player.closeContainer();
-            Tarkov.openHideout(player, pos);
+            Tarkov.openBench(player, pos);
+            return;
+        }
+        if (level.getBlockState(pos).getBlock() instanceof ModuleBlock module && pos.equals(h.modules[module.module.ordinal()])) {
+            player.closeContainer();
+            Tarkov.openModule(player, h, module.module);
             return;
         }
         String kind = kindOf(level.getBlockState(pos));

@@ -4,9 +4,11 @@
   "package": "com.cavmkii.seancraft.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "PlayerEnchantDamageMixin",
     "BetterCombatSwingMixin",
     "BrewedPotionTriggerMixin",
     "ContainerNameAccessor",
+    "CraftingMenuMixin",
     "FurnaceAccessor",
     "FoodDataMixin",
     "FurnaceMixin",

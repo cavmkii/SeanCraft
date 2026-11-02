@@ -34,12 +34,16 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 | Handle | `handle_planks`, `handle_log`, `handle_bone`, `handle_blaze`, `handle_breeze` |
 | Wrap | `wrap_string`, `wrap_leather`, `wrap_rabbit`, `wrap_membrane`, `wrap_scute` |
 | Padding | `padding_string`, `padding_leather`, `padding_rabbit`, `padding_membrane`, `padding_scute` |
+| Long blade, knife blade, mace head, spearhead, halberd head | `long_blade_<metal>`, `knife_blade_<metal>`, `mace_head_<metal>`, `spearhead_<metal>`, `halberd_head_<metal>` (metal: copper, iron, gold, diamond, netherite) |
+| Haft | `haft_planks`, `haft_log`, `haft_bone`, `haft_blaze`, `haft_breeze` |
+
+**Weapons:** `<metal>_dagger`, `<metal>_mace`, `<metal>_warhammer`, `<metal>_greatsword`, `<metal>_halberd`, `<metal>_spear`, `<metal>_pike` (metal: copper, iron, gold, diamond, netherite), and `wooden_club`. These and the new parts above already have simple generated icons; drop in your own PNG with the same name to replace one.
 
 **Meds:** `bandage`, `tourniquet`, `splint`, `painkillers`, `field_kit`, `surgical_kit`, `surgery_case`, `antidote`
 
 **Gear:**
-- **Rigs:** `rig_scav`, `rig_carrier`
-- **Backpacks:** `pack_sling`, `pack_scav`, `pack_pilgrim`
+- **Rigs:** `rig_scav`, `rig_chest`, `rig_carrier`, `rig_assault`
+- **Backpacks:** `pack_sling`, `pack_scav`, `pack_pilgrim`, `pack_expedition`
 - **Secure pouches:** `secure_beta`, `secure_gamma`, `secure_kappa`
 
 **Joe and Sean:** `soda`, `merch`, `glock`, `restraining_order`, `diddy_oil`, `sixty_seven`, `baby_bonnet`
@@ -50,4 +54,4 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 
 **Bosses:** `mark_totem`, `trophy_old_salt`, `marks_reel` (blocks: `summoning_pedestal`, `trophy_rack`)
 
-**Blocks** (as items): `hideout_bench`, `weapon_bench`, `altar_of_regret`. These show the block model in your inventory now, and a PNG replaces that with a flat icon.
+**Blocks** (as items): `hideout_bench`, `weapon_bench`, `altar_of_regret`, `workshop`, `medstation`, `perimeter`, `intel`. These show the block model in your inventory now, and a PNG replaces that with a flat icon.

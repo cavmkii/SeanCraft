@@ -133,6 +133,10 @@ public class TarkovScreen extends Screen {
         if (status != null) {
             status.tick();
         }
+        if (web != null && tab == WEB) {
+            // The web's one-time reveal animation runs on ticks.
+            web.tick();
+        }
     }
 
     private double vx(double mouseX) {
@@ -1363,7 +1367,8 @@ public class TarkovScreen extends Screen {
         PlayerData data = ClientRpg.data;
         Stats stats = ClientRpg.stats;
         String head = "Level " + data.level + (data.level < PlayerData.MAX_LEVEL ? "  (" + data.xp + " / " + PlayerData.xpToNext(data.level) + " xp)" : "")
-                + "   Free points " + data.freePoints() + "   Primary " + stats.primary.label;
+                + "   Free points " + data.freePoints()
+                + (data.origin != null ? "   " + data.origin.label + (data.spec != null ? ", " + data.spec.label : "") : "   No origin yet (K)");
         g.drawString(font, head, 0, 0, 0xFFFFE080, false);
         int ax = 0;
         for (Attr attr : Attr.values()) {
@@ -1387,13 +1392,13 @@ public class TarkovScreen extends Screen {
             double from = Skill.xpForLevel(level);
             double to = Skill.xpForLevel(Math.min(Skill.MAX_LEVEL, level + 1));
             g.fill(x, y, x + 206, y + 29, 0xFF1C1C22);
-            g.fill(x, y, x + 2, y + 29, 0xFF000000 | skill.attr.color);
-            g.drawString(font, skill.label, x + 6, y + 4, 0xFF000000 | skill.attr.color, false);
+            g.fill(x, y, x + 2, y + 29, 0xFF000000 | skill.color());
+            g.drawString(font, skill.label, x + 6, y + 4, 0xFF000000 | skill.color(), false);
             String lv = String.valueOf(level);
             g.drawString(font, lv, x + 200 - font.width(lv), y + 4, 0xFFFFFFFF, false);
             g.fill(x + 6, y + 14, x + 200, y + 16, 0xFF000000);
             if (level < Skill.MAX_LEVEL && to > from) {
-                g.fill(x + 6, y + 14, x + 6 + (int) (194 * Math.min(1, (xp - from) / (to - from))), y + 16, 0xFF000000 | skill.attr.color);
+                g.fill(x + 6, y + 14, x + 6 + (int) (194 * Math.min(1, (xp - from) / (to - from))), y + 16, 0xFF000000 | skill.color());
             }
             g.pose().pushPose();
             g.pose().translate(x + 6, y + 19, 0);

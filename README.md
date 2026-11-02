@@ -23,7 +23,8 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | E or J | Inventory screen (GEAR tab) |
 | H | Inventory screen, STATUS tab |
 | K | Inventory screen, WEB tab (passive tree) |
-| Z, X, C, V, B | Active skills in your 5 ability slots |
+| Z, X, C | Your three active skills |
+| V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
@@ -53,8 +54,9 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
   - Hideouts have to be at least 500 blocks from each other and from spawn points.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
-- **Hideout modules.** The bench builds modules, and each one takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash. Once it's all in, it starts building. TRACK puts what's still missing on your gather list (see below).
-- **Station tabs.** In your hideout, the Hideout Bench, Weapon Bench and crafting table screens all have tabs for each other, so you can hop between them from anywhere in the hideout without walking over. Each station shows up once it's within the hideout.
+- **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
+  - A module only works while its block is in the hideout. Hideouts from before module blocks get their old levels back when you place each block.
+- **Station tabs.** In your hideout, the Hideout Bench, Weapon Bench, crafting table and every module have tabs for each other, so you can hop between them from anywhere in the hideout without walking over. Each station shows up once it's within the hideout.
 
   | Module | What it does |
   |---|---|
@@ -80,7 +82,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - elemental: fire, frost, lightning, poison;
   - spirit.
 
-  Swords are mostly slash, axes slash plus chop, maces and fists blunt, arrows and tridents pierce. Gold weapons add 15% as spirit and netherite 20% as fire, on top. Chop only hurts wood, so it does nothing to monsters.
+  Swords are mostly slash, axes slash plus chop, maces and fists blunt, arrows and tridents pierce. Some materials add an element on top (see material traits under Weapons and armor). Chop only hurts wood, so it does nothing to monsters.
 - **Resistances.** Skeletons take 50% from pierce and 150% from blunt. Iron golems shrug off slash and pierce. Fire does nothing to fire-immune mobs. Spirit only hurts the undead, at 150%.
 - **Armor** works per body part: your helmet only protects your head, your chestplate your body and arms, and leggings and boots your legs.
   - A hit is multiplied by 20 / (armor + 20). Leather is 5, chainmail and gold 8, iron 12, diamond 20, netherite 25. So iron takes a third off, and diamond takes half.
@@ -121,7 +123,10 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Swapping.** Dropping something on a hotbar or armor slot that's already full swaps them, and you end up holding the item you bumped, like vanilla. Put it wherever you want, or let go and it stays where the new one came from.
 - **Auto-refill.** When the last item in a hotbar slot gets used up (a block placed, food eaten, a tool broken), more of the same comes up from your grids. The toggles next to HOTBAR turn it off, or let it pull from the stash too (off by default).
 - **Pickups** fill pockets, then rig, then backpack. Weapons and tools go to the hotbar first. If nothing has room, the item stays on the ground.
-- **Rigs and backpacks** have to be empty before you can take them off. You start with a Scav vest (4x2), a Sling bag (3x3) and a 2x2 pouch. Bigger ones are made at the Hideout Bench.
+- **Rigs and backpacks** have to be empty before you can take them off. You start with a Scav vest (4x2), a Sling bag (3x3) and a 2x2 pouch. Bigger ones are made at the Hideout Bench:
+  - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
+  - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
+  - Or upgrade: trade in the empty one below it in the line and pay half the materials.
 - **Chests and barrels** open on the GEAR tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
 - **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
 - **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
@@ -179,26 +184,73 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Weapons and armor from parts
 
-- Swords, axes, crossbows, shields and metal armor are made from parts: blades, axe heads, limbs, handles, guards, wraps, plates and padding. The vanilla recipes for them are gone. Bows keep their vanilla recipe.
-- Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table itself is vanilla only.
-- **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
-  - Most parts cost 2 of their material. Axe heads, limbs and padding cost 3, and a guard needs a stick as well.
+- Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
+- Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
+- **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Heads are on the first page and everything else on the second (click the arrow under the grid). Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
+  - Most parts cost 2 of their material. A knife blade costs 1. Axe heads, mace heads, limbs, hafts and padding cost 3. Long blades and halberd heads cost 4. A guard needs a stick as well.
   - Netherite parts are the diamond part plus 2 netherite scrap.
 - **BUILD tab.**
   1. With the left slot empty, pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
   2. Empty slots show a faded example of the part that goes there. Hover one for its name, and the plate slot shows how many plates it takes.
   3. Drop the parts in and hit ASSEMBLE. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If ASSEMBLE is grey, hover it to see what's missing.
 - The standard parts give you exactly the vanilla item. Other materials change damage, swing speed, durability, armor and weight.
+- **Weapon families.** Each one has its own moveset (from Better Combat), damage type and base numbers. At iron:
+  - Dagger (knife blade, handle): 20 damage, 2 swings a second, pierce and slash. Quick strikes leave enemies open again fast, and hits from behind do 50% more.
+  - Mace (mace head, handle, wrap): 35, blunt. Warhammer (mace head, haft, wrap): 45, slow, blunt, two-handed, ignores an extra 25% of armor. Both can knock a raised shield out of use, like the axe.
+  - Greatsword (long blade, long grip, guard, wrap): 50, slash, wide two-handed sweeps.
+  - Halberd (halberd head, haft, wrap): 45, slash and pierce, reach.
+  - Spear (spearhead, haft, wrap): 32, pierce, reach, ignores an extra 25% of armor. Pike: 40, pierce, even longer reach.
+  - Materials scale damage: copper ×0.85, iron ×1, gold ×1.1, diamond ×1.2, netherite ×1.35.
+- **Material traits.** Every material also has one trait, shown in pink on the part and on the item's part list. Vanilla items come with the traits of their standard parts, so a plain iron sword already has 300 durability instead of 250.
+  - Heads (and bow limbs): copper +10% added lightning, iron +20% durability, gold +15% added spirit, diamond +5% crit chance, netherite +20% added fire and doesn't burn in lava. Iron plates get the +20% durability too.
+  - Handles and hafts: planks +5% swing speed but −15% durability, log nothing, bone +15% durability, blaze rod +5% added fire, breeze rod +10% swing speed.
+  - Wraps and padding: leather nothing, rabbit hide makes you harder for mobs to spot while sneaking (stacks per piece), phantom membrane is lighter, scute padding gives +2 armor.
+  - The old "gold does more to undead, netherite sets things on fire" part bonuses are gone; the trait is the bonus now.
+- **Recipe ladders.** You can use any weapon you find, but you can only make the ones you've unlocked. Each attribute has a ladder:
+  - STR: wooden club → mace, axe, sword → warhammer, greatsword, halberd.
+  - AGI: bow, dagger → sword, spear, crossbow → pike.
+  - INT: wands and staves, once they're in. Until then an Arcanist can make the club.
+  - You start knowing the first rung of your origin's ladder. 5,000 damage to monsters with rung 1 weapons opens rung 2, and 25,000 with rung 2 weapons opens rung 3. Swords are on both ladders.
+  - Crossing over: do 1,000 damage with a found weapon from another ladder and you unlock that weapon, plus the first rung of its ladder, which you can then climb too.
+  - Locked weapons are greyed out at the bench, and hovering one shows your progress. Heads that only locked weapons use can't be made. The wooden club recipe is locked the same way.
+  - Shields and armor aren't on a ladder.
 - Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it.
 
 ### Character
 
-- **Levels.** You get class XP from killing mobs and mining ores, up to level 60. Each level gives a point for the passive web.
-- **The web (K)** has about 120 nodes and no fixed classes. Go straight down one branch and you're a pure warrior, ranger or caster, or mix them however you want. While you have points to spend, a small yellow "Unspent web points" note sits next to your ability bar. Some nodes unlock active skills, which go in your 5 ability slots. Each archetype has its own resource: rage, stamina or mana.
-- **Attributes.** Strength, Agility and Intelligence come from your skills and the web. Your highest one is your primary attribute, and it adds damage.
-- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, and Strength adds to that. Some web nodes add more of both. Your numbers are on the SKILLS tab.
-- **Skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
-- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian). It wipes your web and kills you on the spot. Below level 21 you get every point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret.
+- **Origin.** The first time you open the web (K) you pick an origin, and it never changes:
+  - **Vanguard** (Strength): starts in the Warrior region with a wooden club. Can become a Warrior, Knight or Paladin.
+  - **Scout** (Agility): starts in the Ranger region with a bow. Can become an Archer, Blademaster or Rogue.
+  - **Arcanist** (Intelligence): starts in the Mage region. Can become a Sorcerer, Warlock or Cleric. (The apprentice wand comes with wands.)
+- **Levels.** You get class XP from killing mobs, mining ores and first boss kills, up to level 60. Each level gives a web point and 2 attribute points.
+- **Attributes.** You start with 10 in your origin's attribute. Each level's 2 points split by what you trained during that level: swords, axes, mining and blocking feed Strength; bows, running and sneaking feed Agility; casting, brewing and enchanting feed Intelligence. Swimming and farming feed nothing. The web never gives attributes. There's no "primary" attribute:
+  - Each weapon scales with its own: +1% damage per point. Axes, maces, warhammers, greatswords, halberds and the club use Strength. Daggers, bows and crossbows use Agility. Swords, spears and pikes use the average of Strength and Agility. Skills scale with their region's attribute.
+  - Strength: more rage, bigger crits, a little knockback, a little max health.
+  - Agility: crit chance, swing speed, faster meds, and Agility weapons and skills cost up to 50% less stamina.
+  - Intelligence: more mana and faster regen, shorter cooldowns, faster skill XP, and longer food, Rested and painkillers.
+- **The web (K)** has 120 nodes in six regions around a ring. At first you only see your starter web, your origin's home region, with a faint outline of the rest. Every node does something on its own: damage, health, stamina, elemental resistance, bonuses that scale with an attribute, keystones with a real drawback, and active skills.
+- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), opens your ultimate (V), and opens the first of your specialization's three signature nodes at the outer edge of its region. You get one specialization.
+- **Milestones.** Mastery (level 40 and any tier 2 trophy) opens your second signature node and ranks your ultimate up; Capstone (level 60 and a tier 3 trophy) opens the third and ranks it up again. Tier 2 and 3 bosses aren't in yet, so for now only the first step is reachable.
+
+  | Specialization | Signature nodes (specialization / mastery / capstone) | Ultimate |
+  |---|---|---|
+  | Warrior | Can't be staggered while Rage is above half / +50% rage gain, +10% melee / +25% melee while Rage is above half | Rampage: 8s of free Rage skills, no staggers, +20% damage |
+  | Knight | Players within 6 blocks take 15% less / blocking pulls the attacker and nearby monsters onto you / +10 armor, +50% knockback resistance | Bulwark: 6s, players behind you take half, you 30% less |
+  | Paladin | Melee hits add 20% spirit / players within 8 blocks bleed 30% slower / another 20% spirit and a holy aura | Hallowed Ground: 8s, spirit damage to undead in it, slower bleeding |
+  | Archer | Arrows slow / +15% arrow damage, +5% crit / arrow crits pin | Deadeye: next three arrows always crit and pin |
+  | Blademaster | +50% on your first hit after a block / sword hits leave enemies open fast, like a dagger / +15% swing speed, +10% crit | Thousand Cuts: dash through up to five enemies, three cuts each |
+  | Rogue | +25% sneak speed, +25% backstab / invisible while sneaking / +50% backstab, +25% crit damage | Vanish: 5s invisible, things lose you, first hit is a backstab |
+  | Sorcerer | +30% skill area / +20% skill damage / skills cost 20% less mana | Cataclysm: 5s of lightning on monsters around you |
+  | Warlock | Skill hits hex for +15% damage taken / melee hits poison / hex +15% more, +10% skill damage | Doom: 8s of double damage from its weaknesses; it bursts into poison if it dies |
+  | Cleric | Meds apply and heal 30% better / surgical kits leave 15% lasting damage instead of 35% / you and players near you regenerate | Miracle: revives every destroyed part on players near you |
+
+  Ultimates cost 40 of the specialization's resource (rage, stamina or mana) and recharge in 120 seconds, 100 at mastery and 80 at capstone; each rank also makes them last or hit 25% more.
+- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each (+15% damage and -10% cost per rank).
+- **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
+- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
+- **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
+- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
+- **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.
 
 ### World
 
@@ -217,6 +269,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
   - Mark: a sandy landing on a beach or river mouth. Daylan: a photo-shoot clearing in a cherry grove. Bo Daddy: a lit cavern dug in at the edge of the deep dark. It's walled in, so you tunnel to it.
   - No Hideout Bench within 100 blocks of a dungeon.
+  - **Custom dungeons.** Build one in a creative world and save it with a structure block named `seancraft:dungeon/<boss>` (`mark`, `daylan` or `bo_daddy`). Copy the saved `.nbt` from the world's `generated` folder into `src/main/resources/data/seancraft/structure/dungeon/`. From then on that boss's dungeon is your build instead of the built-in one. The bottom layer is the floor, set at ground level (at the site's depth for Bo Daddy), and the Summoning Pedestal goes wherever you put one in it, or in the middle if you didn't. Keep the 40-block ring in mind.
 
 - **Summoning.** Craft the boss's totem at the Hideout Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
 - **The arena** is a ring 40 blocks across around the pedestal. Everyone inside sees the boss bar.
@@ -287,7 +340,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
-  - `/character xp|skill|reset` is for testing the character system (op).
+  - `/character xp|skill|reset` is for testing the character system (op). `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with

@@ -16,7 +16,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Weapon Bench. Modify: put a weapon or armor piece in the left slot and its parts appear on its outline; take a part
+ * Weapon Bench (design doc 4.5). Modify: put a weapon or armor piece in the left slot and its parts appear on its outline; take a part
  * out to remove it, put one in to fit it. Build: with the left slot empty, pick what to make and drop the parts into
  * its outline, then ASSEMBLE. The arrow buttons level a part up with its own material. The PARTS tab makes the parts
  * themselves from materials you carry and the stash.
@@ -36,6 +36,16 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             case SWORD -> new int[][] {{109, 24}, {109, 77}, {109, 57}, {109, 98}};
             // Head off the top of the haft, wrap low on it.
             case AXE -> new int[][] {{86, 26}, {109, 62}, {109, 94}};
+            // Knife blade on top, short grip under the little guard.
+            case DAGGER -> new int[][] {{109, 34}, {109, 80}};
+            // Head at the top of the handle (mace) or haft (warhammer), wrap low down.
+            case MACE -> new int[][] {{109, 26}, {109, 64}, {109, 94}};
+            case WARHAMMER -> new int[][] {{109, 25}, {109, 62}, {109, 96}};
+            // Like the sword, longer.
+            case GREATSWORD -> new int[][] {{109, 26}, {109, 80}, {109, 60}, {109, 99}};
+            // The axe blade off the side of the haft.
+            case HALBERD -> new int[][] {{128, 28}, {109, 64}, {109, 96}};
+            case SPEAR, PIKE -> new int[][] {{109, 20}, {109, 60}, {109, 94}};
             // Limbs arc on the right, grip in the middle, string on the left.
             case BOW -> new int[][] {{124, 22}, {128, 58}, {92, 58}};
             // Limbs across the top, stock down the middle, string between the limb tips.
@@ -61,8 +71,9 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     /** Family picked to build, as an index into {@link #BUILDABLE}, or -1. Synced to the client. */
     private final net.minecraft.world.inventory.DataSlot building = net.minecraft.world.inventory.DataSlot.standalone();
 
-    /** What the bench can build from scratch. Bows keep their vanilla recipe. */
-    public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.CROSSBOW, Family.SHIELD,
+    /** What the bench can build from scratch: every part-built family (4.4). */
+    public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.DAGGER, Family.MACE, Family.WARHAMMER,
+            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.CROSSBOW, Family.SHIELD,
             Family.HELMET, Family.CHEST, Family.LEGS, Family.BOOTS};
     public static final int ASSEMBLE_BUTTON = 200;
     public static final int PICK_BUTTON = 100;
@@ -76,6 +87,9 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         this.access = access;
         this.server = !inventory.player.level().isClientSide;
         this.owner = inventory.player instanceof ServerPlayer sp ? sp : null;
+        if (owner != null) {
+            viewer = com.cavmkii.seancraft.rpg.Rpg.data(owner);
+        }
         addSlot(new Slot(item, 0, ITEM_X, ITEM_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -124,9 +138,15 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     private int firstInventorySlot;
 
     /** Which parts the PARTS tab can make right now, as bits over {@link PartDef#ALL}; 16 per data slot. */
-    private final net.minecraft.world.inventory.DataSlot[] affordable = {
-            net.minecraft.world.inventory.DataSlot.standalone(), net.minecraft.world.inventory.DataSlot.standalone(),
-            net.minecraft.world.inventory.DataSlot.standalone()};
+    private final net.minecraft.world.inventory.DataSlot[] affordable = affordableSlots();
+
+    private static net.minecraft.world.inventory.DataSlot[] affordableSlots() {
+        net.minecraft.world.inventory.DataSlot[] slots = new net.minecraft.world.inventory.DataSlot[(PartDef.ALL.size() + 15) / 16];
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = net.minecraft.world.inventory.DataSlot.standalone();
+        }
+        return slots;
+    }
     private int affordTick;
 
     public boolean canMake(int partIndex) {
@@ -189,6 +209,26 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     }
 
     private ServerPlayer owner;
+    /** The player's character, for recipe ladders (4.7). The screen sets the client's copy. */
+    public com.cavmkii.seancraft.rpg.PlayerData viewer;
+
+    /** Why a family can't be built from scratch yet, or null. */
+    public String lockReason(Family family) {
+        return viewer == null ? null : com.cavmkii.seancraft.rpg.Ladders.lockReason(viewer, com.cavmkii.seancraft.rpg.Ladders.key(family));
+    }
+
+    /** A striking part only the locked families use (4.7): it can't be made yet. */
+    public boolean headLocked(PartDef def) {
+        if (def.kind().slot != PartSlot.HEAD || viewer == null) {
+            return false;
+        }
+        for (Family f : BUILDABLE) {
+            if (f.head == def.kind() && lockReason(f) == null) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     private void refreshAffordable() {
         if (owner == null) {
@@ -197,7 +237,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Hideouts.Hideout hideout = Hideouts.at(owner.serverLevel(), owner.position());
         int[] bits = new int[affordable.length];
         for (int i = 0; i < PartDef.ALL.size(); i++) {
-            if (Stash.canAfford(owner, hideout, PartDef.ALL.get(i).costs())) {
+            if (!headLocked(PartDef.ALL.get(i)) && Stash.canAfford(owner, hideout, PartDef.ALL.get(i).costs())) {
                 bits[i / 16] |= 1 << (i % 16);
             }
         }
@@ -212,6 +252,11 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             return false;
         }
         PartDef def = PartDef.ALL.get(partIndex);
+        if (headLocked(def)) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You haven't unlocked a weapon that uses a "
+                    + def.kind().label.toLowerCase() + " yet.").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return false;
+        }
         Hideouts.Hideout hideout = Hideouts.at(player.serverLevel(), player.position());
         int made = 0;
         for (int t = 0; t < times && Stash.canAfford(player, hideout, def.costs()); t++) {
@@ -267,6 +312,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             map.put(slot, new Parts.Installed(part.def, Parts.level(stack)));
         }
         net.minecraft.world.item.Item result = switch (family) {
+            case BOW -> net.minecraft.world.item.Items.BOW;
             case CROSSBOW -> net.minecraft.world.item.Items.CROSSBOW;
             case SHIELD -> net.minecraft.world.item.Items.SHIELD;
             default -> Family.itemFor(family, metal);
@@ -284,6 +330,10 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Family family = family();
         if (!buildMode() || family == null) {
             return "Pick what to build";
+        }
+        String locked = lockReason(family);
+        if (locked != null) {
+            return "Locked: " + locked;
         }
         for (int i = 0; i < family.slots.size(); i++) {
             PartSlot slot = family.slots.get(i);

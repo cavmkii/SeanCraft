@@ -504,16 +504,39 @@ public final class Tarkov {
 
     // ================================================================== hideout bench
 
+    /** Which module's screen each player has open, or none for the Hideout Bench's own (2.5). */
+    private static final Map<UUID, Module> FOCUS = new HashMap<>();
+
+    /** The Hideout Bench's screen: its crafts, module blocks among them. */
+    public static void openBench(ServerPlayer player, BlockPos pos) {
+        FOCUS.remove(player.getUUID());
+        openHideout(player, pos);
+    }
+
+    /** A module block's screen: build and upgrade that module (2.5). Actions still go through the hideout's bench. */
+    public static void openModule(ServerPlayer player, Hideouts.Hideout h, Module module) {
+        FOCUS.put(player.getUUID(), module);
+        openHideout(player, h.pos);
+    }
+
     public static void openHideout(ServerPlayer player, BlockPos pos) {
         ServerLevel level = player.serverLevel();
         Hideouts.Hideout h = Hideouts.byPos(level, pos);
-        // In reach of the bench, or anywhere in its hideout (opened from another station's tab).
+        // In reach of the bench, or anywhere in its hideout (opened from another station's tab or a module block).
         if (h == null || player.distanceToSqr(Vec3.atCenterOf(pos)) > 64 && !h.contains(player.position())) {
             return;
+        }
+        Module focus = FOCUS.get(player.getUUID());
+        if (focus != null && h.modules[focus.ordinal()] == null) {
+            focus = null;
+            FOCUS.remove(player.getUUID());
         }
         long now = level.getGameTime();
         List<TarkovNet.Entry> entries = new ArrayList<>();
         for (Module module : Module.values()) {
+            if (module != focus) {
+                continue;
+            }
             int current = h.level(module);
             String title = module.label + " " + current + "/" + module.max();
             String icon = id(module.icon);
@@ -560,7 +583,7 @@ public final class Tarkov {
             }
             entries.add(new TarkovNet.Entry(TarkovNet.Entry.MODULE, module.name(), title, "Next: " + next.effect(), icon, status, note, costs, progress));
         }
-        for (HideoutRecipe recipe : HideoutRecipe.ALL) {
+        for (HideoutRecipe recipe : focus != null ? List.<HideoutRecipe>of() : HideoutRecipe.ALL) {
             ItemStack result = recipe.result().get();
             int status;
             String note;
@@ -576,13 +599,19 @@ public final class Tarkov {
             }
             String description = result.getItem() instanceof com.cavmkii.seancraft.boss.BossContent.TotemItem totem
                     ? com.cavmkii.seancraft.boss.BossSites.hint(player, totem) : describe(result);
-            entries.add(new TarkovNet.Entry(TarkovNet.Entry.RECIPE, recipe.id(), result.getHoverName().getString()
+            if (recipe.id().startsWith(HideoutRecipe.UPGRADE)) {
+                description = "Upgrade: trade in an empty " + recipe.costs().get(0).label() + " for half the materials.";
+            }
+            entries.add(new TarkovNet.Entry(TarkovNet.Entry.RECIPE, recipe.id(), (recipe.id().startsWith(HideoutRecipe.UPGRADE) ? "Upgrade to " : "")
+                    + result.getHoverName().getString()
                     + (result.getCount() > 1 ? " x" + result.getCount() : ""), description, id(result.getItem()), status, note,
                     costLines(player, h, recipe.costs()), 0));
         }
         int chests = Stash.containers(level, h).size();
-        String summary = "Radius " + (int) h.radius() + " blocks. Stash: " + chests + (chests == 1 ? " chest" : " chests") + " in range.";
-        ServerPlayNetworking.send(player, new TarkovNet.HideoutView(pos, (int) h.radius(), summary, entries));
+        String summary = focus != null ? focus.label + " " + h.level(focus) + "/" + focus.max() + ". Put materials in from you and the stash."
+                : "Radius " + (int) h.radius() + " blocks. Stash: " + chests + (chests == 1 ? " chest" : " chests") + " in range.";
+        String station = focus != null ? Stations.moduleKind(focus) : Stations.HIDEOUT;
+        ServerPlayNetworking.send(player, new TarkovNet.HideoutView(pos, (int) h.radius(), summary, entries, station));
         Stations.send(player);
     }
 
