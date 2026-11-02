@@ -353,6 +353,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The pack's GUI sprites are in `textures/gui/sprites/` but the screens don't draw with them yet.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). Vanilla's own screens (pause menu, Mod Menu, other mods' configs) still look stock.
 
 A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.

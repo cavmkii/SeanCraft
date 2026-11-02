@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.rpg;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.rpg.ActiveSkill;
 import com.cavmkii.seancraft.rpg.Archetype;
 import com.cavmkii.seancraft.rpg.Attr;
@@ -144,9 +145,34 @@ public class WebScreen extends Screen {
         return Math.max(1.5, base * scale() / 12);
     }
 
+    /** Which of the kit's node sprites a kind uses. */
+    private static String nodeSprite(WebNode.Kind kind) {
+        return switch (kind) {
+            case ORIGIN -> "origin";
+            case SMALL -> "scaling";
+            case NOTABLE -> "effect";
+            case ACTIVE -> "skill";
+            case KEYSTONE -> "keystone";
+            case GATE -> "gate";
+            case SIGNATURE -> "lineage";
+        };
+    }
+
+    /** Region tints from web/region_* (Appendix C palette). */
+    private static int regionTint(com.cavmkii.seancraft.rpg.Archetype a) {
+        return switch (a) {
+            case WARRIOR -> Kit.BLOOD_LIGHT;
+            case DUELIST -> 0xFFB0A090;
+            case RANGER -> Kit.MOSS;
+            case SHADOW -> 0xFF7A4AA0;
+            case MAGE -> Kit.ARCANE;
+            case TEMPLAR -> Kit.GOLD_LIGHT;
+        };
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, width, height, 0xF0101014);
+        g.fill(0, 0, width, height, Kit.BACKDROP);
         PlayerData data = ClientRpg.data;
         if (data.origin == null) {
             renderOrigins(g, mouseX, mouseY);
@@ -162,9 +188,10 @@ public class WebScreen extends Screen {
                 WebNode m = PassiveWeb.get(linkId);
                 boolean a = data.isAllocated(n.id);
                 boolean b = data.isAllocated(m.id);
-                int color = a && b ? 0xFFE0C060 : a || b ? 0xFF8A8A8A : 0xFF45454C;
+                // The kit's link colours: owned gold, reachable ash, locked iron.
+                int color = a && b ? Kit.GOLD : a || b ? Kit.ASH : Kit.IRON_DARK;
                 if (!visible(n, data) || !visible(m, data)) {
-                    color = 0x2045454C;
+                    color = 0x302B2622;
                 }
                 line(g, sx(n), sy(n), sx(m), sy(m), color);
             }
@@ -184,25 +211,25 @@ public class WebScreen extends Screen {
                 int gx = (int) Math.round(x);
                 int gy = (int) Math.round(y);
                 int gr = (int) Math.max(1, Math.round(r * 0.7));
-                g.fill(gx - gr, gy - gr, gx + gr, gy + gr, 0x18FFFFFF);
+                g.fill(gx - gr, gy - gr, gx + gr, gy + gr, 0x207D7266);
                 continue;
             }
             boolean allocated = data.isAllocated(n.id);
             boolean available = data.canAllocate(n.id) || data.canRankUp(n.id);
-            int color = n.kind == WebNode.Kind.GATE ? 0xFFF2F2F2 : n.kind == WebNode.Kind.SIGNATURE ? 0xFFE8B030
-                    : n.archetype != null ? n.archetype.color : 0xFFDDDDDD;
-            int border = allocated ? 0xFFFFE080 : available ? 0xFFFFFFFF : 0xFF4A4A50;
-            int fill = allocated ? color : (color & 0x00FFFFFF) | (available ? 0x90000000 : 0x40000000);
-            if (n.active != null && n.active == selected) {
-                border = 0xFF55FFFF;
-            }
             int x0 = (int) Math.round(x - r);
             int y0 = (int) Math.round(y - r);
             int x1 = (int) Math.round(x + r);
             int y1 = (int) Math.round(y + r);
-            g.fill(x0 - 1, y0 - 1, x1 + 1, y1 + 1, border);
-            g.fill(x0, y0, x1, y1, 0xFF15151A);
-            g.fill(x0, y0, x1, y1, fill);
+            // The node's region shows as a faint tint behind it (web/region_*), then the kit's node sprite for its
+            // kind and state: locked, available or owned.
+            if (n.archetype != null) {
+                g.fill(x0 - 2, y0 - 2, x1 + 2, y1 + 2, (allocated ? 0x60000000 : 0x30000000) | (regionTint(n.archetype) & 0xFFFFFF));
+            }
+            String state = allocated ? "owned" : available ? "available" : "locked";
+            Kit.blit(g, "web/node_" + nodeSprite(n.kind) + "_" + state, x0, y0, x1 - x0, y1 - y0);
+            if (n.active != null && n.active == selected) {
+                g.renderOutline(x0 - 2, y0 - 2, x1 - x0 + 4, y1 - y0 + 4, Kit.GOLD_LIGHT);
+            }
             if (n.active != null && r >= 4) {
                 g.pose().pushPose();
                 float s = (float) (r * 2 / 16.0);
@@ -303,8 +330,7 @@ public class WebScreen extends Screen {
     }
 
     private void renderPanel(GuiGraphics g, PlayerData data) {
-        g.fill(0, 0, PANEL, height, 0xFF1A1A20);
-        g.fill(PANEL - 1, 0, PANEL, height, 0xFF3A3A44);
+        Kit.inset(g, 0, 0, PANEL, height);
         Stats stats = ClientRpg.stats;
         float s = 0.75f;
         g.pose().pushPose();
@@ -312,49 +338,49 @@ public class WebScreen extends Screen {
         int x = 6;
         int y = 6;
         int lh = 10;
-        g.drawString(font, "Level " + data.level + (data.level >= PlayerData.MAX_LEVEL ? " (max)" : ""), x, y, 0xFFFFE080);
+        g.drawString(font, "Level " + data.level + (data.level >= PlayerData.MAX_LEVEL ? " (max)" : ""), x, y, Kit.GOLD_LIGHT);
         y += lh;
         if (data.level < PlayerData.MAX_LEVEL) {
             long need = PlayerData.xpToNext(data.level);
             int w = (int) ((PANEL - 10) / s);
-            g.fill(x, y, x + w, y + 4, 0xFF000000);
-            g.fill(x, y, x + (int) (w * Math.min(1, data.xp / (double) need)), y + 4, 0xFF9B59B6);
-            y += 6;
-            g.drawString(font, data.xp + " / " + need + " xp", x, y, 0xFF999999);
+            Kit.bar(g, "xp", x, y, w, (float) Math.min(1, data.xp / (double) need));
+            y += 9;
+            g.drawString(font, data.xp + " / " + need + " xp", x, y, Kit.ASH);
             y += lh;
         }
         g.drawString(font, "Points: " + data.freePoints() + " free" + (data.lostPoints > 0 ? ", " + data.lostPoints + " lost" : ""), x, y,
-                data.freePoints() > 0 ? 0xFF55FF55 : 0xFFAAAAAA);
+                data.freePoints() > 0 ? Kit.MOSS : Kit.ASH);
         y += lh;
-        g.drawString(font, data.origin.label + (data.spec != null ? ", " + data.spec.label : ""), x, y, 0xFFCCCCCC);
+        g.drawString(font, data.origin.label + (data.spec != null ? ", " + data.spec.label : ""), x, y, Kit.BONE);
         y += lh;
-        g.drawString(font, "Path: " + path(data), x, y, 0xFF999999);
+        g.drawString(font, "Path: " + path(data), x, y, Kit.ASH);
         y += lh + 4;
 
         attrTop = y;
         for (Attr attr : Attr.values()) {
-            g.drawString(font, attr.label + ": " + String.format("%.1f", stats.attr(attr)), x, y, 0xFF000000 | attr.color);
+            Kit.blit(g, "icon/attribute/" + attr.name().toLowerCase(java.util.Locale.ROOT), x, y - 1, 9, 9);
+            g.drawString(font, attr.label + ": " + String.format("%.1f", stats.attr(attr)), x + 12, y, Kit.BONE);
             if (data.unassigned > 0) {
-                g.drawString(font, "[+]", (int) ((PANEL - 8) / s) - font.width("[+]"), y, 0xFF55FF55);
+                g.drawString(font, "[+]", (int) ((PANEL - 8) / s) - font.width("[+]"), y, Kit.MOSS);
             }
             y += lh;
         }
         if (data.unassigned > 0) {
-            g.drawString(font, data.unassigned + " attribute points to place", x, y, 0xFF55FF55);
+            g.drawString(font, data.unassigned + " attribute points to place", x, y, Kit.MOSS);
             y += lh;
         }
-        g.drawString(font, String.format("Crit %.0f%% for +%.0f%%", stats.critChance(), stats.critDamage()), x, y, 0xFF999999);
+        g.drawString(font, String.format("Crit %.0f%% for +%.0f%%", stats.critChance(), stats.critDamage()), x, y, Kit.ASH);
         y += lh;
-        g.drawString(font, String.format("+%.0f health, +%.0f%% swing speed", stats.bonusHealth(), stats.attackSpeedPct()), x, y, 0xFF999999);
+        g.drawString(font, String.format("+%.0f health, +%.0f%% swing speed", stats.bonusHealth(), stats.attackSpeedPct()), x, y, Kit.ASH);
         y += lh;
         g.drawString(font, String.format("AGI stamina -%.0f%%, prep +%.0f%%", stats.staminaEfficiency() * 100, (stats.preparation() - 1) * 100), x, y,
-                0xFF999999);
+                Kit.ASH);
         y += lh;
         g.drawString(font, String.format("Mana %.0f  Rage %.0f  Stamina %.0f", stats.maxMana(), stats.maxRage(), stats.maxStamina()), x, y,
-                0xFF999999);
+                Kit.ASH);
         y += lh + 4;
 
-        g.drawString(font, "Skills", x, y, 0xFFFFE080);
+        g.drawString(font, "Skills", x, y, Kit.GOLD_LIGHT);
         y += lh;
         for (Skill skill : Skill.values()) {
             int level = data.skillLevel(skill);
@@ -363,11 +389,11 @@ public class WebScreen extends Screen {
             double to = Skill.xpForLevel(Math.min(Skill.MAX_LEVEL, level + 1));
             int w = 40;
             int bx = x + (int) ((PANEL - 8) / s) - w;
-            g.drawString(font, skill.label, x, y, 0xFF000000 | skill.color());
-            g.drawString(font, String.valueOf(level), bx - 4 - font.width(String.valueOf(level)), y, 0xFFFFFFFF);
-            g.fill(bx, y + 3, bx + w, y + 6, 0xFF000000);
+            g.drawString(font, skill.label, x, y, Kit.BONE);
+            g.drawString(font, String.valueOf(level), bx - 4 - font.width(String.valueOf(level)), y, Kit.BONE);
+            g.fill(bx, y + 3, bx + w, y + 6, Kit.VOID);
             if (level < Skill.MAX_LEVEL && to > from) {
-                g.fill(bx, y + 3, bx + (int) (w * Math.min(1, (xp - from) / (to - from))), y + 6, 0xFF000000 | skill.color());
+                g.fill(bx, y + 3, bx + (int) (w * Math.min(1, (xp - from) / (to - from))), y + 6, Kit.GOLD);
             }
             y += lh;
         }
@@ -409,7 +435,7 @@ public class WebScreen extends Screen {
     private int renderSlots(GuiGraphics g, PlayerData data, int mouseX, int mouseY) {
         int hovered = -1;
         int y = slotY();
-        g.fill(slotX(0) - 2, y - 2, slotX(PlayerData.SLOTS - 1) + SLOT + 1, y + SLOT + 1, 0xC0000000);
+        Kit.hudPanel(g, slotX(0) - 4, y - 4, PlayerData.SLOTS * SLOT + 7, SLOT + 7);
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             int x = slotX(s);
             boolean open = data.slotOpen(s);
@@ -417,8 +443,14 @@ public class WebScreen extends Screen {
             if (hover) {
                 hovered = s;
             }
-            g.fill(x, y, x + SLOT - 1, y + SLOT - 1, hover && selected != null && open ? 0xFF55FFFF : 0xFF2A2A2A);
-            g.fill(x + 1, y + 1, x + SLOT - 2, y + SLOT - 2, open ? 0xFF3C3C3C : 0xFF1C1C1C);
+            if (!open) {
+                Kit.slot(g, x, y, SLOT - 1, Kit.SlotState.LOCKED);
+            } else {
+                Kit.blit(g, s == PlayerData.ULTIMATE_SLOT ? "hud/skill_slot_ultimate" : "hud/skill_slot_basic", x, y, SLOT - 1, SLOT - 1);
+                if (hover && selected != null) {
+                    g.renderOutline(x, y, SLOT - 1, SLOT - 1, Kit.GOLD_LIGHT);
+                }
+            }
             ActiveSkill skill = data.slot(s);
             if (open && skill != null) {
                 g.renderItem(new ItemStack(skill.icon), x + 1, y + 1);
@@ -427,13 +459,13 @@ public class WebScreen extends Screen {
                 if (ult != null) {
                     g.renderItem(new ItemStack(ult.icon), x + 1, y + 1);
                 } else {
-                    g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, 0xFF666666, false);
+                    g.drawString(font, "U", x + (SLOT - font.width("U")) / 2, y + 6, Kit.DISABLED, false);
                 }
             }
         }
         if (selected != null) {
             String hint = "Placing " + selected.label + ": click a slot";
-            g.drawString(font, hint, slotX(0) + PlayerData.SLOTS * SLOT / 2 - font.width(hint) / 2, y - 12, 0xFF55FFFF);
+            g.drawString(font, hint, slotX(0) + PlayerData.SLOTS * SLOT / 2 - font.width(hint) / 2, y - 12, Kit.GOLD_LIGHT);
         }
         return hovered;
     }
@@ -575,23 +607,26 @@ public class WebScreen extends Screen {
     /** Character creation (6.2.1): pick one of three origins. It never changes. */
     private void renderOrigins(GuiGraphics g, int mouseX, int mouseY) {
         String title = "Choose your origin";
-        g.drawString(font, title, (width - font.width(title)) / 2, height / 2 - 76, 0xFFFFE080);
+        g.drawString(font, title, (width - font.width(title)) / 2, height / 2 - 76, Kit.GOLD_LIGHT);
         String sub = "Sets your attribute, starter web and specializations. It never changes.";
-        g.drawString(font, sub, (width - font.width(sub)) / 2, height / 2 - 64, 0xFF999999);
+        g.drawString(font, sub, (width - font.width(sub)) / 2, height / 2 - 64, Kit.ASH);
         int w = Math.min(150, (width - 40) / 3);
         int hover = originAt(mouseX, mouseY);
         com.cavmkii.seancraft.rpg.Origin[] origins = com.cavmkii.seancraft.rpg.Origin.values();
         for (int i = 0; i < origins.length; i++) {
             int x = originX(i);
             int y = height / 2 - 50;
-            int color = 0xFF000000 | origins[i].attr.color;
-            g.fill(x - 1, y - 1, x + w + 1, y + 101, hover == i ? 0xFFFFFFFF : color);
-            g.fill(x, y, x + w, y + 100, 0xFF1A1A20);
-            g.drawString(font, origins[i].label, x + 6, y + 6, color);
+            int color = hover == i ? Kit.GOLD_LIGHT : Kit.BONE;
+            Kit.panel(g, x - 4, y - 4, w + 8, 108);
+            if (hover == i) {
+                g.renderOutline(x - 4, y - 4, w + 8, 108, Kit.GOLD);
+            }
+            Kit.blit(g, "emblem/origin/" + origins[i].name().toLowerCase(java.util.Locale.ROOT), x + w - 26, y + 2, 24, 24);
+            Kit.text(g, font, Kit.heading(origins[i].label), x + 6, y + 4, color);
             List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(ORIGIN_BLURB[i]), w - 12);
             int ly = y + 20;
             for (net.minecraft.util.FormattedCharSequence line : lines) {
-                g.drawString(font, line, x + 6, ly, 0xFFCCCCCC);
+                g.drawString(font, line, x + 6, ly, Kit.BONE);
                 ly += 10;
             }
         }

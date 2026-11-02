@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.tetris.TetrisNet;
 import java.util.List;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -53,13 +54,13 @@ public final class FurnacePanel {
         ItemStack tip = ItemStack.EMPTY;
         int n = perRow(w);
         for (Row row : rows()) {
-            g.drawString(font, row.title, x, y, 0xFFE0C060, true);
+            Kit.label(g, font, row.title, x, y);
             y += 10;
             if (row.items.isEmpty()) {
                 g.pose().pushPose();
                 g.pose().translate(x, y + 4, 0);
                 g.pose().scale(0.75f, 0.75f, 1);
-                g.drawString(font, "none", 0, 0, 0xFF777780, false);
+                g.drawString(font, "none", 0, 0, Kit.ASH, false);
                 g.pose().popPose();
             }
             int shown = row.items.size() > n ? n - 1 : row.items.size();
@@ -67,7 +68,7 @@ public final class FurnacePanel {
                 ItemStack s = row.items.get(i);
                 int cx = x + i * CELL;
                 boolean over = mx >= cx && mx < cx + CELL - 1 && my >= y && my < y + CELL - 1;
-                g.fill(cx, y, cx + CELL - 1, y + CELL - 1, over ? 0xFF4A4A56 : 0xFF22262C);
+                Kit.slot(g, cx, y, CELL, over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
                 g.renderItem(s, cx + 1, y + 1);
                 g.renderItemDecorations(font, s, cx + 1, y + 1, s.getCount() > 999 ? "999+" : null);
                 if (over) {
@@ -76,7 +77,7 @@ public final class FurnacePanel {
             }
             if (shown < row.items.size()) {
                 String more = "+" + (row.items.size() - shown);
-                g.drawString(font, more, x + shown * CELL + 2, y + 5, 0xFF999999, false);
+                g.drawString(font, more, x + shown * CELL + 2, y + 5, Kit.ASH, false);
             }
             y += CELL + 4;
         }

@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.tarkov.TarkovNet;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,12 +73,14 @@ public class HideoutScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        g.fill(0, 0, width, height, 0xE0101014);
+        g.fill(0, 0, width, height, Kit.BACKDROP);
         int x0 = left();
         int w = panelWidth();
-        String heading = StationTabs.label(view.station());
-        g.drawString(font, heading, x0, 8, 0xFFFFE080, true);
-        g.drawString(font, view.summary(), x0 + font.width(heading) + 12, 8, 0xFFAAAAAA, false);
+        Kit.panel(g, x0 - 8, 2, w + 16, height - 4);
+        // The station's name as a heading (Jacquard 12, C.6).
+        Component heading = Kit.heading(StationTabs.label(view.station()));
+        Kit.text(g, font, heading, x0, 9, Kit.GOLD_LIGHT);
+        g.drawString(font, view.summary(), x0 + font.width(heading) + 12, 10, Kit.ASH, false);
         StationTabs.render(g, font, x0, 24, w, view.station(), mouseX, mouseY);
 
         List<TarkovNet.Entry> entries = shown();
@@ -102,14 +105,14 @@ public class HideoutScreen extends Screen {
     }
 
     private void drawEntry(GuiGraphics g, TarkovNet.Entry e, int x, int y, int w, int mouseX, int mouseY) {
-        g.fill(x, y, x + w, y + ROW - 3, 0xFF1C1C22);
+        Kit.inset(g, x, y, w, ROW - 3);
         g.renderItem(new ItemStack(item(e.icon())), x + 4, y + 4);
-        g.drawString(font, e.title(), x + 24, y + 4, 0xFFFFFFFF, false);
+        g.drawString(font, e.title(), x + 24, y + 4, Kit.BONE, false);
 
         g.pose().pushPose();
         g.pose().translate(x + 24, y + 15, 0);
         g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(font, font.plainSubstrByWidth(e.subtitle(), (int) ((w - 156) / 0.75)), 0, 0, 0xFFAAAAAA, false);
+        g.drawString(font, font.plainSubstrByWidth(e.subtitle(), (int) ((w - 156) / 0.75)), 0, 0, Kit.ASH, false);
         g.pose().popPose();
 
         // Costs: icon and have/need, red when short.
@@ -122,7 +125,7 @@ public class HideoutScreen extends Screen {
             g.pose().popPose();
             // Modules: put in so far / needed, plus what you could still add.
             String text = Math.min(c.have(), 9999) + "/" + c.need() + (c.carry() > 0 ? " +" + c.carry() : "");
-            int color = c.have() >= c.need() ? 0xFF7CFC7C : c.have() + c.carry() >= c.need() ? 0xFFE0C060 : 0xFFFF6666;
+            int color = c.have() >= c.need() ? Kit.MOSS : c.have() + c.carry() >= c.need() ? Kit.GOLD : Kit.BLOOD_LIGHT;
             g.drawString(font, text, cx + 14, y + 29, color, false);
             cx += 18 + font.width(text) + 6;
         }
@@ -132,8 +135,7 @@ public class HideoutScreen extends Screen {
         int by = y + 6;
         boolean ready = e.status() == TarkovNet.Entry.READY || e.status() == TarkovNet.Entry.GIVE;
         boolean hover = mouseX >= bx && mouseX < bx + 78 && mouseY >= by && mouseY < by + 18;
-        int bg = ready ? (hover ? 0xFF4C8C4C : 0xFF3A6A3A) : 0xFF2A2A30;
-        g.fill(bx, by, bx + 78, by + 18, bg);
+
         String label = switch (e.status()) {
             case TarkovNet.Entry.READY -> e.kind() == TarkovNet.Entry.MODULE ? "BUILD" : "CRAFT";
             case TarkovNet.Entry.GIVE -> "CONTRIBUTE";
@@ -143,21 +145,20 @@ public class HideoutScreen extends Screen {
             case TarkovNet.Entry.BUSY -> "BUSY";
             default -> "LOCKED";
         };
-        g.drawString(font, label, bx + (78 - font.width(label)) / 2, by + 5, ready ? 0xFFFFFFFF : 0xFF888888, false);
+        Kit.button(g, font, label, bx, by, 78, 18, ready, hover, false);
         if (trackable(e)) {
             int tx = bx - TRACK_W - 4;
             boolean th = mouseX >= tx && mouseX < tx + TRACK_W && mouseY >= by && mouseY < by + 18;
-            g.fill(tx, by, tx + TRACK_W, by + 18, th ? 0xFF4A4A58 : 0xFF2E2E38);
-            g.drawString(font, "TRACK", tx + (TRACK_W - font.width("TRACK")) / 2, by + 5, 0xFFE0C060, false);
+            Kit.button(g, font, "TRACK", tx, by, TRACK_W, 18, true, th, false);
         }
         if (e.status() == TarkovNet.Entry.BUILDING) {
-            g.fill(bx, by + 18, bx + 78 * e.progress() / 100, by + 20, 0xFFE0C060);
+            Kit.bar(g, "xp", bx, by + 18, 78, e.progress() / 100f);
         }
         g.pose().pushPose();
         g.pose().translate(bx, by + 24, 0);
         g.pose().scale(0.75f, 0.75f, 1);
         g.drawString(font, font.plainSubstrByWidth(e.note(), (int) (100 / 0.75)), 0, 0,
-                ready ? 0xFF7CFC7C : e.status() == TarkovNet.Entry.MAXED ? 0xFFE0C060 : 0xFFFF9966, false);
+                ready ? Kit.MOSS : e.status() == TarkovNet.Entry.MAXED ? Kit.GOLD : Kit.EMBER, false);
         g.pose().popPose();
     }
 

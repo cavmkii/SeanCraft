@@ -25,33 +25,33 @@ public final class HealthBar {
         int fill = Math.round(inner * health / max);
         int capAt = Math.round(inner * capFraction);
 
-        g.fill(x, y, x + WIDTH, y + HEIGHT, blinking ? 0xFFE0E0E0 : 0xFF101010);
-        g.fill(x + 1, y + 1, x + 1 + inner, y + HEIGHT - 1, 0xFF3A1414);
-        int color = player.hasEffect(MobEffects.POISON) ? 0xFF7A9A2A : player.hasEffect(MobEffects.WITHER) ? 0xFF3A3A3A : 0xFFC81E1E;
+        g.fill(x, y, x + WIDTH, y + HEIGHT, blinking ? 0xFFD9CBB0 : 0xFF0E0C0B);
+        g.fill(x + 1, y + 1, x + 1 + inner, y + HEIGHT - 1, 0xFF2B2622);
+        int color = player.hasEffect(MobEffects.POISON) ? 0xFF7D9A3A : player.hasEffect(MobEffects.WITHER) ? 0xFF5A5149 : 0xFFC8402E;
         g.fill(x + 1, y + 1, x + 1 + fill, y + HEIGHT - 1, color);
         g.fill(x + 1, y + 1, x + 1 + fill, y + 3, 0x40FFFFFF);
         if (capAt < inner) {
             // Locked health: dark, with diagonal strokes.
             int lx = x + 1 + capAt;
-            g.fill(lx, y + 1, x + 1 + inner, y + HEIGHT - 1, 0xFF2A2A2E);
+            g.fill(lx, y + 1, x + 1 + inner, y + HEIGHT - 1, 0xFF3A3430);
             for (int sx = lx - (HEIGHT - 2); sx < x + 1 + inner; sx += 4) {
                 for (int k = 0; k < HEIGHT - 2; k++) {
                     int px = sx + k;
                     if (px >= lx && px < x + 1 + inner) {
-                        g.fill(px, y + HEIGHT - 2 - k, px + 1, y + HEIGHT - 1 - k, 0xFF6A2A2A);
+                        g.fill(px, y + HEIGHT - 2 - k, px + 1, y + HEIGHT - 1 - k, 0xFF8E1F1F);
                     }
                 }
             }
         }
         if (absorption > 0) {
             int ab = Math.min(inner, Math.round(inner * absorption / max));
-            g.fill(x + 1, y + 1, x + 1 + ab, y + 3, 0xFFE8C040);
+            g.fill(x + 1, y + 1, x + 1 + ab, y + 3, 0xFFE0BC62);
         }
         String text = Math.round(health) + (absorption > 0 ? "+" + absorption : "") + " / " + Math.round(max);
         g.pose().pushPose();
         g.pose().translate(x + WIDTH / 2f - mc.font.width(text) * 0.375f, y + 2, 0);
         g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(mc.font, text, 0, 0, 0xFFFFFFFF, true);
+        g.drawString(mc.font, text, 0, 0, 0xFFD9CBB0, true);
         g.pose().popPose();
     }
 }

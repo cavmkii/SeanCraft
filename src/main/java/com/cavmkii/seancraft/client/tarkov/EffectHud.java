@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.food.Food;
 import com.cavmkii.seancraft.hazard.Hazards;
 import com.cavmkii.seancraft.tarkov.Body;
@@ -42,21 +43,21 @@ final class EffectHud {
             int c = body.conditions()[i];
             if (body.body()[i] <= 0.0001f) {
                 // A destroyed part is the whole story: its bleeds, breaks and lasting damage don't need their own lines.
-                out.add(new Wound(new ItemStack(Items.BARRIER), "Destroyed - " + p.label, "surgery", 0xFFFF5555));
+                out.add(new Wound(new ItemStack(Items.BARRIER), "Destroyed - " + p.label, "surgery", Kit.ASH));
                 continue;
             }
             if ((c & Body.HEAVY_BLEED) != 0) {
-                out.add(new Wound(new ItemStack(Items.RED_DYE), "Heavy bleed " + pct(body.bleed()[i]) + "% - " + p.label, "tourniquet", 0xFFFF5555));
+                out.add(new Wound(new ItemStack(Items.RED_DYE), "Heavy bleed " + pct(body.bleed()[i]) + "% - " + p.label, "tourniquet", Kit.BLOOD_LIGHT));
             }
             if ((c & Body.LIGHT_BLEED) != 0) {
-                out.add(new Wound(new ItemStack(Items.RED_DYE), "Light bleed " + pct(body.bleed()[i]) + "% - " + p.label, "bandage", 0xFFFF9966));
+                out.add(new Wound(new ItemStack(Items.RED_DYE), "Light bleed " + pct(body.bleed()[i]) + "% - " + p.label, "bandage", Kit.BLOOD_LIGHT));
             }
             if ((c & Body.FRACTURE) != 0) {
-                out.add(new Wound(new ItemStack(Items.BONE), "Fracture " + pct(body.fracture()[i]) + "% - " + p.label, "splint", 0xFFFFAA55));
+                out.add(new Wound(new ItemStack(Items.BONE), "Fracture " + pct(body.fracture()[i]) + "% - " + p.label, "splint", Kit.BONE));
             }
             if (body.scar()[i] > 0.001f && body.body()[i] > 0.0001f) {
                 out.add(new Wound(new ItemStack(Items.GRAY_DYE), "Lasting damage " + pct(body.scar()[i]) + "% - " + p.label, "surgery case",
-                        0xFFB0B0B8));
+                        Kit.ASH));
             }
         }
         return out;
@@ -74,12 +75,12 @@ final class EffectHud {
             case COLD -> Items.SNOWBALL;
         });
         switch (ClientHazard.state) {
-            case Hazards.DRAINING -> out.add(new Wound(icon, h.label + " - draining health", h.potion + " or " + Hazards.keyName(h), 0xFFFF7040));
+            case Hazards.DRAINING -> out.add(new Wound(icon, h.label + " - draining health", h.potion + " or " + Hazards.keyName(h), Kit.EMBER));
             case Hazards.PASS -> {
                 int s = ClientHazard.passLeft();
-                out.add(new Wound(icon, h.label + " - " + h.potion + " " + s / 60 + ":" + String.format("%02d", s % 60), "", 0xFFB0D8B0));
+                out.add(new Wound(icon, h.label + " - " + h.potion + " " + s / 60 + ":" + String.format("%02d", s % 60), "", Kit.MOSS));
             }
-            default -> out.add(new Wound(icon, h.label + " - " + Hazards.keyName(h), "", 0xFF9A9AA4));
+            default -> out.add(new Wound(icon, h.label + " - " + Hazards.keyName(h), "", Kit.ASH));
         }
     }
 
@@ -135,7 +136,7 @@ final class EffectHud {
         int y = bottom - ICON - 5;
         for (int i = 0; i < Food.SLOTS; i++) {
             int cx = x + i * (ICON + 4);
-            g.fill(cx - 1, y - 1, cx + ICON + 1, y + ICON + 4, 0x60000000);
+            Kit.blit(g, "hud/food_slot", cx - 2, y - 2, ICON + 4, ICON + 4);
             if (i >= meals.size()) {
                 continue;
             }
@@ -147,10 +148,10 @@ final class EffectHud {
             g.pose().popPose();
             float left = meal.left() / (float) Math.max(1, meal.duration());
             int w = Math.max(1, Math.round(ICON * left));
-            g.fill(cx, y + ICON + 1, cx + w, y + ICON + 3, meal.strength() < 1 ? 0xFFE0A030 : 0xFF60C060);
+            g.fill(cx, y + ICON + 1, cx + w, y + ICON + 2, meal.strength() < 1 ? Kit.EMBER : Kit.MOSS);
         }
         if (meals.isEmpty()) {
-            g.drawString(mc.font, "Hungry", x + Food.SLOTS * (ICON + 4) + 2, y + 2, 0xFFAAAAAA, true);
+            Kit.text(g, mc.font, "Hungry", x + Food.SLOTS * (ICON + 4) + 2, y + 2, Kit.ASH);
         }
         return y - 2;
     }
@@ -183,6 +184,21 @@ final class EffectHud {
     static int render(GuiGraphics g, Minecraft mc, int x, int bottom) {
         int y = bottom;
         List<Wound> injuries = wounds();
+        List<String> penalties = penalties();
+        // Injuries and penalties share one HUD panel (C.5), sized to what's in it.
+        if (!injuries.isEmpty() || !penalties.isEmpty()) {
+            int pw = 0;
+            for (Wound i : injuries) {
+                int cx = 12 + mc.font.width(i.text);
+                boolean cureFits = x + cx + mc.font.width(i.cure) * 0.75f < g.guiWidth() / 2f - 96;
+                pw = Math.max(pw, cx + (cureFits ? (int) (mc.font.width(i.cure) * 0.75f) : 0));
+            }
+            for (String p : penalties) {
+                pw = Math.max(pw, (int) (mc.font.width(p) * 0.75f));
+            }
+            int ph = injuries.size() * 10 + (penalties.isEmpty() ? 0 : penalties.size() * 8 + 1);
+            Kit.hudPanel(g, x - 5, bottom - ph - 4, pw + 10, ph + 6);
+        }
         y -= injuries.size() * 10;
         int line = y;
         for (Wound i : injuries) {
@@ -191,21 +207,20 @@ final class EffectHud {
             g.pose().scale(0.5f, 0.5f, 1);
             g.renderItem(i.icon, 0, 0);
             g.pose().popPose();
-            g.drawString(mc.font, i.text, x + 10, line, i.color, true);
+            Kit.text(g, mc.font, i.text, x + 10, line, i.color);
             // What fixes it, small and grey, if it fits left of the hotbar.
             int cx = x + 12 + mc.font.width(i.text);
             if (cx + mc.font.width(i.cure) * 0.75f < g.guiWidth() / 2f - 96) {
                 g.pose().pushPose();
                 g.pose().translate(cx, line + 2, 0);
                 g.pose().scale(0.75f, 0.75f, 1);
-                g.drawString(mc.font, i.cure, 0, 0, 0xFF9A9AA4, true);
+                Kit.text(g, mc.font, i.cure, 0, 0, Kit.ASH);
                 g.pose().popPose();
             }
             line += 10;
         }
 
         // Penalties, small, above the injuries; cyan while painkillers are taking the edge off.
-        List<String> penalties = penalties();
         if (!penalties.isEmpty()) {
             boolean pain = ClientTarkov.body.painkillerTicks() > 0;
             y -= penalties.size() * 8 + 1;
@@ -214,13 +229,13 @@ final class EffectHud {
                 g.pose().pushPose();
                 g.pose().translate(x, py, 0);
                 g.pose().scale(0.75f, 0.75f, 1);
-                g.drawString(mc.font, p, 0, 0, pain ? 0xFF7FE0E0 : 0xFFFFB060, true);
+                Kit.text(g, mc.font, p, 0, 0, pain ? Kit.CYAN : Kit.BONE);
                 g.pose().popPose();
                 py += 8;
             }
         }
 
-        y = meals(g, mc, x, y);
+        y = meals(g, mc, x, injuries.isEmpty() && penalties.isEmpty() ? y : y - 6);
 
         List<Chip> chips = chips(mc);
         if (chips.isEmpty()) {
@@ -242,7 +257,7 @@ final class EffectHud {
             w += cw;
         }
         rows.add(row);
-        y -= rows.size() * (ICON + 2);
+        y -= rows.size() * (ICON + 3) + 2;
         int ry = y;
         for (List<Chip> r : rows) {
             int cx = x;
@@ -252,7 +267,7 @@ final class EffectHud {
                 boolean ending = c.ticks >= 0 && c.ticks < 100;
                 boolean dim = ending && (c.ticks / 5) % 2 == 0;
                 int cw = ICON + 2 + mc.font.width(t) + 2;
-                g.fill(cx - 1, ry - 1, cx + cw, ry + ICON + 1, 0x60000000);
+                Kit.hudPanel(g, cx - 2, ry - 1, cw + 3, ICON + 2);
                 if (c.sprite != null) {
                     g.setColor(1, 1, 1, dim ? 0.4f : 1f);
                     g.blit(cx, ry, 0, ICON, ICON, c.sprite);
@@ -264,11 +279,11 @@ final class EffectHud {
                     g.renderItem(c.item, 0, 0);
                     g.pose().popPose();
                 }
-                int color = ending ? 0xFFFFE060 : c.bad ? 0xFFFF8877 : 0xFFDDDDDD;
-                g.drawString(mc.font, t, cx + ICON + 2, ry + 2, color, true);
+                int color = ending ? Kit.GOLD_LIGHT : c.bad ? Kit.BLOOD_LIGHT : Kit.BONE;
+                Kit.text(g, mc.font, t, cx + ICON + 2, ry + 2, color);
                 cx += cw + 4;
             }
-            ry += ICON + 2;
+            ry += ICON + 3;
         }
         return y;
     }

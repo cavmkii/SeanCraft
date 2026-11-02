@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.tetris.GearItem;
 import com.cavmkii.seancraft.tetris.Grid;
 import com.cavmkii.seancraft.tetris.GridId;
@@ -158,22 +159,22 @@ public final class GridPanel {
         g.pose().pushPose();
         g.pose().translate(0, 0, 100);
         if (minX < maxX) {
-            g.fill(minX - 1, minY - 1, maxX + 1, maxY + 1, 0xE0303036);
+            Kit.inset(g, minX - 1, minY - 1, maxX - minX + 2, maxY - minY + 2);
             String hint = "Your inventory is in the grids";
-            g.drawString(font, hint, (minX + maxX - font.width(hint)) / 2, (minY + maxY) / 2 - 4, 0xFFB0B0B8, false);
+            g.drawString(font, hint, (minX + maxX - font.width(hint)) / 2, (minY + maxY) / 2 - 4, Kit.ASH, false);
         }
 
         List<Box> boxes = layout(screen, left, top, imageWidth, imageHeight);
         Loc hover = locAt(boxes, mx, my);
         ItemStack tip = ItemStack.EMPTY;
         for (Box b : boxes) {
-            g.drawString(font, b.title, b.x, b.y - 10, 0xFFE0C060, true);
-            g.fill(b.x - 1, b.y - 1, b.x + b.w * b.c + 1, b.y + b.h * b.c + 1, 0xFF000000);
+            Kit.label(g, font, b.title, b.x, b.y - 10, b.id == GridId.POUCH ? Kit.GOLD : Kit.ASH);
             for (int cy = 0; cy < b.h; cy++) {
                 for (int cx = 0; cx < b.w; cx++) {
                     int x = b.x + cx * b.c;
                     int y = b.y + cy * b.c;
-                    g.fill(x, y, x + b.c - 1, y + b.c - 1, 0xFF22262C);
+                    boolean over = mx >= x && mx < x + b.c && my >= y && my < y + b.c;
+                    Kit.slot(g, x, y, b.c, over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
                 }
             }
             for (Placed p : b.items) {
@@ -196,7 +197,7 @@ public final class GridPanel {
             int gy = b.y + (merge ? there.y : hover.c()) * b.c;
             g.pose().translate(0, 0, 150);
             g.fill(gx, gy, gx + (merge ? there.width() : w) * b.c - 1, gy + (merge ? there.height() : h) * b.c - 1,
-                    ok ? 0x6040C040 : 0x60C04040);
+                    ok ? 0x60B08A3E : 0x608E1F1F);
         }
         g.pose().popPose();
         if (FurnacePanel.applies(screen)) {
@@ -217,7 +218,9 @@ public final class GridPanel {
     private static void drawPlaced(GuiGraphics g, Font font, ItemStack stack, int px, int py, int w, int h, int c, boolean rot) {
         int pw = w * c;
         int ph = h * c;
-        g.fill(px, py, px + pw - 1, py + ph - 1, 0xFF39404C);
+        if (w > 1 || h > 1) {
+            Kit.inset(g, px + 1, py + 1, pw - 2, ph - 2);
+        }
         float k = Math.max(1, Math.min(2, Math.min(w, h))) * c / 18f;
         g.pose().pushPose();
         g.pose().translate(px + pw / 2f - 0.5f, py + ph / 2f - 0.5f, 0);
@@ -231,7 +234,7 @@ public final class GridPanel {
         g.pose().translate(0, 0, 200);
         if (stack.getCount() > 1) {
             String n = String.valueOf(stack.getCount());
-            g.drawString(font, n, px + pw - 1 - font.width(n), py + ph - 8, 0xFFFFFFFF, true);
+            Kit.text(g, font, n, px + pw - 1 - font.width(n), py + ph - 8, Kit.BONE);
         }
         if (stack.isBarVisible()) {
             int bw = (pw - 4) * stack.getBarWidth() / 13;
