@@ -53,9 +53,18 @@ final class RpgHud {
             ActiveSkill skill = data.slot(s);
             if (skill != null) {
                 used.add(skill.resource);
+                if (skill.alt != null) {
+                    used.add(skill.alt);
+                }
             }
         }
-        int y = y0 - 9;
+        // Each slot's cost plate sits just above it, the bars above those.
+        for (int s = 0; s < PlayerData.SLOTS; s++) {
+            if (data.slotOpen(s)) {
+                costPlate(g, mc.font, x0 + s * SLOT, y0 - 9, s);
+            }
+        }
+        int y = y0 - 18;
         for (Resource resource : Resource.values()) {
             if (!used.contains(resource)) {
                 continue;
@@ -74,6 +83,45 @@ final class RpgHud {
             y -= 8;
         }
         unspent(g, mc.font, x0, y - 1, data);
+    }
+
+    /**
+     * What a slot costs (6.5): the pool's icon and the number. A hybrid skill shows both pools, the one it will draw from
+     * now (the fuller) lit and the other dimmed.
+     */
+    private static void costPlate(GuiGraphics g, Font font, int x, int y, int slot) {
+        ActiveSkill skill = ClientRpg.data.slot(slot);
+        com.cavmkii.seancraft.rpg.Ultimate ult = slot == PlayerData.ULTIMATE_SLOT && ClientRpg.data.spec != null
+                ? com.cavmkii.seancraft.rpg.Ultimate.of(ClientRpg.data.spec) : null;
+        if (skill == null && ult == null) {
+            return;
+        }
+        Kit.blit(g, "hud/skill_cost_plate", x, y, SLOT, 9);
+        float maxStamina = ClientRpg.stats.maxStamina() + com.cavmkii.seancraft.client.food.ClientFood.stamina();
+        if (skill != null && skill.alt != null) {
+            Resource pick = skill.pool(ClientRpg.mana, ClientRpg.stats.maxMana(), ClientRpg.rage, ClientRpg.stats.maxRage(), ClientRpg.stamina, maxStamina);
+            icon(g, skill.resource, pick == skill.resource, x + 2, y);
+            icon(g, skill.alt, pick == skill.alt, x + 11, y);
+            return;
+        }
+        Resource pool = skill != null ? skill.resource : ult.resource;
+        int cost = skill != null ? skill.cost : ult.cost;
+        float have = switch (pool) {
+            case MANA -> ClientRpg.mana;
+            case RAGE -> ClientRpg.rage;
+            case STAMINA -> ClientRpg.stamina;
+        };
+        icon(g, pool, have >= cost, x + 2, y);
+        String text = String.valueOf(cost);
+        g.pose().pushPose();
+        g.pose().translate(x + 12, y + 3, 300);
+        g.pose().scale(0.5f, 0.5f, 1);
+        Kit.text(g, font, text, 0, 0, have >= cost ? Kit.BONE : Kit.ASH);
+        g.pose().popPose();
+    }
+
+    private static void icon(GuiGraphics g, Resource pool, boolean lit, int x, int y) {
+        Kit.blit(g, "icon/resource/" + pool.name().toLowerCase(java.util.Locale.ROOT) + (lit ? "" : "_dim"), x, y, 9, 9);
     }
 
     /** A small reminder to pick an origin, or while you have web or attribute points to spend; nothing otherwise. */

@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Modules",
+ "pattern": [
+  "PPP",
+  "PWP",
+  "CCC"
+ ],
+ "key": {
+  "P": "#minecraft:planks",
+  "W": "minecraft:white_wool",
+  "C": "minecraft:cobblestone"
+ },
+ "result": {
+  "id": "seancraft:medstation",
+  "count": 1
+ }
+}

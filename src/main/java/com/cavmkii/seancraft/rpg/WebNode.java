@@ -54,7 +54,10 @@ public final class WebNode {
         }
         if (active != null) {
             lines.add("Active: " + active.description);
-            lines.add("Costs " + active.cost + " " + active.resource.label + ", " + active.cooldownTicks / 20.0 + "s cooldown");
+            String pools = active.alt == null ? active.resource.label : active.resource.label + " or " + active.alt.label.toLowerCase()
+                    + " (whichever is fuller)";
+            lines.add("Costs " + active.cost + " " + pools + ", " + active.cooldownTicks / 20.0 + " s cooldown");
+            lines.add("Ranks 2/3/4: " + String.join(" / ", active.ranks));
         }
         stats.forEach((stat, value) -> lines.add(stat.describe(value)));
         return lines;

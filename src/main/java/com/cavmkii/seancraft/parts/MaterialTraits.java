@@ -82,12 +82,12 @@ public final class MaterialTraits {
     public static Trait of(PartDef def) {
         int t = def.tier() - 1;
         return switch (def.kind()) {
-            case BLADE, LONG_BLADE, KNIFE_BLADE, AXE_HEAD, MACE_HEAD, SPEARHEAD, HALBERD_HEAD, LIMBS -> HEADS[t];
+            case BLADE, LONG_BLADE, KNIFE_BLADE, AXE_HEAD, MACE_HEAD, SPEARHEAD, HALBERD_HEAD -> HEADS[t];
             case PLATE -> def.tier() == 2 ? Trait.RELIABLE : null;
-            case HANDLE, HAFT -> GRIPS[t];
+            case HANDLE, HAFT, LIMBS -> GRIPS[t];
             case WRAP -> HIDES[t] == Trait.PLATED ? null : HIDES[t];
             case PADDING -> HIDES[t];
-            case GUARD -> null;
+            case GUARD, CRYSTAL, FOCUS -> null;
         };
     }
 

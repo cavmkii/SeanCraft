@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Pouches",
+ "pattern": [
+  "GRG",
+  "RXR",
+  "GRG"
+ ],
+ "key": {
+  "G": "minecraft:gold_ingot",
+  "R": "minecraft:rabbit_hide",
+  "X": "seancraft:secure_gamma"
+ },
+ "result": {
+  "id": "seancraft:secure_kappa",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 3
+ },
+ "previous": "X"
+}

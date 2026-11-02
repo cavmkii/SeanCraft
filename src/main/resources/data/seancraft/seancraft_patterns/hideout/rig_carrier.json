@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Rigs",
+ "pattern": [
+  "NLN",
+  "LXL",
+  "NLN"
+ ],
+ "key": {
+  "N": "minecraft:iron_nugget",
+  "L": "minecraft:leather",
+  "X": "seancraft:rig_chest"
+ },
+ "result": {
+  "id": "seancraft:rig_carrier",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 1
+ },
+ "previous": "X"
+}

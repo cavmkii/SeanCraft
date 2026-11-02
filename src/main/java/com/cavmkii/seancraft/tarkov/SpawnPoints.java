@@ -91,6 +91,38 @@ public final class SpawnPoints extends SavedData {
 
     // ================================================================== building
 
+    /**
+     * Admin: moves the spawn points other than world spawn out to the configured distance, for worlds made before it
+     * changed. New shelters are built; the old ones stay as plain buildings and stop restocking.
+     */
+    public static String respread(ServerLevel level) {
+        SpawnPoints data = get(level);
+        if (data.points.isEmpty()) {
+            return "This world has no spawn points.";
+        }
+        BlockPos center = data.points.get(0);
+        for (BlockPos old : data.points.subList(1, data.points.size())) {
+            data.chests.removeIf(c -> c.closerThan(old, 10));
+        }
+        int extra = data.points.size() - 1;
+        data.points.subList(1, data.points.size()).clear();
+        StringBuilder out = new StringBuilder("Spawn points now:");
+        out.append(" ").append(center.toShortString());
+        for (int i = 0; i < extra; i++) {
+            double angle = i * Math.PI * 2 / Math.max(1, extra) + level.random.nextDouble() * 0.6;
+            int x = center.getX() + (int) (Math.cos(angle) * Cfg.spawnDistance);
+            int z = center.getZ() + (int) (Math.sin(angle) * Cfg.spawnDistance);
+            level.getChunk(x >> 4, z >> 4);
+            int y = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), level.getSeaLevel());
+            BlockPos floor = new BlockPos(x, y, z);
+            shelter(level, floor, data.chests);
+            data.points.add(floor);
+            out.append(", ").append(floor.toShortString());
+        }
+        data.setDirty();
+        return out.toString();
+    }
+
     private static void build(ServerLevel level) {
         SpawnPoints data = get(level);
         if (data.built) {

@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Arrows",
+ "pattern": [
+  "ACA",
+  ".S.",
+  "A.A"
+ ],
+ "key": {
+  "A": "minecraft:arrow",
+  "C": "#minecraft:coals",
+  "S": "minecraft:string"
+ },
+ "result": {
+  "id": "seancraft:fire_arrow",
+  "count": 4
+ }
+}

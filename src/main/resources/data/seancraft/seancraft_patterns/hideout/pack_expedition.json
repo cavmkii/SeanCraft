@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Backpacks",
+ "pattern": [
+  "PRP",
+  "RXR",
+  "PRP"
+ ],
+ "key": {
+  "P": "minecraft:phantom_membrane",
+  "R": "minecraft:rabbit_hide",
+  "X": "seancraft:pack_pilgrim"
+ },
+ "result": {
+  "id": "seancraft:pack_expedition",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 3
+ },
+ "previous": "X"
+}

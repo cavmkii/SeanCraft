@@ -491,6 +491,18 @@ public class TarkovScreen extends Screen {
         for (int i = 0; i < 9; i++) {
             slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)), null);
         }
+        // Load and roll under the hotbar, so packing shows what it does to the dodge (C.4, 9.4.7).
+        com.cavmkii.seancraft.combat.Load.State load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
+        com.cavmkii.seancraft.combat.Load.Tier tier = load.tier();
+        String loadText = String.format("LOAD %d%%   %s   %s", Math.round(load.fraction() * 100), tier.label,
+                tier.rollTicks == 0 ? "NO ROLL" : String.format("ROLL %.1f S", tier.rollTicks / 20f));
+        g.pose().pushPose();
+        g.pose().translate(0, 211, 0);
+        g.pose().scale(0.75f, 0.75f, 1);
+        g.drawString(font, loadText, 0, 0, tier == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT
+                : tier == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.ASH, false);
+        g.pose().popPose();
+        Kit.bar(g, "load", 9 * C - 40, 210, 40, (float) Math.min(1, load.fraction()));
 
         for (Box b : boxes()) {
             // Every grid is labelled with what it is and its size (C.4).
@@ -566,12 +578,16 @@ public class TarkovScreen extends Screen {
     }
 
     private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg) {
+        drawPlaced(g, stack, px, py, w, h, rotated, bg, true);
+    }
+
+    private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg, boolean framed) {
         int pw = w * C;
         int ph = h * C;
         if (bg != 0) {
             g.fill(px, py, px + pw - 1, py + ph - 1, bg);
         }
-        if (w > 1 || h > 1) {
+        if (framed && (w > 1 || h > 1)) {
             // A multi-cell item reads as one piece: an inset across its whole footprint.
             Kit.inset(g, px + 1, py + 1, pw - 2, ph - 2);
         }
@@ -784,6 +800,9 @@ public class TarkovScreen extends Screen {
         int[] size = ItemSize.of(held);
         int w = heldRot ? size[1] : size[0];
         int h = heldRot ? size[0] : size[1];
+        // Over a grid the held item snaps to the cells it would land in, so it and the highlight always line up.
+        int drawX = mx - 9;
+        int drawY = my - 9;
         if (gridFor(hover) != null) {
             GridRef b = gridFor(hover);
             if (b != null) {
@@ -797,11 +816,14 @@ public class TarkovScreen extends Screen {
                 g.pose().translate(0, 0, 150);
                 g.fill(gx, gy, gx + (merge ? there.width() : w) * C - 1, gy + (merge ? there.height() : h) * C - 1, ok ? 0x60B08A3E : 0x608E1F1F);
                 g.pose().popPose();
+                drawX = merge ? b.x + there.x * C : gx;
+                drawY = merge ? b.y + there.y * C : gy;
             }
         }
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        drawPlaced(g, shown, mx - 9, my - 9, w, h, heldRot && size[0] != size[1], 0);
+        // See-through, so the highlight and the cells under it still show.
+        drawPlaced(g, shown, drawX, drawY, w, h, heldRot && size[0] != size[1], 0x400E0C0B, false);
         g.pose().popPose();
     }
 
@@ -860,6 +882,30 @@ public class TarkovScreen extends Screen {
     }
 
     /** Puts a recipe's ingredients on the gather list. */
+    /** Recipe whose pattern is drawn as a ghost in the CRAFTING grid, or null. */
+    private String ghostRecipe;
+
+    /** The ghost's item for each of the 9 squares (null where the pattern has nothing). Tag ingredients cycle. */
+    private ItemStack[] ghostCells() {
+        ItemStack[] out = new ItemStack[9];
+        var key = ghostRecipe == null ? null : net.minecraft.resources.ResourceLocation.tryParse(ghostRecipe);
+        var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
+        if (holder == null || !(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe recipe)) {
+            return out;
+        }
+        var ingredients = recipe.getIngredients();
+        int w = recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped ? shaped.getWidth() : 3;
+        int frame = (int) (minecraft.level.getGameTime() / 20);
+        for (int i = 0; i < ingredients.size() && i < 9; i++) {
+            ItemStack[] options = ingredients.get(i).getItems();
+            int cell = (i / w) * 3 + i % w;
+            if (options.length > 0 && cell < 9) {
+                out[cell] = options[frame % options.length];
+            }
+        }
+        return out;
+    }
+
     private void pinRecipe(String id) {
         var key = net.minecraft.resources.ResourceLocation.tryParse(id);
         var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
@@ -979,7 +1025,7 @@ public class TarkovScreen extends Screen {
             }
             TetrisNet.CraftEntry e = row.entry;
             boolean hover = mx >= 0 && mx < LIST_W && my >= y && my < y + ROW - 2 && my >= top;
-            boolean selected = e.id().equals(craft.selected());
+            boolean selected = e.id().equals(ghostRecipe);
             Kit.blit(g, selected ? "list/row_selected" : hover ? "list/row_hover" : "list/row", 0, y, LIST_W, ROW - 2);
             g.renderItem(e.result(), 3, y + 2);
             g.renderItemDecorations(font, e.result(), 3, y + 2);
@@ -996,17 +1042,31 @@ public class TarkovScreen extends Screen {
         g.drawString(font, "CRAFTING GRID", PX, 2, Kit.ASH, false);
         boolean clearHover = mx >= CLEAR_X && mx < W && my >= 0 && my < 12;
         Kit.button(g, font, "CLEAR", CLEAR_X, 0, 40, 12, true, clearHover, false);
-        if (craft.selected() != null && !craft.selected().isEmpty()) {
+        if (ghostRecipe != null) {
             boolean pinHover = mx >= PIN_X && mx < PIN_X + PIN_W && my >= PIN_Y && my < PIN_Y + 12;
             Kit.button(g, font, "PIN TO HUD", PIN_X, PIN_Y, PIN_W, 12, true, pinHover, false);
         }
+        // The picked recipe's pattern as a ghost (4.1): faded icons in the empty squares, until it's complete.
+        if (!craft.result().isEmpty()) {
+            ghostRecipe = null;
+        }
+        ItemStack[] ghostAt = ghostCells();
         for (int c = 0; c < 9; c++) {
             int x = PX + (c % 3) * CELL;
             int y = GRID_Y + (c / 3) * CELL;
             boolean hover = cellAt(mx, my) == c;
             boolean small = !craft.table() && (c % 3 == 2 || c / 3 == 2);
-            Kit.slot(g, x, y, CELL, small ? Kit.SlotState.LOCKED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             ItemStack in = c < craft.grid().size() ? craft.grid().get(c) : ItemStack.EMPTY;
+            if (in.isEmpty() && ghostAt[c] != null && !ghostAt[c].isEmpty()) {
+                Kit.blit(g, "slot/ghost", x, y, CELL, CELL);
+                g.renderItem(ghostAt[c], x + 3, y + 3);
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                Kit.blit(g, "slot/ghost_overlay", x + 3, y + 3, 16, 16);
+                g.pose().popPose();
+                continue;
+            }
+            Kit.slot(g, x, y, CELL, small ? Kit.SlotState.LOCKED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             boolean lifted = heldFrom != null && heldFrom.kind() == Loc.CRAFT && heldFrom.a() == c && heldCount == 0;
             if (!in.isEmpty() && !lifted) {
                 g.renderItem(in, x + 3, y + 3);
@@ -1293,11 +1353,8 @@ public class TarkovScreen extends Screen {
                 g.drawString(font, c, W - font.width(c), ly, have >= line.need ? Kit.MOSS : Kit.BLOOD_LIGHT, false);
                 ly += 11;
             }
-            for (int b = 0; b < 2; b++) {
-                int bx = PX + b * 84;
-                boolean over = mx >= bx && mx < bx + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
-                Kit.button(g, font, b == 0 ? "LAY OUT" : "PIN TO HUD", bx, REC_BTN_Y, 80, 14, true, over, false);
-            }
+            boolean over = mx >= PX && mx < PX + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
+            Kit.button(g, font, "PIN TO HUD", PX, REC_BTN_Y, 80, 14, true, over, false);
         }
 
         // Tracker.
@@ -1343,16 +1400,13 @@ public class TarkovScreen extends Screen {
         if (cell != null) {
             if (cell.known) {
                 selectedRecipe = cell.holder.id();
+                // Discovered recipes show their ghost pattern in the grid.
+                ghostRecipe = selectedRecipe.toString();
             }
             return true;
         }
         if (selectedRecipe != null && y >= REC_BTN_Y && y < REC_BTN_Y + 14) {
             if (x >= PX && x < PX + 80) {
-                ClientPlayNetworking.send(new TetrisNet.Craft(selectedRecipe.toString(), 0));
-                craftView = 0;
-                return true;
-            }
-            if (x >= PX + 84 && x < PX + 164) {
                 pinRecipe(selectedRecipe.toString());
                 return true;
             }
@@ -1596,8 +1650,8 @@ public class TarkovScreen extends Screen {
             ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
             return true;
         }
-        if (craft.selected() != null && !craft.selected().isEmpty() && x >= PIN_X && x < PIN_X + PIN_W && y >= PIN_Y && y < PIN_Y + 12) {
-            pinRecipe(craft.selected());
+        if (ghostRecipe != null && x >= PIN_X && x < PIN_X + PIN_W && y >= PIN_Y && y < PIN_Y + 12) {
+            pinRecipe(ghostRecipe);
             return true;
         }
         if (overResult(x, y)) {
@@ -1693,7 +1747,8 @@ public class TarkovScreen extends Screen {
                 return true;
             }
             if (row.entry != null && at >= row.y && at < row.y + ROW - 2) {
-                ClientPlayNetworking.send(new TetrisNet.Craft(row.entry.id(), 0));
+                // Shows the pattern; nothing places items for the player (4.1).
+                ghostRecipe = row.entry.id().equals(ghostRecipe) ? null : row.entry.id();
                 break;
             }
         }

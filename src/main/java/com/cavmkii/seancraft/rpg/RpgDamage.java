@@ -29,9 +29,6 @@ public final class RpgDamage {
     /** Set while an ability deals its damage, so it isn't scaled again as a melee hit. */
     static boolean applyingSkill;
 
-    /** Hunter's Mark: target id to game time the mark ends. */
-    static final Map<UUID, Long> MARKED = new HashMap<>();
-
     /** A Warlock's hex: until when, and how much more damage the target takes. */
     record Hex(long until, float extra) {}
 
@@ -51,12 +48,10 @@ public final class RpgDamage {
         Rpg.Runtime rt = Rpg.runtime(player);
         long now = player.serverLevel().getGameTime();
 
-        if (source.getEntity() instanceof LivingEntity attacker && attacker != player && now < rt.parryUntil) {
+        // Riposte (6.5.5): a melee hit during the stance is parried, no shield needed, and countered.
+        if (source.getEntity() instanceof LivingEntity attacker && attacker != player && source.getDirectEntity() == attacker && now < rt.parryUntil) {
             rt.parryUntil = 0;
-            float counter = (float) (player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 2);
-            SkillEffects.damage(player, attacker, counter);
-            player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1f, 1.4f);
-            player.serverLevel().sendParticles(ParticleTypes.CRIT, attacker.getX(), attacker.getY(1), attacker.getZ(), 15, 0.3, 0.3, 0.3, 0.2);
+            SkillEffects.riposte(player, attacker, rt);
             return false;
         }
         boolean dodgeable = source.getEntity() != null && !source.is(DamageTypes.FALL);
@@ -87,13 +82,10 @@ public final class RpgDamage {
                 HEXED.remove(victim.getUUID());
             }
         }
-        Long markEnd = MARKED.get(victim.getUUID());
-        if (markEnd != null) {
-            if (markEnd > now) {
-                amount *= 1.3f;
-            } else {
-                MARKED.remove(victim.getUUID());
-            }
+        // Hunter's Mark, a frozen target, Berserk, a daunted attacker; Berserk and War Cry on the dealing side.
+        amount *= SkillEffects.takenMultiplier(victim, source);
+        if (source.getEntity() instanceof ServerPlayer dealer && dealer != victim) {
+            amount *= SkillEffects.dealtMultiplier(dealer);
         }
 
         if (source.getEntity() instanceof ServerPlayer attacker && attacker != victim && !applyingSkill) {
@@ -104,7 +96,7 @@ public final class RpgDamage {
             } else if (source.getDirectEntity() instanceof AbstractArrow arrow) {
                 int bows = data.skillLevel(Skill.BOWS);
                 ItemStack bow = arrow.getWeaponItem();
-                Attr[] scaling = bow != null ? Scaling.of(bow) : new Attr[] {Attr.AGI, null};
+
                 Rpg.Runtime rt = Rpg.runtime(attacker);
                 boolean deadeye = rt.deadeyeShots > 0;
                 if (deadeye) {
@@ -112,7 +104,11 @@ public final class RpgDamage {
                 }
                 double crit = deadeye ? forcedCrit(attacker, victim, stats) : crit(attacker, victim, stats, bow);
                 amount = (float) (amount * (1 + Skill.BOWS.effectValue(bows) / 100.0 + stats.projectileDamagePct() / 100
-                        + stats.scalingPct(scaling[0], scaling[1]) / 100 + crit));
+                        + (bow != null ? stats.scalingPct(bow) : stats.agi()) / 100 + strength(attacker) + crit));
+                if (bow != null && !Scaling.meets(bow, stats)) {
+                    amount *= Scaling.UNDER_REQUIREMENT_DAMAGE;
+                }
+                amount *= com.cavmkii.seancraft.parts.Wear.factor(bow);
                 // The Archer's signatures and Deadeye: arrows slow, and crits pin.
                 if (stats.has(Stat.ARROW_SLOW)) {
                     victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 1), attacker);
@@ -131,6 +127,12 @@ public final class RpgDamage {
             amount = defend(player, source, amount, now);
         }
         return amount;
+    }
+
+    /** Strength: 30% increased damage a level (9.7.2), in the increased pool. */
+    static double strength(ServerPlayer player) {
+        var effect = player.getEffect(MobEffects.DAMAGE_BOOST);
+        return effect == null ? 0 : com.cavmkii.seancraft.combat.Potions.STRENGTH_INCREASED * (effect.getAmplifier() + 1);
     }
 
     /** Rolls a crit: returns the extra damage multiplier (0 if it didn't crit), with a flash and a sound when it does. */
@@ -155,8 +157,7 @@ public final class RpgDamage {
     private static float melee(ServerPlayer attacker, LivingEntity victim, PlayerData data, Stats stats, float amount) {
         ItemStack weapon = attacker.getMainHandItem();
         // Increased damage: melee nodes, and +1% per point of the weapon's scaling attribute (6.3.1, 9.5 step 2).
-        Attr[] scaling = Scaling.of(weapon);
-        double mult = 1 + stats.meleeDamagePct() / 100 + stats.scalingPct(scaling[0], scaling[1]) / 100;
+        double mult = 1 + stats.meleeDamagePct() / 100 + stats.scalingPct(weapon) / 100 + strength(attacker);
         Skill weaponSkill = weapon.is(ItemTags.SWORDS) ? Skill.SWORDS : weapon.is(ItemTags.AXES) ? Skill.AXES : null;
         if (weaponSkill != null) {
             mult += weaponSkill.effectValue(data.skillLevel(weaponSkill)) / 100.0;
@@ -178,6 +179,8 @@ public final class RpgDamage {
             mult += stats.get(Stat.RIPOSTE) / 100;
             rt.riposteUntil = 0;
         }
+        // Shadow Step's backstab; Holy Smite rides on the hit.
+        mult *= SkillEffects.onMeleeHit(attacker, victim);
         if (rt.vanishStrike) {
             // Out of Vanish: the first hit counts as a backstab (x1.5, 9.4).
             rt.vanishStrike = false;
@@ -186,6 +189,12 @@ public final class RpgDamage {
         }
         mult += crit(attacker, victim, stats, weapon);
         amount *= (float) mult;
+        if (!Scaling.meets(weapon, stats)) {
+            // Under the weapon's requirement (9.4.2).
+            amount *= Scaling.UNDER_REQUIREMENT_DAMAGE;
+        }
+        // Worn out: half damage until repaired (9.4.8).
+        amount *= com.cavmkii.seancraft.parts.Wear.factor(weapon);
 
         if (weaponSkill != null) {
             Rpg.addSkillXp(attacker, weaponSkill, Math.min(amount, 15) * 0.5);
@@ -206,10 +215,12 @@ public final class RpgDamage {
         if (source.getEntity() instanceof LivingEntity attacker && attacker != player) {
             Rpg.gainRage(player, 10);
             amount *= protection(player, attacker, now);
-            if (player.isBlocking() && player.isDamageSourceBlocked(source)) {
-                if (stats.get(Stat.RIPOSTE) > 0) {
-                    Rpg.runtime(player).riposteUntil = now + 30;
-                }
+            // Shields (9.4.6): SeanCraft's share-based block, parries and guard breaks replace vanilla's full block.
+            float before = amount;
+            com.cavmkii.seancraft.combat.Blocking.Result block = com.cavmkii.seancraft.combat.Blocking.onHit(player, source, amount);
+            amount = block.amount();
+            if (block.outcome() != com.cavmkii.seancraft.combat.Blocking.Outcome.NONE) {
+                Rpg.openRiposte(player);
                 if (stats.has(Stat.TAUNT)) {
                     // The Knight's Challenge: the attacker and monsters near you come for you.
                     if (attacker instanceof net.minecraft.world.entity.Mob mob) {
@@ -221,12 +232,12 @@ public final class RpgDamage {
                     }
                 }
                 int blocking = data.skillLevel(Skill.BLOCKING);
-                Rpg.addSkillXp(player, Skill.BLOCKING, 1 + Math.min(amount, 15) * 2);
-                float reflect = amount * Skill.BLOCKING.effectValue(blocking) / 100f;
+                Rpg.addSkillXp(player, Skill.BLOCKING, 1 + Math.min(before, 15) * 2);
+                float reflect = (before - amount) * Skill.BLOCKING.effectValue(blocking) / 100f;
                 ItemStack shield = player.getUseItem();
                 if (Parts.modular(shield)) {
                     // Better shield rims and straps than standard add to what is thrown back.
-                    reflect += amount * Math.max(0, Parts.totals(shield).block);
+                    reflect += (before - amount) * Math.max(0, Parts.totals(shield).block);
                 }
                 if (reflect > 0 && source.getDirectEntity() == attacker) {
                     attacker.hurt(player.damageSources().thorns(player), reflect);
@@ -257,12 +268,9 @@ public final class RpgDamage {
                 continue;
             }
             mult = Math.min(mult, (float) (1 - Rpg.stats(ally).get(Stat.ALLY_DR) / 100));
-            if (now < rt.bulwarkUntil && ally.distanceTo(player) <= 5) {
-                Vec3 facing = ally.getLookAngle().multiply(1, 0, 1).normalize();
-                Vec3 toPlayer = player.position().subtract(ally.position()).multiply(1, 0, 1).normalize();
-                if (facing.dot(toPlayer) < 0) {
-                    mult = Math.min(mult, 0.5f);
-                }
+            if (now < rt.bulwarkUntil && ally.distanceTo(player) <= 5 && Ultimates.behind(ally, player)) {
+                // Bulwark: 50% less behind the Knight, 60% at rank 2.
+                mult = Math.min(mult, rt.ultRank >= 2 ? 0.4f : 0.5f);
             }
         }
         return mult;

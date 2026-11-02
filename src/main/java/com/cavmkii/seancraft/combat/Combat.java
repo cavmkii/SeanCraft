@@ -32,7 +32,7 @@ public final class Combat {
     /** Sprinting is the one part of vanilla hunger left, paid in stamina (design doc 11). */
     static final float SPRINT_PER_SECOND = 8;
     static final int REGEN_PAUSE_TICKS = 20;
-    static final int ROLL_IFRAME_TICKS = 8;
+    public static final int ROLL_IFRAME_TICKS = 8;
     /** Combat Roll's recharge, cut from its 4 seconds so stamina is the real limit (9.6.3). */
     static final float ROLL_RECHARGE_SECONDS = 0.75f;
 
@@ -42,7 +42,15 @@ public final class Combat {
         long regenPausedUntil;
         long rollStart = Long.MIN_VALUE / 2;
         boolean weakSwing;
+        boolean heavySwing;
         boolean exhausted;
+        Load.Tier load = Load.Tier.LIGHT;
+    }
+
+    /** The player's equip load tier, as of the last half-second check. */
+    public static Load.Tier load(ServerPlayer player) {
+        State s = STATE.get(player.getUUID());
+        return s == null ? Load.Tier.LIGHT : s.load;
     }
 
     private Combat() {}
@@ -82,20 +90,47 @@ public final class Combat {
         });
         double efficiency = com.cavmkii.seancraft.rpg.Rpg.stats(player).staminaEfficiency()
                 * com.cavmkii.seancraft.rpg.Scaling.agiShare(player.getMainHandItem());
-        return (float) (damage[0] * 5 / 4 * (1 - efficiency));
+        float underRequirement = com.cavmkii.seancraft.rpg.Scaling.meets(player.getMainHandItem(), com.cavmkii.seancraft.rpg.Rpg.stats(player))
+                ? 1 : com.cavmkii.seancraft.rpg.Scaling.UNDER_REQUIREMENT_STAMINA;
+        return (float) (damage[0] * 5 / 4 * (1 - efficiency) * underRequirement);
     }
 
     /** Better Combat started a swing (server side). Charges for it, or marks it weak if the bar can't cover it. */
     public static void onSwing(ServerPlayer player) {
         com.cavmkii.seancraft.boss.Restraint.onSwing(player);
         if (player.isCreative()) {
+            State c = state(player);
+            c.heavySwing = player.isShiftKeyDown();
+            c.weakSwing = false;
+            if (c.heavySwing) {
+                Heavy.perform(player);
+            }
+            com.cavmkii.seancraft.rpg.Magic.onSwing(player, c.heavySwing);
             return;
         }
         State s = state(player);
-        float cost = swingCost(player);
+        // A heavy attack (9.4.1): attack while sneaking. Twice the stamina, x1.75 damage, twice the poise.
+        s.heavySwing = player.isShiftKeyDown();
+        float cost = swingCost(player) * (s.heavySwing ? 2 : 1);
         PlayerData data = Rpg.data(player);
         s.weakSwing = data.stamina < cost;
         spend(player, s, data, cost);
+        if (s.heavySwing && !s.weakSwing) {
+            Heavy.perform(player);
+        }
+        com.cavmkii.seancraft.rpg.Magic.onSwing(player, s.heavySwing);
+    }
+
+    public static boolean heavySwing(ServerPlayer player) {
+        State s = STATE.get(player.getUUID());
+        return s != null && s.heavySwing && !s.weakSwing;
+    }
+
+    /** Spends stamina outside a swing or roll (blocking). */
+    public static void spendStamina(ServerPlayer player, float cost) {
+        if (!player.isCreative()) {
+            spend(player, state(player), Rpg.data(player), cost);
+        }
     }
 
     private static void onRoll(ServerPlayer player) {
@@ -119,6 +154,12 @@ public final class Combat {
     /** Per tick, from the character tick: sprinting, flat regeneration after the pause, and the exhausted state. */
     public static void tick(ServerPlayer player, PlayerData data, float max) {
         State s = state(player);
+        Blocking.tick(player);
+        if (player.tickCount % 10 == 0) {
+            Load.State load = Load.of(player, Rpg.stats(player).str());
+            s.load = load.tier();
+            Load.apply(player, load);
+        }
         if (player.isSprinting() && !player.isCreative() && !player.isPassenger()) {
             spend(player, s, data, SPRINT_PER_SECOND / 20f);
         } else if (player.serverLevel().getGameTime() >= s.regenPausedUntil) {
@@ -137,7 +178,10 @@ public final class Combat {
     /** Swings started with no stamina deal half damage. */
     public static float swingMultiplier(ServerPlayer attacker) {
         State s = STATE.get(attacker.getUUID());
-        return s != null && s.weakSwing ? 0.5f : 1f;
+        if (s == null) {
+            return 1f;
+        }
+        return s.weakSwing ? 0.5f : s.heavySwing ? Heavy.DAMAGE : 1f;
     }
 
     /**
@@ -146,7 +190,8 @@ public final class Combat {
      */
     public static boolean rollDodges(ServerPlayer player, DamageSource source) {
         State s = STATE.get(player.getUUID());
-        if (s == null || player.serverLevel().getGameTime() - s.rollStart >= ROLL_IFRAME_TICKS) {
+        // The window follows equip load: 8 ticks, 4 under Heavy load (9.6.3).
+        if (s == null || player.serverLevel().getGameTime() - s.rollStart >= Math.max(s.load.rollTicks, 1) || s.load.rollTicks == 0) {
             return false;
         }
         boolean attack = source.getEntity() != null || source.getDirectEntity() != null;

@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Totems",
+ "pattern": [
+  "C1C",
+  "2X.",
+  "C.C"
+ ],
+ "key": {
+  "C": "minecraft:copper_ingot",
+  "X": "minecraft:emerald",
+  "1": "minecraft:glow_ink_sac",
+  "2": "minecraft:cherry_sapling"
+ },
+ "result": {
+  "id": "seancraft:daylan_totem",
+  "count": 1
+ }
+}

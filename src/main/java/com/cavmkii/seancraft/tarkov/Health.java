@@ -153,7 +153,10 @@ public final class Health {
         }
         // Slash and pierce mostly bleed, blunt mostly breaks bones (9.1).
         if (player.getRandom().nextFloat() < chance * cut) {
-            inflict(player, severity >= Body.HEAVY ? Body.HEAVY_BLEED : Body.LIGHT_BLEED, part, severity);
+            // Broadheads make bleeds half again as bad (9.4.4).
+            float bleed = com.cavmkii.seancraft.combat.Damage.arrowHas(source, com.cavmkii.seancraft.combat.Damage.BROADHEAD_TAG)
+                    ? Math.min(1, severity * com.cavmkii.seancraft.combat.Damage.BROADHEAD_BLEED) : severity;
+            inflict(player, bleed >= Body.HEAVY ? Body.HEAVY_BLEED : Body.LIGHT_BLEED, part, bleed);
         }
         if (part.limb() && player.getRandom().nextFloat() < chance * (1 - cut)) {
             inflict(player, Body.FRACTURE, part, severity);
@@ -274,6 +277,9 @@ public final class Health {
     private static void inflict(ServerPlayer player, int flag, BodyPart part, float severity) {
         TarkovData d = Tarkov.data(player);
         int i = part.ordinal();
+        if (com.cavmkii.seancraft.rpg.Rpg.injuryBlocked(player, flag == Body.FRACTURE)) {
+            return; // Divine Shield, or a fracture inside a rank-3 Consecrate
+        }
         if (flag != Body.FRACTURE && Body.destroyed(d, part)) {
             return; // a destroyed part doesn't bleed
         }
@@ -378,6 +384,15 @@ public final class Health {
     /**
      * Revives every destroyed part with this much lasting damage (the Cleric's Miracle). Returns how many came back.
      */
+    /** Clears every fracture (Miracle at rank 3). */
+    public static void clearFractures(ServerPlayer player) {
+        TarkovData d = Tarkov.data(player);
+        if (Body.hasAny(d, Body.FRACTURE)) {
+            Body.clearAll(d, Body.FRACTURE);
+            rt(player).dirty = true;
+        }
+    }
+
     public static int revive(ServerPlayer player, float scar) {
         TarkovData d = Tarkov.data(player);
         float max = player.getMaxHealth();

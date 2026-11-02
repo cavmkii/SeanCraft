@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Modules",
+ "pattern": [
+  "PPP",
+  "PTP",
+  "CCC"
+ ],
+ "key": {
+  "P": "#minecraft:planks",
+  "T": "minecraft:crafting_table",
+  "C": "minecraft:cobblestone"
+ },
+ "result": {
+  "id": "seancraft:workshop",
+  "count": 1
+ }
+}

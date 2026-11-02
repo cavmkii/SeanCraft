@@ -68,6 +68,9 @@ public final class ModItems {
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_BENCH_ITEM);
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.FOB_TABLE_ITEM);
                         output.accept(ModItems.FIRE_ARROW);
+                        output.accept(ModItems.BROADHEAD_ARROW);
+                        output.accept(ModItems.BODKIN_ARROW);
+                        output.accept(ModItems.BLUNT_ARROW);
                         output.accept(com.cavmkii.seancraft.boss.BossContent.TROPHY_RACK_ITEM);
                         output.accept(com.cavmkii.seancraft.boss.BossContent.MARK_TOTEM);
                         output.accept(com.cavmkii.seancraft.boss.BossContent.PEDESTAL_ITEM);
@@ -85,6 +88,12 @@ public final class ModItems {
     private ModItems() {}
 
     public static final Item FIRE_ARROW = register("fire_arrow", new FireArrowItem(new Item.Properties()));
+    public static final Item BROADHEAD_ARROW = register("arrow_broadhead",
+            new TaggedArrowItem(com.cavmkii.seancraft.combat.Damage.BROADHEAD_TAG, new Item.Properties()));
+    public static final Item BODKIN_ARROW = register("arrow_bodkin",
+            new TaggedArrowItem(com.cavmkii.seancraft.combat.Damage.BODKIN_TAG, new Item.Properties()));
+    public static final Item BLUNT_ARROW = register("arrow_blunt",
+            new TaggedArrowItem(com.cavmkii.seancraft.combat.Damage.BLUNT_ARROW_TAG, new Item.Properties()));
 
     private static Item register(String name, Item item) {
         return Registry.register(BuiltInRegistries.ITEM, SeanCraft.id(name), item);

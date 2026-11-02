@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": ["T", "S", "F"],
+  "key": { "T": { "item": "minecraft:iron_nugget" }, "S": { "item": "minecraft:stick" }, "F": { "item": "minecraft:feather" } },
+  "result": { "id": "seancraft:arrow_bodkin", "count": 4 }
+}

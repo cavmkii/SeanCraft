@@ -103,7 +103,8 @@ public final class Cfg {
     public static int maxHideouts = 3;
     public static double fobPauseMinutes = 15;
     public static int spawnPoints = 3;
-    public static double spawnDistance = 400;
+    /** Far enough that the 500-block hideout spacing around each spawn point leaves room to build between them (2.4). */
+    public static double spawnDistance = 1000;
     public static double spawnRadius = 24;
     public static double spawnRefillMinutes = 30;
 
@@ -248,6 +249,10 @@ public final class Cfg {
                 } catch (RuntimeException e) {
                     problems.add(entry.section + "." + entry.key + "=" + raw);
                 }
+            }
+            if (spawnDistance == 400) {
+                // The old default, from before spawn points moved out to make room for hideouts between them.
+                spawnDistance = 1000;
             }
             write(path);
         } catch (IOException e) {

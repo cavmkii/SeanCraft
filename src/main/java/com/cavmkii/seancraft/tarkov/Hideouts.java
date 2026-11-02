@@ -29,6 +29,8 @@ public final class Hideouts extends SavedData {
         public java.util.UUID owner;
         /** Where each module's block stands, or null: a module only works while its block is in the hideout (2.5). */
         public final BlockPos[] modules = new BlockPos[Module.values().length];
+        /** Parts waiting in the Recovery crate (9.4.9), by player. */
+        public final java.util.Map<java.util.UUID, List<net.minecraft.world.item.ItemStack>> recovery = new java.util.HashMap<>();
 
         Hideout(BlockPos pos) {
             this.pos = pos;
@@ -160,7 +162,8 @@ public final class Hideouts extends SavedData {
             for (BlockPos p : SpawnPoints.get(level).points) {
                 double d = Math.sqrt(Vec3.atCenterOf(p).distanceToSqr(at));
                 if (d < spacing) {
-                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spacing + ").";
+                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spacing + "). Head "
+                            + away(Vec3.atCenterOf(p), at) + " another " + (int) Math.ceil(spacing - d) + ".";
                 }
             }
         }
@@ -171,6 +174,15 @@ public final class Hideouts extends SavedData {
             return "You already have " + Cfg.maxHideouts + " hideouts. Break one of your Hideout Benches to move it.";
         }
         return null;
+    }
+
+    /** The compass direction leading away from {@code from}, as seen at {@code at}. */
+    private static String away(Vec3 from, Vec3 at) {
+        double dx = at.x - from.x;
+        double dz = at.z - from.z;
+        String ns = Math.abs(dz) > Math.abs(dx) * 0.4 ? (dz > 0 ? "south" : "north") : "";
+        String ew = Math.abs(dx) > Math.abs(dz) * 0.4 ? (dx > 0 ? "east" : "west") : "";
+        return ns.isEmpty() ? ew : ew.isEmpty() ? ns : ns + "-" + ew;
     }
 
     void remove(BlockPos pos) {
@@ -209,6 +221,14 @@ public final class Hideouts extends SavedData {
                     h.modules[m.ordinal()] = BlockPos.of(c.getLong("module_" + m.name()));
                 }
             }
+            for (Tag rt : c.getList("recovery", Tag.TAG_COMPOUND)) {
+                CompoundTag r = (CompoundTag) rt;
+                List<net.minecraft.world.item.ItemStack> items = new ArrayList<>();
+                for (Tag it : r.getList("items", Tag.TAG_COMPOUND)) {
+                    net.minecraft.world.item.ItemStack.parse(registries, it).ifPresent(items::add);
+                }
+                h.recovery.put(r.getUUID("player"), items);
+            }
             data.list.add(h);
         }
         return data;
@@ -235,6 +255,20 @@ public final class Hideouts extends SavedData {
                     c.putLong("module_" + m.name(), h.modules[m.ordinal()].asLong());
                 }
             }
+            ListTag rec = new ListTag();
+            h.recovery.forEach((player, items) -> {
+                CompoundTag r = new CompoundTag();
+                r.putUUID("player", player);
+                ListTag its = new ListTag();
+                for (net.minecraft.world.item.ItemStack s : items) {
+                    if (!s.isEmpty()) {
+                        its.add(s.save(registries));
+                    }
+                }
+                r.put("items", its);
+                rec.add(r);
+            });
+            c.put("recovery", rec);
             list.add(c);
         }
         tag.put("hideouts", list);

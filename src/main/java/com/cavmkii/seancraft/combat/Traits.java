@@ -53,7 +53,7 @@ public final class Traits {
 
     /** The armor a physical hit counts, after pierce's share, the weapon's armor piercing and Breach. */
     static float effectiveArmor(float armor, boolean pierce, Family family, float breach) {
-        float ignored = Math.min(MAX_PENETRATION, (pierce ? Damage.PIERCE_IGNORES : 0) + armorPiercing(family) + breach);
+        float ignored = Math.max(0, Math.min(MAX_PENETRATION, (pierce ? Damage.PIERCE_IGNORES : 0) + armorPiercing(family) + breach));
         return armor * (1 - ignored);
     }
 

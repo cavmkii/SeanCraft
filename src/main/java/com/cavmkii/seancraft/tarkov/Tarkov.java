@@ -476,7 +476,12 @@ public final class Tarkov {
         boolean raid = inRaid(player);
         Runtime rt = runtime(player);
         String time = rt.inRaid != null && rt.inRaid ? " Raid time " + clock(player.serverLevel().getGameTime() - rt.raidStart) + "." : "";
-        if (com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
+        boolean bossFight = com.cavmkii.seancraft.boss.Arenas.inFight(player);
+        if (raid && !bossFight && !player.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
+            // Striking parts of lost part-built gear go back to the hideout (9.4.9).
+            Recovery.onDeath(player, com.cavmkii.seancraft.tetris.Tetris.atRisk(player, Cfg.raidDeathRule == Cfg.DeathRule.VANILLA));
+        }
+        if (bossFight) {
             // A boss death costs a random share of what you carry, lighter than a raid death (8.4.7). The rest drops
             // where you fell, for the run back.
             int lost = com.cavmkii.seancraft.tetris.Tetris.onBossDeath(player, BOSS_DEATH_LOSS);
@@ -508,9 +513,10 @@ public final class Tarkov {
     private static final Map<UUID, Module> FOCUS = new HashMap<>();
 
     /** The Hideout Bench's screen: its crafts, module blocks among them. */
+    /** The Hideout Bench: its 3x3 crafting grid (4.8). */
     public static void openBench(ServerPlayer player, BlockPos pos) {
         FOCUS.remove(player.getUUID());
-        openHideout(player, pos);
+        HideoutCraftMenu.open(player, pos);
     }
 
     /** A module block's screen: build and upgrade that module (2.5). Actions still go through the hideout's bench. */

@@ -72,11 +72,16 @@ public final class Restraint {
 
     /** A heavy hit's stagger: a 0.6-second stop. Bass Drop makes the player immune. */
     public static void stagger(ServerPlayer player) {
+        stagger(player, 12);
+    }
+
+    /** A stagger of any length: 0.6 s for heavy hits and poise, 1 s for a guard break (9.6.1). */
+    public static void stagger(ServerPlayer player, int ticks) {
         if (Trophies.active(player, Trophies.Power.BASS_DROP) || rooted(player) || com.cavmkii.seancraft.rpg.Rpg.unstaggerable(player)) {
             return;
         }
         Hold old = HELD.get(player.getUUID());
-        HELD.put(player.getUUID(), new Hold(now(player) + 12, false, old != null ? old.slowUntil : 0));
+        HELD.put(player.getUUID(), new Hold(now(player) + ticks, false, old != null ? old.slowUntil : 0));
         modify(player, Attributes.MOVEMENT_SPEED, ROOT, -1);
         modify(player, Attributes.JUMP_STRENGTH, ROOT, -1);
     }

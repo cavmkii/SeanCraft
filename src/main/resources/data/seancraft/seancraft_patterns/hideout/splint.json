@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "TST"
+ ],
+ "key": {
+  "T": "minecraft:stick",
+  "S": "minecraft:string"
+ },
+ "result": {
+  "id": "seancraft:splint",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 1
+ }
+}

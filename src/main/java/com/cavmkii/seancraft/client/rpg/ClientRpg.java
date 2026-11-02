@@ -39,6 +39,26 @@ public final class ClientRpg {
 
     private ClientRpg() {}
 
+    /**
+     * Vanilla binds its creative hotbar save and load activators to C and X, the same keys as abilities 3 and 2, and a key
+     * only drives one mapping, so the abilities never fired. Unbind vanilla's when they clash (they're rebindable).
+     */
+    private static void freeAbilityKeys(Minecraft mc) {
+        boolean changed = false;
+        for (KeyMapping vanilla : new KeyMapping[] {mc.options.keySaveHotbarActivator, mc.options.keyLoadHotbarActivator}) {
+            for (KeyMapping ability : ABILITY_KEYS) {
+                if (vanilla.same(ability)) {
+                    vanilla.setKey(InputConstants.UNKNOWN);
+                    changed = true;
+                }
+            }
+        }
+        if (changed) {
+            KeyMapping.resetMapping();
+            mc.options.save();
+        }
+    }
+
     public static void init() {
         KeyBindingHelper.registerKeyBinding(OPEN_WEB);
         for (KeyMapping key : ABILITY_KEYS) {
@@ -68,6 +88,7 @@ public final class ClientRpg {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(ClientRpg::tick);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(ClientRpg::freeAbilityKeys);
         HudRenderCallback.EVENT.register(RpgHud::render);
     }
 

@@ -33,34 +33,33 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int AREA_X1 = 172;
     private static final int AREA_Y1 = 116;
     private static final int PICK_X = 4;
-    private static final int PICK_Y = 40;
+    private static final int PICK_Y = 44;
     private static final int ASSEMBLE_X = 4;
     private static final int ASSEMBLE_Y = 100;
     private static final int TAB_Y = 3;
     /** One icon per buildable family: its iron item (or its only item), in the menu's order. */
     private static final Item[] PICK_ICONS = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
-            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD : Family.itemFor(f, 2)).toArray(Item[]::new);
+            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD
+                    : f == Family.BUCKLER ? com.cavmkii.seancraft.parts.WeaponItems.BUCKLER
+                    : f == Family.TOWER_SHIELD ? com.cavmkii.seancraft.parts.WeaponItems.TOWER_SHIELD
+                    : f == Family.BOOMERANG ? com.cavmkii.seancraft.parts.WeaponItems.BOOMERANG : Family.itemFor(f, 2)).toArray(Item[]::new);
     private static final String[] PICK_NAMES = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
             .map(f -> f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
             .toArray(String[]::new);
-    private static final int PICK_PITCH = 14;
+    private static final int PICK_PITCH = 12;
 
-    // PARTS tab: kinds across, materials (tiers) down.
-    private static final int GRID_X = 6;
-    private static final int GRID_Y = 28;
-    private static final int COL = 21;
-    private static final int ROW = 18;
-    private static final String[] KIND_SHORT = {"Blade", "Long", "Knife", "Axe", "Mace", "Spear", "Halb.", "Limbs", "Guard", "Plates",
-            "Handle", "Haft", "Wrap", "Pad"};
-    /** The PARTS tab's two pages: striking parts, then everything else. Each is a list of kind ordinals. */
-    private static final PartKind[][] PAGES = {
-            {PartKind.BLADE, PartKind.LONG_BLADE, PartKind.KNIFE_BLADE, PartKind.AXE_HEAD, PartKind.MACE_HEAD, PartKind.SPEARHEAD,
-                    PartKind.HALBERD_HEAD, PartKind.LIMBS},
-            {PartKind.GUARD, PartKind.PLATE, PartKind.HANDLE, PartKind.HAFT, PartKind.WRAP, PartKind.PADDING}};
-    private static final String[] PAGE_NAMES = {"Heads", "Other parts"};
+    // PARTS tab: the book of part patterns down the left (4.8).
+    private static final int BOOK_X = 4;
+    private static final int BOOK_Y = 18;
+    private static final int BOOK_W = 52;
+    private static final int BOOK_ROW = 8;
+    private static final int BOOK_ROWS = 12;
+    private static final String[] TABS = {"BUILD", "PARTS", "REPAIR"};
 
-    private boolean partsTab;
-    private int page;
+    private int tab;
+    private int bookScroll;
+    /** The pattern picked in the book, drawn as a ghost in the grid until it's complete. */
+    private com.cavmkii.seancraft.pattern.Pattern ghost;
 
     public WeaponBenchScreen(WeaponBenchMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -78,12 +77,34 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     }
 
     private int tabX(int t) {
-        return leftPos + 110 + t * 32;
+        return leftPos + 78 + t * 32;
     }
 
-    private void setTab(boolean parts) {
-        partsTab = parts;
-        menu.partsTab = parts;
+    private void setTab(int t) {
+        tab = t;
+        menu.setTab(minecraft.player, t);
+        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.TAB_BUTTON + t);
+    }
+
+    /** Part patterns in kind order. */
+    private static List<com.cavmkii.seancraft.pattern.Pattern> book() {
+        List<com.cavmkii.seancraft.pattern.Pattern> out = new ArrayList<>(com.cavmkii.seancraft.pattern.Patterns.station("part"));
+        out.sort(java.util.Comparator.comparingInt(p -> {
+            try {
+                return PartKind.valueOf(p.part).ordinal();
+            } catch (Exception e) {
+                return 99;
+            }
+        }));
+        return out;
+    }
+
+    private static String bookName(com.cavmkii.seancraft.pattern.Pattern p) {
+        try {
+            return PartKind.valueOf(p.part).label;
+        } catch (Exception e) {
+            return p.id;
+        }
     }
 
     // ------------------------------------------------------------------ drawing
@@ -93,12 +114,17 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         int x = leftPos;
         int y = topPos;
         Kit.panel(g, x, y, imageWidth, imageHeight);
-        for (int t = 0; t < 2; t++) {
-            boolean active = (t == 1) == partsTab;
+        for (int t = 0; t < TABS.length; t++) {
+            boolean active = t == tab;
             boolean over = mouseX >= tabX(t) && mouseX < tabX(t) + 30 && mouseY >= y + TAB_Y && mouseY < y + TAB_Y + 11;
-            Kit.smallButton(g, font, t == 0 ? "BUILD" : "PARTS", tabX(t), y + TAB_Y, 30, 11, true, over && !active, active, 0.85f);
+            Kit.smallButton(g, font, TABS[t], tabX(t), y + TAB_Y, 30, 11, true, over && !active, active, 0.75f);
         }
-        if (partsTab) {
+        if (tab == WeaponBenchMenu.TAB_PARTS) {
+            partsBg(g, mouseX, mouseY);
+            return;
+        }
+        if (tab == WeaponBenchMenu.TAB_REPAIR) {
+            repairBg(g);
             return;
         }
         // The outline area.
@@ -132,6 +158,90 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 }
             }
         }
+    }
+
+    /** PARTS: book, grid, arrow, result; ghost icons and the levelling ring under the slot items. */
+    private void partsBg(GuiGraphics g, int mouseX, int mouseY) {
+        int x = leftPos;
+        int y = topPos;
+        Kit.inset(g, x + BOOK_X - 1, y + BOOK_Y - 1, BOOK_W + 2, BOOK_ROWS * BOOK_ROW + 2);
+        List<com.cavmkii.seancraft.pattern.Pattern> book = book();
+        bookScroll = Math.max(0, Math.min(Math.max(0, book.size() - BOOK_ROWS), bookScroll));
+        for (int r = 0; r < BOOK_ROWS && r + bookScroll < book.size(); r++) {
+            var p = book.get(r + bookScroll);
+            int ry = y + BOOK_Y + r * BOOK_ROW;
+            boolean over = mouseX >= x + BOOK_X && mouseX < x + BOOK_X + BOOK_W && mouseY >= ry && mouseY < ry + BOOK_ROW;
+            if (p == ghost) {
+                Kit.blit(g, "list/row_selected", x + BOOK_X, ry, BOOK_W, BOOK_ROW);
+            } else if (over) {
+                Kit.blit(g, "list/row_hover", x + BOOK_X, ry, BOOK_W, BOOK_ROW);
+            }
+            small(g, bookName(p), BOOK_X + 2 + leftPos, ry + 2, p == ghost || over ? Kit.GOLD_LIGHT : Kit.BONE);
+        }
+        Slot center = menu.slots.get(gridSlot(4));
+        int ringLeft = 0;
+        PartItem ringPart = center.getItem().getItem() instanceof PartItem cp ? cp : null;
+        if (ringPart != null) {
+            int have = 0;
+            for (int i = 0; i < 9; i++) {
+                if (i != 4 && menu.slots.get(gridSlot(i)).hasItem()) {
+                    have++;
+                }
+            }
+            ringLeft = Math.max(0, com.cavmkii.seancraft.parts.PartCrafting.ringNeeded(ringPart.def, Parts.level(center.getItem())) - have);
+        }
+        boolean ready = menu.slots.get(gridSlot(9)).hasItem();
+        if (ready) {
+            ghost = null;
+        }
+        char[] ghostAt = ghost == null ? null : ghost.ghost();
+        for (int i = 0; i < 9; i++) {
+            Slot slot = menu.slots.get(gridSlot(i));
+            int sx = x + slot.x - 1;
+            int sy = y + slot.y - 1;
+            boolean empty = !slot.hasItem();
+            if (empty && ringLeft > 0 && i != 4) {
+                // MODIFY levelling: ring squares that still need the part's material (4.6).
+                Kit.slot(g, sx, sy, 18, Kit.SlotState.NORMAL);
+                Kit.blit(g, "slot/ring_target", sx, sy, 18, 18);
+                ringLeft--;
+            } else if (empty && ghostAt != null && ghostAt[i] != 0) {
+                Kit.blit(g, "slot/ghost", sx, sy, 18, 18);
+                g.renderItem(com.cavmkii.seancraft.parts.PartCrafting.example(ghostAt[i]), sx + 1, sy + 1);
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                Kit.blit(g, "slot/ghost_overlay", sx + 1, sy + 1, 16, 16);
+                g.pose().popPose();
+            } else {
+                Kit.slot(g, sx, sy, 18, Kit.SlotState.NORMAL);
+            }
+        }
+        Kit.blit(g, ready ? "progress/arrow_full" : "progress/arrow_empty", x + WeaponBenchMenu.GRID_X + 56, y + WeaponBenchMenu.GRID_Y + 20, 22, 15);
+        Kit.blit(g, ready ? "slot/result_ready" : "slot/result", x + WeaponBenchMenu.GRID_RESULT_X - 5, y + WeaponBenchMenu.GRID_RESULT_Y - 5, 26, 26);
+        if (menu.gridLocked()) {
+            Kit.blit(g, "list/lock", x + WeaponBenchMenu.GRID_RESULT_X + 4, y + WeaponBenchMenu.GRID_RESULT_Y + 4, 9, 9);
+        }
+    }
+
+    /** REPAIR: item, material, arrow, repaired item (9.4.8). */
+    private void repairBg(GuiGraphics g) {
+        int x = leftPos;
+        int y = topPos;
+        Kit.slot(g, x + WeaponBenchMenu.REPAIR_ITEM_X - 1, y + WeaponBenchMenu.REPAIR_Y - 1, 18, Kit.SlotState.NORMAL);
+        Kit.slot(g, x + WeaponBenchMenu.REPAIR_MAT_X - 1, y + WeaponBenchMenu.REPAIR_Y - 1, 18, Kit.SlotState.NORMAL);
+        g.drawString(font, "+", x + WeaponBenchMenu.REPAIR_ITEM_X + 23, y + WeaponBenchMenu.REPAIR_Y + 4, Kit.ASH, false);
+        boolean ready = menu.slots.get(gridSlot(12)).hasItem();
+        Kit.blit(g, ready ? "progress/arrow_full" : "progress/arrow_empty", x + WeaponBenchMenu.REPAIR_MAT_X + 26, y + WeaponBenchMenu.REPAIR_Y + 1, 22, 15);
+        Kit.blit(g, ready ? "slot/result_ready" : "slot/result", x + WeaponBenchMenu.REPAIR_RESULT_X - 5, y + WeaponBenchMenu.REPAIR_Y - 5, 26, 26);
+    }
+
+    /** Menu index of the station slots: 0-8 grid, 9 grid result, 10-11 repair inputs, 12 repair result, 13 build result. */
+    private int gridSlot(int n) {
+        int at = 1;
+        for (Family f : Family.values()) {
+            at += f.slots.size();
+        }
+        return at + n;
     }
 
     private int firstInventory() {
@@ -174,6 +284,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             case CROSSBOW -> new int[][] {{70, 30, 164, 38}, {66, 34, 72, 44}, {162, 34, 168, 44}, {112, 38, 124, 114}, {72, 44, 110, 46},
                     {126, 44, 162, 46}};
             case SHIELD -> new int[][] {{84, 18, 150, 92}, {90, 92, 144, 104}, {100, 104, 134, 112}};
+            case BUCKLER -> new int[][] {{94, 28, 140, 84}};
+            case TOWER_SHIELD -> new int[][] {{86, 14, 148, 110}};
+            case THROWING_KNIFE -> new int[][] {{113, 28, 121, 70}, {111, 70, 123, 100}};
+            case JAVELIN -> new int[][] {{113, 16, 121, 40}, {115, 40, 119, 116}};
+            case BOOMERANG -> new int[][] {{90, 40, 140, 52}, {128, 52, 140, 90}};
+            case WAND -> new int[][] {{111, 22, 123, 42}, {109, 42, 125, 50}, {115, 50, 119, 104}};
+            case STAFF -> new int[][] {{111, 14, 123, 34}, {109, 34, 125, 42}, {115, 42, 119, 116}};
             case HELMET -> new int[][] {{92, 22, 142, 30}, {84, 30, 150, 72}, {84, 72, 98, 86}, {136, 72, 150, 86}, {104, 108, 130, 112}};
             case CHEST -> new int[][] {{86, 22, 148, 112}, {72, 22, 86, 52}, {148, 22, 162, 52}};
             case LEGS -> new int[][] {{84, 16, 150, 38}, {84, 38, 113, 114}, {121, 38, 150, 114}};
@@ -190,7 +307,14 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         Kit.text(g, font, Kit.heading(title.getString()), titleLabelX, titleLabelY - 2, Kit.GOLD_LIGHT);
-        if (partsTab) {
+        if (tab == WeaponBenchMenu.TAB_PARTS) {
+            small(g, "Part in the centre + its", 60, 88, Kit.ASH);
+            small(g, "material around: level up", 60, 96, Kit.ASH);
+            return;
+        }
+        if (tab == WeaponBenchMenu.TAB_REPAIR) {
+            small(g, "1 of the striking part's material", 30, 76, Kit.ASH);
+            small(g, "restores 25%", 30, 84, Kit.ASH);
             return;
         }
         Kit.label(g, font, playerInventoryTitle.getString().toUpperCase(java.util.Locale.ROOT), inventoryLabelX, inventoryLabelY);
@@ -203,7 +327,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 lines.add(pct("Armor", t.armor));
             } else {
                 lines.add(pct("Damage", t.damage));
-                if (family != Family.BOW && family != Family.CROSSBOW && family != Family.SHIELD) {
+                if (family != Family.BOW && family != Family.CROSSBOW && !family.shield()) {
                     lines.add(pct("Speed", -t.stamina));
                 }
             }
@@ -242,12 +366,6 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 300);
                 small(g, "L" + level, slot.x + 18, slot.y + 10, Kit.GOLD_LIGHT);
-                if (level < PartDef.MAX_LEVEL) {
-                    int bx = slot.x + 17;
-                    int by = slot.y;
-                    boolean hover = mouseX - leftPos >= bx && mouseX - leftPos < bx + 9 && mouseY - topPos >= by && mouseY - topPos < by + 9;
-                    Kit.blit(g, hover ? "button_small/level_up_hover" : "button_small/level_up_normal", bx, by, 9, 9);
-                }
                 g.pose().popPose();
             }
         }
@@ -300,86 +418,17 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             g.pose().popPose();
         }
         if (menu.family() != null) {
-            int ax = leftPos + ASSEMBLE_X;
-            int ay = topPos + ASSEMBLE_Y;
-            boolean hover = ready && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14;
-            Kit.button(g, font, "ASSEMBLE", ax, ay, 54, 14, ready, hover, false);
+            // The finished weapon comes out of the result slot (4.5).
+            int ax = leftPos + WeaponBenchMenu.BUILD_RESULT_X;
+            int ay = topPos + WeaponBenchMenu.BUILD_RESULT_Y;
+            g.pose().pushPose();
+            g.pose().translate(0, 0, -50);
+            Kit.blit(g, ready ? "slot/result_ready" : "slot/result", ax - 5, ay - 5, 26, 26);
+            g.pose().popPose();
             String problem = menu.assemblyProblem();
-            if (!ready && problem != null && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14) {
+            if (!ready && problem != null && mouseX >= ax - 5 && mouseX < ax + 21 && mouseY >= ay - 5 && mouseY < ay + 21) {
                 g.renderTooltip(font, Component.literal(problem), mouseX, mouseY);
             }
-        }
-    }
-
-    /** Index into {@link PartDef#ALL} of the part kind {@code kind} at tier {@code t} (0-4). */
-    private static int partIndex(PartKind kind, int t) {
-        return t * PartKind.values().length + kind.ordinal();
-    }
-
-    private int partAt(double mouseX, double mouseY) {
-        PartKind[] kinds = PAGES[page];
-        double lx = mouseX - leftPos - GRID_X;
-        double ly = mouseY - topPos - GRID_Y;
-        if (lx < 0 || ly < 0) {
-            return -1;
-        }
-        int k = (int) (lx / COL);
-        int t = (int) (ly / ROW);
-        if (k >= kinds.length || t >= 5 || lx - k * COL > 18 || ly - t * ROW > 17) {
-            return -1;
-        }
-        return partIndex(kinds[k], t);
-    }
-
-    private int pageButtonX() {
-        return leftPos + GRID_X;
-    }
-
-    private int pageButtonY() {
-        return topPos + GRID_Y + 5 * ROW + 2;
-    }
-
-    private void renderParts(GuiGraphics g, int mouseX, int mouseY) {
-        PartKind[] kinds = PAGES[page];
-        for (int k = 0; k < kinds.length; k++) {
-            g.pose().pushPose();
-            g.pose().translate(leftPos + GRID_X + k * COL, topPos + GRID_Y - 6, 0);
-            g.pose().scale(0.5f, 0.5f, 1);
-            g.drawString(font, KIND_SHORT[kinds[k].ordinal()], 0, 0, Kit.ASH, false);
-            g.pose().popPose();
-        }
-        // Page switch: heads, or everything else.
-        String label = "< " + PAGE_NAMES[page] + " (" + (page + 1) + "/" + PAGES.length + ") >";
-        int bx = pageButtonX();
-        int by = pageButtonY();
-        boolean over = mouseX >= bx && mouseX < bx + font.width(label) + 6 && mouseY >= by && mouseY < by + 11;
-        Kit.button(g, font, label, bx, by, font.width(label) + 6, 11, true, over, false);
-        int hovered = partAt(mouseX, mouseY);
-        for (int k = 0; k < kinds.length; k++) {
-            for (int t = 0; t < 5; t++) {
-                int i = partIndex(kinds[k], t);
-                int px = leftPos + GRID_X + k * COL;
-                int py = topPos + GRID_Y + t * ROW;
-                boolean can = menu.canMake(i);
-                // Moss rim: you have enough to make it (C.2). Hatched: a head no unlocked weapon uses (4.7).
-                Kit.slot(g, px, py, 18, menu.headLocked(PartDef.ALL.get(i)) ? Kit.SlotState.LOCKED : hovered == i ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
-                if (can && hovered != i) {
-                    g.renderOutline(px, py, 18, 18, Kit.MOSS);
-                }
-                g.renderItem(new ItemStack(PartItems.get(PartDef.ALL.get(i))), px + 1, py);
-            }
-        }
-        if (hovered >= 0) {
-            PartDef def = PartDef.ALL.get(hovered);
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.literal(def.label()));
-            for (Cost c : def.costs()) {
-                lines.add(Component.literal("  " + c.count() + " " + c.label()).withStyle(net.minecraft.ChatFormatting.GRAY));
-            }
-            boolean headLocked = menu.headLocked(PartDef.ALL.get(hovered));
-            lines.add(Component.literal(headLocked ? "Locked: unlock a weapon that uses it first" : menu.canMake(hovered) ? "Click: make one. Shift: make 5." : "Not enough materials")
-                    .withStyle(menu.canMake(hovered) ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.RED));
-            g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
         }
     }
 
@@ -388,8 +437,30 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         menu.viewer = com.cavmkii.seancraft.client.rpg.ClientRpg.data;
         super.render(g, mouseX, mouseY, partialTick);
         StationTabs.render(g, font, leftPos, topPos - 14, imageWidth, StationTabs.WEAPON_BENCH, mouseX, mouseY);
-        if (partsTab) {
-            renderParts(g, mouseX, mouseY);
+        if (tab != WeaponBenchMenu.TAB_BUILD) {
+            renderTooltip(g, mouseX, mouseY);
+            if (tab == WeaponBenchMenu.TAB_PARTS && menu.gridLocked() && mouseX >= leftPos + WeaponBenchMenu.GRID_RESULT_X - 5
+                    && mouseX < leftPos + WeaponBenchMenu.GRID_RESULT_X + 21 && mouseY >= topPos + WeaponBenchMenu.GRID_RESULT_Y - 5
+                    && mouseY < topPos + WeaponBenchMenu.GRID_RESULT_Y + 21) {
+                g.renderTooltip(font, List.of(Component.literal("Locked"),
+                        Component.literal("No weapon you've unlocked uses this part (recipe ladders)").withStyle(net.minecraft.ChatFormatting.GRAY)),
+                        java.util.Optional.empty(), mouseX, mouseY);
+            }
+            if (tab == WeaponBenchMenu.TAB_PARTS) {
+                List<com.cavmkii.seancraft.pattern.Pattern> book = book();
+                int r = (int) Math.floor((mouseY - topPos - BOOK_Y) / (double) BOOK_ROW);
+                if (mouseX >= leftPos + BOOK_X && mouseX < leftPos + BOOK_X + BOOK_W && r >= 0 && r < BOOK_ROWS && r + bookScroll < book.size()) {
+                    var p = book.get(r + bookScroll);
+                    List<Component> lines = new ArrayList<>();
+                    lines.add(Component.literal(bookName(p)));
+                    for (String row : p.rows) {
+                        lines.add(Component.literal(row.replace('.', '·').replace("", " ").trim()).withStyle(net.minecraft.ChatFormatting.GRAY));
+                    }
+                    lines.add(Component.literal("M metal, W wood, H hide, G gem, C catalyst, S stick").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    lines.add(Component.literal("Click to show it in the grid").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
+                }
+            }
             return;
         }
         renderBuild(g, mouseX, mouseY);
@@ -418,17 +489,19 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             int sy = topPos + slot.y;
             if (!slot.hasItem() && menu.getCarried().isEmpty() && mouseX >= sx && mouseX < sx + 16 && mouseY >= sy && mouseY < sy + 16) {
                 String name = family.slotName(kind) + (menu.buildMode() && kind == PartSlot.PLATE ? " x" + WeaponBenchMenu.platesFor(family) : "");
-                g.renderTooltip(font, List.of(Component.literal(name), Component.literal("Make parts on the PARTS tab")
+                g.renderTooltip(font, List.of(Component.literal(name), Component.literal("Make parts on the PARTS tab, by pattern")
                         .withStyle(net.minecraft.ChatFormatting.GRAY)), java.util.Optional.empty(), mouseX, mouseY);
             }
-            if (slot.getItem().getItem() instanceof PartItem p && !menu.buildMode() && Parts.level(slot.getItem()) < PartDef.MAX_LEVEL
-                    && mouseX >= sx + 17 && mouseX < sx + 26 && mouseY >= sy && mouseY < sy + 9) {
-                int level = Parts.level(slot.getItem());
-                g.renderTooltip(font, List.of(Component.literal("Level up to " + (level + 1)),
-                        Component.literal("Costs " + p.def.upgradeCost(level) + " " + new ItemStack(p.def.material()).getHoverName().getString())),
-                        java.util.Optional.empty(), mouseX, mouseY);
-            }
         }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (tab == WeaponBenchMenu.TAB_PARTS && mouseX < leftPos + BOOK_X + BOOK_W) {
+            bookScroll -= (int) Math.signum(scrollY);
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
@@ -436,49 +509,26 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         if (StationTabs.click(leftPos, topPos - 14, imageWidth, StationTabs.WEAPON_BENCH, mouseX, mouseY)) {
             return true;
         }
-        for (int t = 0; t < 2; t++) {
+        for (int t = 0; t < TABS.length; t++) {
             if (mouseX >= tabX(t) && mouseX < tabX(t) + 30 && mouseY >= topPos + TAB_Y && mouseY < topPos + TAB_Y + 11) {
-                setTab(t == 1);
+                setTab(t);
                 return true;
             }
         }
-        if (partsTab) {
-            String label = "< " + PAGE_NAMES[page] + " (" + (page + 1) + "/" + PAGES.length + ") >";
-            if (mouseX >= pageButtonX() && mouseX < pageButtonX() + font.width(label) + 6 && mouseY >= pageButtonY() && mouseY < pageButtonY() + 11) {
-                page = (page + 1) % PAGES.length;
-                return true;
-            }
-            int i = partAt(mouseX, mouseY);
-            if (i >= 0) {
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
-                        (hasShiftDown() ? WeaponBenchMenu.MAKE_FIVE_BUTTON : WeaponBenchMenu.MAKE_BUTTON) + i);
+        if (tab == WeaponBenchMenu.TAB_PARTS) {
+            List<com.cavmkii.seancraft.pattern.Pattern> book = book();
+            int r = (int) Math.floor((mouseY - topPos - BOOK_Y) / (double) BOOK_ROW);
+            if (mouseX >= leftPos + BOOK_X && mouseX < leftPos + BOOK_X + BOOK_W && r >= 0 && r < BOOK_ROWS && r + bookScroll < book.size()) {
+                var p = book.get(r + bookScroll);
+                ghost = ghost == p ? null : p;
                 return true;
             }
             return super.mouseClicked(mouseX, mouseY, button);
         }
-        if (menu.buildMode()) {
+        if (tab == WeaponBenchMenu.TAB_BUILD && menu.buildMode()) {
             for (int i = 0; i < PICK_ICONS.length; i++) {
                 if (mouseX >= pickX(i) && mouseX < pickX(i) + PICK_PITCH - 1 && mouseY >= pickY(i) && mouseY < pickY(i) + PICK_PITCH - 1) {
                     minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.PICK_BUTTON + i);
-                    return true;
-                }
-            }
-            int ax = leftPos + ASSEMBLE_X;
-            int ay = topPos + ASSEMBLE_Y;
-            if (mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14 && !menu.assemblyResult().isEmpty()) {
-                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.ASSEMBLE_BUTTON);
-                return true;
-            }
-        } else {
-            for (int i = 0; i < WeaponBenchMenu.PARTS; i++) {
-                Slot slot = menu.partSlot(i);
-                if (slot == null || !(slot.getItem().getItem() instanceof PartItem) || Parts.level(slot.getItem()) >= PartDef.MAX_LEVEL) {
-                    continue;
-                }
-                int bx = leftPos + slot.x + 17;
-                int by = topPos + slot.y;
-                if (mouseX >= bx && mouseX < bx + 9 && mouseY >= by && mouseY < by + 9) {
-                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId, i);
                     return true;
                 }
             }

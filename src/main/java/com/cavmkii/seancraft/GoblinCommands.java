@@ -33,6 +33,9 @@ public final class GoblinCommands {
                         .then(Commands.literal("stop").executes(ctx -> reply(ctx,
                                 director(ctx).war.end("An admin called off the Baby Wars.") ? "Calling off the Baby Wars." : "No war is running."))))
                 .then(Commands.literal("pedestal").requires(src -> src.hasPermission(2)).executes(GoblinCommands::pedestal))
+                .then(Commands.literal("spawnpoints").requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("respread").executes(ctx -> reply(ctx,
+                                com.cavmkii.seancraft.tarkov.SpawnPoints.respread(ctx.getSource().getServer().overworld())))))
                 .then(Commands.literal("dungeons").requires(src -> src.hasPermission(2))
                         .executes(ctx -> reply(ctx, String.join("\n", com.cavmkii.seancraft.boss.BossSites.describe(ctx.getSource().getServer().overworld()))))
                         .then(Commands.literal("build").then(Commands.argument("boss", StringArgumentType.word())

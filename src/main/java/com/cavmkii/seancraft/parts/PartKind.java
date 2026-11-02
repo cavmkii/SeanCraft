@@ -12,15 +12,19 @@ public enum PartKind {
     MACE_HEAD("Mace head", PartSlot.HEAD, Material.METAL),
     SPEARHEAD("Spearhead", PartSlot.HEAD, Material.METAL),
     HALBERD_HEAD("Halberd head", PartSlot.HEAD, Material.METAL),
-    LIMBS("Limbs", PartSlot.HEAD, Material.METAL),
+    LIMBS("Limbs", PartSlot.HEAD, Material.WOOD),
     GUARD("Guard", PartSlot.GUARD, Material.METAL),
     PLATE("Plates", PartSlot.PLATE, Material.METAL),
     HANDLE("Handle", PartSlot.HANDLE, Material.WOOD),
     HAFT("Haft", PartSlot.HANDLE, Material.WOOD),
     WRAP("Wrap", PartSlot.WRAP, Material.HIDE),
-    PADDING("Padding", PartSlot.PADDING, Material.HIDE);
+    PADDING("Padding", PartSlot.PADDING, Material.HIDE),
+    /** A wand's or staff's crystal (9.4.5): sets spell power; a catalyst set when making it sets the element. */
+    CRYSTAL("Crystal", PartSlot.HEAD, Material.GEM),
+    /** The metal that holds the crystal. */
+    FOCUS("Focus", PartSlot.GUARD, Material.METAL);
 
-    public enum Material { METAL, WOOD, HIDE }
+    public enum Material { METAL, WOOD, HIDE, GEM }
 
     public final String label;
     public final PartSlot slot;

@@ -1,0 +1,17 @@
+{
+ "station": "hideout",
+ "category": "Backpacks",
+ "pattern": [
+  ".S.",
+  "L.L",
+  "LLL"
+ ],
+ "key": {
+  "S": "minecraft:string",
+  "L": "minecraft:leather"
+ },
+ "result": {
+  "id": "seancraft:pack_sling",
+  "count": 1
+ }
+}

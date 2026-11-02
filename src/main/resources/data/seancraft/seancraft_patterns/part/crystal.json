@@ -1,0 +1,9 @@
+{
+ "station": "part",
+ "part": "crystal",
+ "pattern": [
+  "G",
+  "C",
+  "G"
+ ]
+}
