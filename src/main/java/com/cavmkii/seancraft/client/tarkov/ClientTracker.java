@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.tetris.TetrisNet;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,10 +159,11 @@ public final class ClientTracker {
         if (list.isEmpty()) {
             return;
         }
-        int x = 4;
-        int y = 4;
-        g.fill(x - 2, y - 2, x + 130, y + 10 + list.size() * 12, 0x70000000);
-        g.drawString(mc.font, "GATHER", x, y, 0xFFE0C060, true);
+        // Top left, on the kit's HUD panel (C.5).
+        int x = 11;
+        int y = 9;
+        Kit.hudPanel(g, 6, 6, 136, 13 + list.size() * 12);
+        Kit.text(g, mc.font, "GATHER", x, y, Kit.GOLD_LIGHT);
         y += 11;
         for (Entry e : list) {
             int have = have(e);
@@ -172,9 +174,9 @@ public final class ClientTracker {
             g.renderItem(new ItemStack(e.item), 0, 0);
             g.pose().popPose();
             String name = mc.font.plainSubstrByWidth(e.name(), 70);
-            g.drawString(mc.font, name, x + 13, y, done ? 0xFF7CFC7C : 0xFFDDDDDD, true);
+            Kit.text(g, mc.font, name, x + 13, y, done ? Kit.MOSS : Kit.BONE);
             String count = Math.min(have, 9999) + "/" + e.goal;
-            g.drawString(mc.font, count, x + 128 - mc.font.width(count), y, done ? 0xFF7CFC7C : 0xFFFFAA55, true);
+            Kit.text(g, mc.font, count, x + 126 - mc.font.width(count), y, done ? Kit.MOSS : Kit.BONE);
             y += 12;
         }
     }

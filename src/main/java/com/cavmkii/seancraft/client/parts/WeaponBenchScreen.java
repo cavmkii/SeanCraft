@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.parts;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.client.tarkov.StationTabs;
 import com.cavmkii.seancraft.parts.Family;
 import com.cavmkii.seancraft.parts.PartDef;
@@ -91,21 +92,17 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
         int x = leftPos;
         int y = topPos;
-        g.fill(x, y, x + imageWidth, y + imageHeight, 0xFF8B8B8B);
-        g.fill(x + 1, y + 1, x + imageWidth - 1, y + imageHeight - 1, 0xFFC6C6C6);
+        Kit.panel(g, x, y, imageWidth, imageHeight);
         for (int t = 0; t < 2; t++) {
             boolean active = (t == 1) == partsTab;
             boolean over = mouseX >= tabX(t) && mouseX < tabX(t) + 30 && mouseY >= y + TAB_Y && mouseY < y + TAB_Y + 11;
-            g.fill(tabX(t), y + TAB_Y, tabX(t) + 30, y + TAB_Y + 11, active ? 0xFF4A4A55 : over ? 0xFF9A9AA6 : 0xFFADADB6);
-            String label = t == 0 ? "BUILD" : "PARTS";
-            g.drawString(font, label, tabX(t) + (30 - font.width(label)) / 2, y + TAB_Y + 2, active ? 0xFFFFFFFF : 0xFF404040, false);
+            Kit.smallButton(g, font, t == 0 ? "BUILD" : "PARTS", tabX(t), y + TAB_Y, 30, 11, true, over && !active, active, 0.85f);
         }
         if (partsTab) {
             return;
         }
         // The outline area.
-        g.fill(x + AREA_X0 - 1, y + AREA_Y0 - 1, x + AREA_X1 + 1, y + AREA_Y1 + 1, 0xFF55555E);
-        g.fill(x + AREA_X0, y + AREA_Y0, x + AREA_X1, y + AREA_Y1, 0xFF2E2E36);
+        Kit.inset(g, x + AREA_X0 - 1, y + AREA_Y0 - 1, AREA_X1 - AREA_X0 + 2, AREA_Y1 - AREA_Y0 + 2);
         Family family = menu.family();
         if (family != null) {
             outline(g, family);
@@ -116,8 +113,8 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             }
             int sx = x + slot.x - 1;
             int sy = y + slot.y - 1;
-            g.fill(sx, sy, sx + 18, sy + 18, 0xFF1A1A20);
-            g.fill(sx + 1, sy + 1, sx + 17, sy + 17, slot.index == 0 ? 0xFF7A7A88 : 0xFF4A4A58);
+            boolean over = mouseX >= sx && mouseX < sx + 18 && mouseY >= sy && mouseY < sy + 18;
+            Kit.slot(g, sx, sy, 18, over ? Kit.SlotState.HOVER : slot.index == 0 ? Kit.SlotState.RESULT : Kit.SlotState.NORMAL);
         }
         // Faded example parts in empty slots, so you can see what goes where.
         if (family != null) {
@@ -127,13 +124,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 if (slot == null || kind == null || slot.hasItem()) {
                     continue;
                 }
-                PartDef example = PartDef.of(exampleKind(family, kind), 2);
-                if (example != null) {
-                    g.renderItem(new ItemStack(PartItems.get(example)), x + slot.x, y + slot.y);
-                    g.pose().pushPose();
-                    g.pose().translate(0, 0, 200);
-                    g.fill(x + slot.x, y + slot.y, x + slot.x + 16, y + slot.y + 16, 0xB04A4A58);
-                    g.pose().popPose();
+                // The kit's part outline (ghost/part_*) in the empty slot.
+                PartKind ex = exampleKind(family, kind);
+                if (ex != null) {
+                    String ghost = ex == PartKind.PLATE ? "plates" : ex.name().toLowerCase(java.util.Locale.ROOT);
+                    Kit.blit(g, "ghost/part_" + ghost, x + slot.x, y + slot.y, 16, 16);
                 }
             }
         }
@@ -155,11 +150,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     }
 
     private void shape(GuiGraphics g, int x0, int y0, int x1, int y1) {
-        g.fill(leftPos + x0 - 1, topPos + y0 - 1, leftPos + x1 + 1, topPos + y1 + 1, 0xFF8A8A98);
+        g.fill(leftPos + x0 - 1, topPos + y0 - 1, leftPos + x1 + 1, topPos + y1 + 1, Kit.IRON_LIGHT);
     }
 
     private void fillShape(GuiGraphics g, int x0, int y0, int x1, int y1) {
-        g.fill(leftPos + x0, topPos + y0, leftPos + x1, topPos + y1, 0xFF5C5C6A);
+        g.fill(leftPos + x0, topPos + y0, leftPos + x1, topPos + y1, Kit.IRON);
     }
 
     /** Draws a family's outline: a light edge pass, then the body, so touching pieces read as one shape. */
@@ -194,11 +189,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
 
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        g.drawString(font, title, titleLabelX, titleLabelY, 0xFF404040, false);
+        Kit.text(g, font, Kit.heading(title.getString()), titleLabelX, titleLabelY - 2, Kit.GOLD_LIGHT);
         if (partsTab) {
             return;
         }
-        g.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0xFF404040, false);
+        Kit.label(g, font, playerInventoryTitle.getString().toUpperCase(java.util.Locale.ROOT), inventoryLabelX, inventoryLabelY);
         ItemStack weapon = menu.weapon();
         Family family = menu.family();
         if (Parts.modular(weapon)) {
@@ -215,13 +210,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             lines.add(pct("Durab.", t.durability));
             int ly = 42;
             for (String line : lines) {
-                small(g, line, 6, ly, 0xFF303030);
+                small(g, line, 6, ly, Kit.BONE);
                 ly += 8;
             }
         } else if (family == null) {
-            small(g, "Pick what to build,", AREA_X0 + 20, 58, 0xFFB0B0BC);
-            small(g, "or put an item in", AREA_X0 + 20, 66, 0xFFB0B0BC);
-            small(g, "the slot to modify it.", AREA_X0 + 20, 74, 0xFFB0B0BC);
+            small(g, "Pick what to build,", AREA_X0 + 20, 58, Kit.ASH);
+            small(g, "or put an item in", AREA_X0 + 20, 66, Kit.ASH);
+            small(g, "the slot to modify it.", AREA_X0 + 20, 74, Kit.ASH);
         }
         if (family != null && menu.buildMode()) {
             // How many plates the armor takes, on the plate slot.
@@ -231,7 +226,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                     String n = "x" + WeaponBenchMenu.platesFor(family);
                     g.pose().pushPose();
                     g.pose().translate(0, 0, 300);
-                    g.drawString(font, n, slot.x + 17 - font.width(n), slot.y - 8, 0xFFE0C060, true);
+                    Kit.text(g, font, n, slot.x + 17 - font.width(n), slot.y - 8, Kit.GOLD_LIGHT);
                     g.pose().popPose();
                 }
             }
@@ -246,13 +241,12 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 int level = Parts.level(slot.getItem());
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 300);
-                small(g, "L" + level, slot.x + 18, slot.y + 10, 0xFFE0C060);
+                small(g, "L" + level, slot.x + 18, slot.y + 10, Kit.GOLD_LIGHT);
                 if (level < PartDef.MAX_LEVEL) {
                     int bx = slot.x + 17;
                     int by = slot.y;
                     boolean hover = mouseX - leftPos >= bx && mouseX - leftPos < bx + 9 && mouseY - topPos >= by && mouseY - topPos < by + 9;
-                    g.fill(bx, by, bx + 9, by + 9, hover ? 0xFF4C8C4C : 0xFF3A6A3A);
-                    g.drawString(font, "▲", bx + 2, by + 1, 0xFFFFFFFF, false);
+                    Kit.blit(g, hover ? "button_small/level_up_hover" : "button_small/level_up_normal", bx, by, 9, 9);
                 }
                 g.pose().popPose();
             }
@@ -280,7 +274,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             int py = pickY(i);
             boolean selected = menu.buildingIndex() == i;
             boolean hover = mouseX >= px && mouseX < px + PICK_PITCH - 1 && mouseY >= py && mouseY < py + PICK_PITCH - 1;
-            g.fill(px, py, px + PICK_PITCH - 1, py + PICK_PITCH - 1, selected ? 0xFF3A6A3A : hover ? 0xFF9A9AAA : 0xFF7A7A88);
+            Kit.slot(g, px, py, PICK_PITCH - 1, selected ? Kit.SlotState.SELECTED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             g.pose().pushPose();
             g.pose().translate(px + 0.5f, py + 0.5f, 0);
             g.pose().scale(0.75f, 0.75f, 1);
@@ -290,7 +284,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 // Not on the player's ladders yet (4.7).
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 300);
-                g.fill(px, py, px + PICK_PITCH - 1, py + PICK_PITCH - 1, 0xB0303038);
+                g.fill(px + 1, py + 1, px + PICK_PITCH - 2, py + PICK_PITCH - 2, 0xB00E0C0B);
                 g.pose().popPose();
             }
         }
@@ -309,8 +303,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             int ax = leftPos + ASSEMBLE_X;
             int ay = topPos + ASSEMBLE_Y;
             boolean hover = ready && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14;
-            g.fill(ax, ay, ax + 54, ay + 14, !ready ? 0xFF6A6A70 : hover ? 0xFF4C8C4C : 0xFF3A6A3A);
-            g.drawString(font, "ASSEMBLE", ax + (54 - font.width("ASSEMBLE")) / 2, ay + 3, ready ? 0xFFFFFFFF : 0xFFAAAAAA, false);
+            Kit.button(g, font, "ASSEMBLE", ax, ay, 54, 14, ready, hover, false);
             String problem = menu.assemblyProblem();
             if (!ready && problem != null && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14) {
                 g.renderTooltip(font, Component.literal(problem), mouseX, mouseY);
@@ -352,7 +345,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             g.pose().pushPose();
             g.pose().translate(leftPos + GRID_X + k * COL, topPos + GRID_Y - 6, 0);
             g.pose().scale(0.5f, 0.5f, 1);
-            g.drawString(font, KIND_SHORT[kinds[k].ordinal()], 0, 0, 0xFF404040, false);
+            g.drawString(font, KIND_SHORT[kinds[k].ordinal()], 0, 0, Kit.ASH, false);
             g.pose().popPose();
         }
         // Page switch: heads, or everything else.
@@ -360,8 +353,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         int bx = pageButtonX();
         int by = pageButtonY();
         boolean over = mouseX >= bx && mouseX < bx + font.width(label) + 6 && mouseY >= by && mouseY < by + 11;
-        g.fill(bx, by, bx + font.width(label) + 6, by + 11, over ? 0xFF9A9AA6 : 0xFFADADB6);
-        g.drawString(font, label, bx + 3, by + 2, 0xFF303030, false);
+        Kit.button(g, font, label, bx, by, font.width(label) + 6, 11, true, over, false);
         int hovered = partAt(mouseX, mouseY);
         for (int k = 0; k < kinds.length; k++) {
             for (int t = 0; t < 5; t++) {
@@ -369,7 +361,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 int px = leftPos + GRID_X + k * COL;
                 int py = topPos + GRID_Y + t * ROW;
                 boolean can = menu.canMake(i);
-                g.fill(px, py, px + 18, py + 17, hovered == i ? 0xFF9A9AAA : can ? 0xFF4C7C4C : 0xFF6A6A74);
+                // Moss rim: you have enough to make it (C.2). Hatched: a head no unlocked weapon uses (4.7).
+                Kit.slot(g, px, py, 18, menu.headLocked(PartDef.ALL.get(i)) ? Kit.SlotState.LOCKED : hovered == i ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
+                if (can && hovered != i) {
+                    g.renderOutline(px, py, 18, 18, Kit.MOSS);
+                }
                 g.renderItem(new ItemStack(PartItems.get(PartDef.ALL.get(i))), px + 1, py);
             }
         }

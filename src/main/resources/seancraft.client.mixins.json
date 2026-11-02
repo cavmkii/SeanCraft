@@ -13,7 +13,8 @@
     "ItemInHandCarryMixin",
     "ItemInHandLayerCarryMixin",
     "LocalPlayerSprintMixin",
-    "RollManagerMixin"
+    "RollManagerMixin",
+    "TooltipBackgroundMixin"
   ],
   "injectors": {
     "defaultRequire": 1

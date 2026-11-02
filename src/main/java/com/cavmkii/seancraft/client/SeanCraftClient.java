@@ -82,6 +82,17 @@ public final class SeanCraftClient implements ClientModInitializer {
             }
         });
 
+        // Tooltip titles in Gold light (Appendix C.4), unless rarity or a custom name already colours them.
+        ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
+            if (!lines.isEmpty()) {
+                Component title = lines.get(0);
+                net.minecraft.network.chat.TextColor c = title.getStyle().getColor();
+                if (c == null || c.getValue() == 0xFFFFFF) {
+                    lines.set(0, title.copy().withColor(com.cavmkii.seancraft.client.ui.Kit.GOLD_LIGHT & 0xFFFFFF));
+                }
+            }
+        });
+
         // Merch and the bonnet are dyed leather; tint the base layer of their icons.
         ColorProviderRegistry.ITEM.register((stack, tintIndex) -> tintIndex > 0 ? -1 : DyedItemColor.getOrDefault(stack, -1),
                 ModItems.MERCH, ModItems.BABY_BONNET);

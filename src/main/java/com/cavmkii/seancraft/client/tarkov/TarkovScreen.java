@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
+import com.cavmkii.seancraft.client.ui.Kit;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -179,6 +180,8 @@ public class TarkovScreen extends Screen {
     private static final int[][] TOGGLES = {{44, 52}, {100, 62}};
 
     private static final String[] EQUIP_NAMES = {"Head", "Chest", "Legs", "Feet", "Rig", "Backpack", "Off-hand"};
+    /** Outlines shown in empty equipment slots (ghost/*). */
+    private static final String[] EQUIP_GHOSTS = {"helmet", "chestplate", "leggings", "boots", "rig", "backpack", "offhand"};
 
     private static final int BTN_X = 164;
     private static final int BTN_W = 90;
@@ -347,7 +350,9 @@ public class TarkovScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         settleSwap();
-        g.fill(0, 0, width, height, 0xF4101014);
+        g.fill(0, 0, width, height, Kit.BACKDROP);
+        int[] pr = panelRect();
+        Kit.panel(g, pr[0], pr[1], pr[2], pr[3]);
         if (tab == STATUS || tab == WEB) {
             g.pose().pushPose();
             g.pose().translate(0, TOP, 0);
@@ -379,27 +384,55 @@ public class TarkovScreen extends Screen {
         }
     }
 
+    /** Top of the panel; the tab row sits on its edge (Appendix C, spacing rules). */
+    private static final int PANEL_TOP = TOP - 10;
+
+    /** The window frame, in screen coordinates: around the scaled content, or the full width for STATUS and WEB. */
+    private int[] panelRect() {
+        if (tab == STATUS || tab == WEB) {
+            return new int[] {2, PANEL_TOP, width - 4, height - PANEL_TOP - 2};
+        }
+        int x = Math.max(2, (int) Math.floor(ox - 8 * scale) - 2);
+        int right = Math.min(width - 2, (int) Math.ceil(ox + W * scale + 8 * scale) + 2);
+        int bottom = Math.min(height - (tab == CRAFTING ? 17 : 2), (int) Math.ceil(oy + H * scale + 8 * scale));
+        return new int[] {x, PANEL_TOP, right - x, bottom - PANEL_TOP};
+    }
+
     private int tabX(int t) {
-        return width / 2 - TABS.length * 74 / 2 + t * 74;
+        int x = panelRect()[0] + 6;
+        for (int i = 0; i < t; i++) {
+            x += Kit.tabWidth(font, TABS[i]) + 1;
+        }
+        return x;
+    }
+
+    private boolean overTab(int t, double mouseX, double mouseY) {
+        int x = tabX(t);
+        return mouseX >= x && mouseX < x + Kit.tabWidth(font, TABS[t]) && mouseY >= PANEL_TOP - 12 && mouseY < PANEL_TOP + 5;
     }
 
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
-        g.fill(0, 0, width, TOP - 2, 0xFF141418);
         for (int t = 0; t < TABS.length; t++) {
-            int x = tabX(t);
-            boolean active = t == tab;
-            boolean hover = mouseX >= x && mouseX < x + 70 && mouseY >= 4 && mouseY < 20;
-            g.fill(x, 4, x + 70, 20, active ? 0xFF3A3A44 : hover ? 0xFF2A2A32 : 0xFF202026);
-            if (active) {
-                g.fill(x, 19, x + 70, 20, 0xFFE0C060);
+            if (t != tab) {
+                Kit.tab(g, font, TABS[t], tabX(t), PANEL_TOP, Kit.tabWidth(font, TABS[t]), false, overTab(t, mouseX, mouseY));
             }
-            g.drawString(font, TABS[t], x + (70 - font.width(TABS[t])) / 2, 8, active ? 0xFFFFFFFF : 0xFF888888, false);
+        }
+        Kit.tab(g, font, TABS[tab], tabX(tab), PANEL_TOP, Kit.tabWidth(font, TABS[tab]), true, false);
+        // The raid state, always in view while the inventory is open (C.4).
+        // Shorter forms when the tab row leaves too little room.
+        int[] pr = panelRect();
+        int tabsEnd = tabX(TABS.length - 1) + Kit.tabWidth(font, TABS[TABS.length - 1]) + 8;
+        for (String raid : RaidHud.stateLines()) {
+            int rx = pr[0] + pr[2] - 10 - font.width(raid);
+            if (rx >= tabsEnd) {
+                Kit.text(g, font, raid, rx, PANEL_TOP - 9, RaidHud.stateColor());
+                break;
+            }
         }
     }
 
     private void slot(GuiGraphics g, int x, int y, int size, ItemStack stack, boolean hover, String empty) {
-        g.fill(x, y, x + size - 1, y + size - 1, hover ? 0xFF4A4A56 : 0xFF2A2A30);
-        g.fill(x + 1, y + 1, x + size - 2, y + size - 2, 0xFF1A1A1F);
+        Kit.slot(g, x, y, size, hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
         if (!stack.isEmpty() && !(heldFrom != null && stack == stackAt(heldFrom) && heldCount == 0)) {
             if (size >= 32) {
                 g.pose().pushPose();
@@ -416,13 +449,13 @@ public class TarkovScreen extends Screen {
             g.pose().pushPose();
             g.pose().translate(x + size / 2f, y + size / 2f - 2, 0);
             g.pose().scale(0.5f, 0.5f, 1);
-            g.drawString(font, empty, -font.width(empty) / 2, 0, 0xFF555560, false);
+            g.drawString(font, empty, -font.width(empty) / 2, 0, Kit.ASH, false);
             g.pose().popPose();
         }
     }
 
     private void label(GuiGraphics g, String text, int x, int y) {
-        g.drawString(font, text, x, y, 0xFFE0C060, false);
+        Kit.label(g, font, text, x, y);
     }
 
     private int lastMx;
@@ -438,10 +471,13 @@ public class TarkovScreen extends Screen {
         label(g, "EQUIPMENT", 0, 0);
         for (int slot = 0; slot < 7; slot++) {
             int[] r = equipRect(slot);
-            slot(g, r[0], r[1], r[2], stackAt(Loc.equip(slot)), hover != null && hover.equals(Loc.equip(slot)), EQUIP_NAMES[slot]);
+            slot(g, r[0], r[1], r[2], stackAt(Loc.equip(slot)), hover != null && hover.equals(Loc.equip(slot)), null);
+            if (stackAt(Loc.equip(slot)).isEmpty()) {
+                Kit.blit(g, "ghost/" + EQUIP_GHOSTS[slot], r[0] + (r[2] - 16) / 2, r[1] + (r[2] - 16) / 2, 16, 16);
+            }
             if (!held.isEmpty() && equipAccepts(slot, held)) {
                 // Where the held item can be worn.
-                int c = hover != null && hover.equals(Loc.equip(slot)) ? 0xFF7CFC7C : 0xFF3F8F3F;
+                int c = hover != null && hover.equals(Loc.equip(slot)) ? Kit.GOLD_LIGHT : Kit.GOLD;
                 g.renderOutline(r[0] - 1, r[1] - 1, r[2] + 1, r[2] + 1, c);
             }
         }
@@ -450,32 +486,30 @@ public class TarkovScreen extends Screen {
             int[] r = TOGGLES[t];
             boolean on = t == 0 ? s.autoRefill() : s.refillFromStash();
             boolean over = mx >= r[0] && mx < r[0] + r[1] && my >= 179 && my < 188;
-            g.fill(r[0], 179, r[0] + r[1], 188, on ? (over ? 0xFF4C8C4C : 0xFF3A6A3A) : (over ? 0xFF4C4C58 : 0xFF33333C));
-            g.pose().pushPose();
-            g.pose().translate(r[0] + 3, 180.5f, 0);
-            g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, (t == 0 ? "REFILL " : "FROM STASH ") + (on ? "ON" : "OFF"), 0, 0, 0xFFDDDDDD, false);
-            g.pose().popPose();
+            Kit.smallButton(g, font, (t == 0 ? "REFILL " : "FROM STASH ") + (on ? "ON" : "OFF"), r[0], 179, r[1], 9, true, over, on, 0.75f);
         }
         for (int i = 0; i < 9; i++) {
             slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)), null);
         }
 
         for (Box b : boxes()) {
+            // Every grid is labelled with what it is and its size (C.4).
             String title = switch (b.id) {
                 case POCKETS -> "POCKETS";
-                case RIG -> "RIG";
-                case BACKPACK -> "BACKPACK";
+                case RIG -> ClientTetris.sync.rig().isEmpty() ? "RIG" : ClientTetris.sync.rig().getHoverName().getString().toUpperCase(Locale.ROOT);
+                case BACKPACK -> ClientTetris.sync.backpack().isEmpty() ? "BACKPACK"
+                        : ClientTetris.sync.backpack().getHoverName().getString().toUpperCase(Locale.ROOT);
                 case POUCH -> "SECURE POUCH";
-            };
-            label(g, title, b.x, b.y - 10);
+            } + "  " + b.w + "X" + b.h;
+            // The secure pouch label is gold: gold marks what survives death.
+            Kit.label(g, font, title, b.x, b.y - 10, b.id == GridId.POUCH ? Kit.GOLD : Kit.ASH);
             renderGrid(g, b);
         }
         if (s.rig().isEmpty()) {
-            g.drawString(font, "no rig", 66, 64, 0xFF555560, false);
+            g.drawString(font, "no rig", 66, 64, Kit.DISABLED, false);
         }
         if (s.backpack().isEmpty()) {
-            g.drawString(font, "no backpack", 164, 14, 0xFF555560, false);
+            g.drawString(font, "no backpack", 164, 14, Kit.DISABLED, false);
         }
 
         for (int i = 0; i < BTN.length; i++) {
@@ -483,16 +517,13 @@ public class TarkovScreen extends Screen {
             boolean enabled = i != 1 || !s.containers().isEmpty();
             enabled &= i != 2 || s.stash();
             enabled &= i != 3 || !s.unsorted().isEmpty();
-            g.fill(BTN_X, BTN_Y[i], BTN_X + BTN_W, BTN_Y[i] + BTN_H, !enabled ? 0xFF1E1E22 : h ? 0xFF4C4C58 : 0xFF33333C);
-            g.pose().pushPose();
-            g.pose().translate(BTN_X + BTN_W / 2f, BTN_Y[i] + 3, 0);
-            g.pose().scale(0.85f, 0.85f, 1);
-            g.drawString(font, BTN[i], -font.width(BTN[i]) / 2, 0, enabled ? 0xFFDDDDDD : 0xFF555555, false);
-            g.pose().popPose();
+            Kit.smallButton(g, font, BTN[i], BTN_X, BTN_Y[i], BTN_W, BTN_H, enabled, h, false, 0.85f);
         }
         boolean overDiscard = hover != null && hover.kind() == Loc.DISCARD;
-        g.fill(BTN_X, DISCARD_Y, BTN_X + BTN_W, DISCARD_Y + 19, overDiscard && !held.isEmpty() ? 0xFF803030 : 0xFF3A2020);
-        g.drawString(font, "DISCARD", BTN_X + (BTN_W - font.width("DISCARD")) / 2, DISCARD_Y + 6, 0xFFCC8888, false);
+        // Blood marks danger: discarding destroys the item.
+        Kit.buttonBg(g, BTN_X, DISCARD_Y, BTN_W, 19, true, overDiscard && !held.isEmpty(), false);
+        g.renderOutline(BTN_X, DISCARD_Y, BTN_W, 19, overDiscard && !held.isEmpty() ? Kit.BLOOD_LIGHT : Kit.BLOOD);
+        Kit.text(g, font, "DISCARD", BTN_X + (BTN_W - font.width("DISCARD")) / 2, DISCARD_Y + 6, Kit.BLOOD_LIGHT);
 
         renderRight(g, hover);
         renderFilter(g, mx, my);
@@ -505,12 +536,14 @@ public class TarkovScreen extends Screen {
     }
 
     private void renderGrid(GuiGraphics g, GridRef b) {
-        g.fill(b.x - 1, b.y - 1, b.x + b.w * C, b.y + b.h * C, 0xFF000000);
+        boolean arrows = !held.isEmpty() && held.is(net.minecraft.tags.ItemTags.ARROWS) && arrowSource(b);
         for (int cy = 0; cy < b.h; cy++) {
             for (int cx = 0; cx < b.w; cx++) {
                 int x = b.x + cx * C;
                 int y = b.y + cy * C;
-                g.fill(x, y, x + C - 1, y + C - 1, 0xFF22262C);
+                boolean over = lastMx >= x && lastMx < x + C && lastMy >= y && lastMy < y + C;
+                // While arrows are held, the grids a bow draws from get the green rim (3.3).
+                Kit.slot(g, x, y, C, arrows ? Kit.SlotState.ARROW_SOURCE : over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             }
         }
         Placed source = heldFrom != null && heldCount == 0 ? placedAt(heldFrom) : null;
@@ -518,15 +551,30 @@ public class TarkovScreen extends Screen {
             if (p == source) {
                 continue;
             }
-            drawPlaced(g, p.stack, b.x + p.x * C, b.y + p.y * C, p.width(), p.height(), p.rotated, 0xFF39404C);
+            drawPlaced(g, p.stack, b.x + p.x * C, b.y + p.y * C, p.width(), p.height(), p.rotated, 0);
         }
+    }
+
+    /** Bows draw arrows from the pockets, rig and backpack (not the pouch or open containers). */
+    private boolean arrowSource(GridRef r) {
+        for (Box b : boxes()) {
+            if (b.x() == r.x() && b.y() == r.y()) {
+                return b.id() != GridId.POUCH;
+            }
+        }
+        return false;
     }
 
     private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg) {
         int pw = w * C;
         int ph = h * C;
-        g.fill(px, py, px + pw - 1, py + ph - 1, bg);
-        g.fill(px, py, px + pw - 1, py + 1, 0x30FFFFFF);
+        if (bg != 0) {
+            g.fill(px, py, px + pw - 1, py + ph - 1, bg);
+        }
+        if (w > 1 || h > 1) {
+            // A multi-cell item reads as one piece: an inset across its whole footprint.
+            Kit.inset(g, px + 1, py + 1, pw - 2, ph - 2);
+        }
         int k = Math.max(1, Math.min(2, Math.min(w, h)));
         g.pose().pushPose();
         g.pose().translate(px + pw / 2f - 0.5f, py + ph / 2f - 0.5f, 0);
@@ -540,7 +588,7 @@ public class TarkovScreen extends Screen {
         g.pose().translate(0, 0, 200);
         if (stack.getCount() > 1) {
             String n = String.valueOf(stack.getCount());
-            g.drawString(font, n, px + pw - 2 - font.width(n), py + ph - 9, 0xFFFFFFFF, true);
+            Kit.text(g, font, n, px + pw - 2 - font.width(n), py + ph - 9, Kit.BONE);
         }
         if (stack.isBarVisible()) {
             int bw = (pw - 4) * stack.getBarWidth() / 13;
@@ -557,7 +605,7 @@ public class TarkovScreen extends Screen {
         if (secs.isEmpty()) {
             g.drawWordWrap(font, Component.literal(ClientTetris.sync.stash()
                     ? "Your stash is empty: place chests or barrels inside the hideout."
-                    : "Open a chest or barrel to see it here. Inside your hideout, the stash shows here."), COL4, 4, COL4_W, 0xFF666670);
+                    : "Open a chest or barrel to see it here. Inside your hideout, the stash shows here."), COL4, 4, COL4_W, Kit.ASH);
             return;
         }
         int sx0 = (int) (ox + COL4 * scale);
@@ -566,7 +614,7 @@ public class TarkovScreen extends Screen {
         for (Section sec : secs) {
             int y = sec.y - (int) containerScroll;
             if (sec.kind == Loc.UNSORTED) {
-                g.drawString(font, sec.title, COL4, y, 0xFFFF7755, false);
+                g.drawString(font, sec.title, COL4, y, Kit.BLOOD_LIGHT, false);
             } else {
                 renderContainerTitle(g, sec, y);
             }
@@ -583,17 +631,12 @@ public class TarkovScreen extends Screen {
                 int[] r = containerButton(y, b);
                 boolean hb = lastMx >= r[0] && lastMx < r[0] + r[2] && lastMy >= r[1] && lastMy < r[1] + 9;
                 boolean filtered = b == 2 && c.filter() != com.cavmkii.seancraft.tetris.StorageCategory.ALL;
-                g.fill(r[0], r[1], r[0] + r[2], r[1] + 9, filtered ? (hb ? 0xFF4C8C4C : 0xFF3A6A3A) : hb ? 0xFF4C4C58 : 0xFF33333C);
-                g.pose().pushPose();
-                g.pose().translate(r[0] + 3, r[1] + 1.5f, 0);
-                g.pose().scale(0.75f, 0.75f, 1);
-                g.drawString(font, b == 0 ? "SORT" : b == 1 ? "TAKE ALL" : "FILTER", 0, 0, 0xFFDDDDDD, false);
-                g.pose().popPose();
+                Kit.smallButton(g, font, b == 0 ? "SORT" : b == 1 ? "TAKE ALL" : "FILTER", r[0], r[1], r[2], 9, true, hb, filtered, 0.75f);
             }
             renderGrid(g, new GridRef(COL4, y + 10, c.width(), c.height(), c.items()));
             if (!c.overflow().isEmpty()) {
                 int oy0 = y + 10 + c.height() * C;
-                g.drawString(font, "NO ROOM IN GRID", COL4, oy0 + 1, 0xFFFF7755, false);
+                g.drawString(font, "NO ROOM IN GRID", COL4, oy0 + 1, Kit.BLOOD_LIGHT, false);
                 for (int i = 0; i < c.overflow().size(); i++) {
                     Loc loc = Loc.containerOverflow(sec.index, c.overflowSlots().get(i));
                     slot(g, COL4 + (i % 9) * C, oy0 + 10 + (i / 9) * C, C, c.overflow().get(i), hover != null && hover.equals(loc), null);
@@ -604,7 +647,7 @@ public class TarkovScreen extends Screen {
         if (max > 0) {
             int barH = Math.max(10, (int) (H * H / (H + max)));
             int barY = (int) ((H - barH) * containerScroll / max);
-            g.fill(COL4 + COL4_W + 2, barY, COL4 + COL4_W + 4, barY + barH, 0xFF555560);
+            Kit.blit(g, "scroll/handle", COL4 + COL4_W + 1, barY, 6, barH);
         }
     }
 
@@ -635,8 +678,7 @@ public class TarkovScreen extends Screen {
         boolean editing = renameIndex == sec.index;
         boolean hover = lastMx >= COL4 && lastMx < COL4 + TITLE_W && lastMy >= y - 1 && lastMy < y + 9;
         if (editing) {
-            g.fill(COL4 + 11, y - 1, COL4 + TITLE_W, y + 8, 0xFF101014);
-            g.renderOutline(COL4 + 11, y - 1, TITLE_W - 11, 9, 0xFF55555F);
+            Kit.blit(g, "text_field/focused", COL4 + 11, y - 1, TITLE_W - 11, 9);
         }
         String text = editing ? renameText + (ticks / 6 % 2 == 0 ? "_" : "") : c.name();
         g.pose().pushPose();
@@ -646,7 +688,7 @@ public class TarkovScreen extends Screen {
         g.pose().scale(k, k, 1);
         String fit = editing ? font.plainSubstrByWidth(text, (int) ((TITLE_W - 15) / k), true)
                 : font.plainSubstrByWidth(text, (int) ((TITLE_W - 15) / k));
-        g.drawString(font, fit, 0, 0, editing ? 0xFFFFFFFF : hover ? 0xFFFFF0A0 : 0xFFE0C060, false);
+        g.drawString(font, fit, 0, 0, editing ? Kit.BONE : hover ? Kit.GOLD_LIGHT : Kit.ASH, false);
         g.pose().popPose();
     }
 
@@ -667,31 +709,23 @@ public class TarkovScreen extends Screen {
         int y = Math.min(filterY, H - (cats.length + 2) * FILTER_ROW - 6);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
-        g.fill(x - 1, y - 1, x + FILTER_W + 1, y + (cats.length + 2) * FILTER_ROW + 5, 0xFF000000);
-        g.fill(x, y, x + FILTER_W, y + (cats.length + 2) * FILTER_ROW + 4, 0xFF1C1C22);
-        g.drawString(font, "Puts away here:", x + 4, y + 3, 0xFFE0C060, false);
+        Kit.hudPanel(g, x - 1, y - 1, FILTER_W + 2, (cats.length + 2) * FILTER_ROW + 6);
+        Kit.label(g, font, "FILTERS", x + 4, y + 3);
         for (int i = 0; i < cats.length; i++) {
             int ry = y + (i + 1) * FILTER_ROW + 3;
             boolean on = (mask & cats[i].bit()) != 0;
             boolean hover = mx >= x && mx < x + FILTER_W && my >= ry && my < ry + FILTER_ROW;
             if (hover) {
-                g.fill(x + 1, ry, x + FILTER_W - 1, ry + FILTER_ROW, 0xFF2A2A34);
+                Kit.blit(g, "list/row_hover", x + 1, ry, FILTER_W - 2, FILTER_ROW);
             }
-            g.fill(x + 4, ry + 1, x + 12, ry + 9, on ? 0xFF3FA34D : 0xFF3A2020);
-            g.drawString(font, on ? "✔" : "✖", x + 5, ry + 1, 0xFFFFFFFF, false);
-            g.drawString(font, cats[i].label, x + 16, ry + 1, on ? 0xFFDDDDDD : 0xFF777777, false);
+            Kit.blit(g, "checkbox/" + (on ? "on" : "off") + (hover ? "_hover" : ""), x + 4, ry + 1, 9, 9);
+            g.drawString(font, cats[i].label, x + 16, ry + 1, on ? (hover ? Kit.GOLD_LIGHT : Kit.BONE) : Kit.ASH, false);
         }
         int by = y + (cats.length + 1) * FILTER_ROW + 4;
         for (int b = 0; b < 2; b++) {
             int bx = x + 4 + b * 52;
             boolean hover = mx >= bx && mx < bx + 48 && my >= by && my < by + 10;
-            g.fill(bx, by, bx + 48, by + 10, hover ? 0xFF4C4C58 : 0xFF33333C);
-            String t = b == 0 ? "ALLOW ALL" : "CLEAR";
-            g.pose().pushPose();
-            g.pose().translate(bx + 24, by + 2, 0);
-            g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, t, -font.width(t) / 2, 0, 0xFFDDDDDD, false);
-            g.pose().popPose();
+            Kit.smallButton(g, font, b == 0 ? "ALLOW ALL" : "CLEAR", bx, by, 48, 10, true, hover, false, 0.75f);
         }
         g.pose().popPose();
     }
@@ -761,13 +795,13 @@ public class TarkovScreen extends Screen {
                 int gy = b.y + hover.c() * C;
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 150);
-                g.fill(gx, gy, gx + (merge ? there.width() : w) * C - 1, gy + (merge ? there.height() : h) * C - 1, ok ? 0x6040C040 : 0x60C04040);
+                g.fill(gx, gy, gx + (merge ? there.width() : w) * C - 1, gy + (merge ? there.height() : h) * C - 1, ok ? 0x60B08A3E : 0x608E1F1F);
                 g.pose().popPose();
             }
         }
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        drawPlaced(g, shown, mx - 9, my - 9, w, h, heldRot && size[0] != size[1], 0x8039404C);
+        drawPlaced(g, shown, mx - 9, my - 9, w, h, heldRot && size[0] != size[1], 0);
         g.pose().popPose();
     }
 
@@ -892,33 +926,27 @@ public class TarkovScreen extends Screen {
             int bx = v * 48;
             boolean active = craftView == v;
             boolean over = mx >= bx && mx < bx + 44 && my >= 0 && my < 14;
-            g.fill(bx, 0, bx + 44, 14, active ? 0xFF3A3A44 : over ? 0xFF2A2A32 : 0xFF202026);
-            if (active) {
-                g.fill(bx, 13, bx + 44, 14, 0xFFE0C060);
-            }
-            String t = v == 0 ? "CRAFT" : "RECIPES";
-            g.drawString(font, t, bx + (44 - font.width(t)) / 2, 3, active ? 0xFFFFFFFF : 0xFF888888, false);
+            Kit.button(g, font, v == 0 ? "CRAFT" : "RECIPES", bx, 0, 44, 14, true, over && !active, active);
         }
-        g.fill(SEARCH_X, 0, LIST_W, 14, searchFocused ? 0xFF55555F : 0xFF33333C);
-        g.fill(SEARCH_X + 1, 1, LIST_W - 1, 13, 0xFF101014);
+        Kit.blit(g, searchFocused ? "text_field/focused" : "text_field/normal", SEARCH_X, 0, LIST_W - SEARCH_X, 14);
         String shown = search.isEmpty() && !searchFocused ? "Search..." : search + (searchFocused && ticks / 6 % 2 == 0 ? "_" : "");
         g.drawString(font, font.plainSubstrByWidth(shown, LIST_W - SEARCH_X - 6, true), SEARCH_X + 4, 3,
-                search.isEmpty() && !searchFocused ? 0xFF666670 : 0xFFFFFFFF, false);
+                search.isEmpty() && !searchFocused ? Kit.ASH : Kit.BONE, false);
         if (craftView == 1) {
             return renderRecipes(g, mx, my);
         }
         ItemStack tip = ItemStack.EMPTY;
 
         if (!craft.inHideout()) {
-            g.fill(0, 18, LIST_W, 54, 0xFF2E2614);
-            g.fill(0, 18, 2, 54, 0xFFE0C060);
-            g.drawString(font, "No hideout here. Start one:", 6, 21, 0xFFE0C060, false);
+            Kit.inset(g, 0, 18, LIST_W, 36);
+            g.fill(1, 19, 2, 53, Kit.GOLD);
+            g.drawString(font, "No hideout here. Start one:", 6, 21, Kit.GOLD_LIGHT, false);
             g.pose().pushPose();
             g.pose().translate(6, 32, 0);
             g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, "Hideout Bench: 3 cobblestone on top, then plank,", 0, 0, 0xFFDDD0B0, false);
-            g.drawString(font, "crafting table, plank, then 3 planks. Place it and", 0, 9, 0xFFDDD0B0, false);
-            g.drawString(font, "everything within 30 blocks is your hideout.", 0, 18, 0xFFDDD0B0, false);
+            g.drawString(font, "Hideout Bench: 3 cobblestone on top, then plank,", 0, 0, Kit.BONE, false);
+            g.drawString(font, "crafting table, plank, then 3 planks. Place it and", 0, 9, Kit.BONE, false);
+            g.drawString(font, "everything within 30 blocks is your hideout.", 0, 18, Kit.BONE, false);
             g.pose().popPose();
         }
 
@@ -929,7 +957,7 @@ public class TarkovScreen extends Screen {
         double max = Math.max(0, height - (H - top));
         craftScroll = Math.max(0, Math.min(max, craftScroll));
         if (rows.isEmpty()) {
-            g.drawString(font, craft.entries().isEmpty() ? "Nothing you can make right now." : "No matches.", 0, top + 4, 0xFF666670, false);
+            g.drawString(font, craft.entries().isEmpty() ? "Nothing you can make right now." : "No matches.", 0, top + 4, Kit.ASH, false);
         }
         g.enableScissor((int) ox, (int) (oy + top * scale), (int) (ox + LIST_W * scale), (int) (oy + H * scale));
         for (CraftRow row : rows) {
@@ -941,26 +969,23 @@ public class TarkovScreen extends Screen {
                 boolean folded = COLLAPSED.contains(row.header) && search.isEmpty();
                 boolean overHead = mx >= 0 && mx < LIST_W && my >= y && my < y + HEAD && my >= top;
                 if (overHead) {
-                    g.fill(0, y, LIST_W, y + HEAD - 1, 0xFF22222A);
+                    Kit.blit(g, "list/row_hover", 0, y, LIST_W, HEAD - 1);
                 }
                 g.drawString(font, (folded ? "▸ " : "▾ ") + row.header.label.toUpperCase(Locale.ROOT), 1, y + 3,
-                        overHead ? 0xFFFFF0A0 : 0xFFE0C060, false);
+                        overHead ? Kit.GOLD_LIGHT : Kit.ASH, false);
                 String n = String.valueOf(row.count);
-                g.drawString(font, n, LIST_W - 2 - font.width(n), y + 3, 0xFF666670, false);
+                g.drawString(font, n, LIST_W - 2 - font.width(n), y + 3, Kit.ASH, false);
                 continue;
             }
             TetrisNet.CraftEntry e = row.entry;
             boolean hover = mx >= 0 && mx < LIST_W && my >= y && my < y + ROW - 2 && my >= top;
             boolean selected = e.id().equals(craft.selected());
-            g.fill(0, y, LIST_W, y + ROW - 2, selected ? 0xFF2E3A2E : hover ? 0xFF26262E : 0xFF1C1C22);
-            if (selected) {
-                g.fill(0, y, 2, y + ROW - 2, 0xFF7CFC7C);
-            }
+            Kit.blit(g, selected ? "list/row_selected" : hover ? "list/row_hover" : "list/row", 0, y, LIST_W, ROW - 2);
             g.renderItem(e.result(), 3, y + 2);
             g.renderItemDecorations(font, e.result(), 3, y + 2);
-            g.drawString(font, font.plainSubstrByWidth(e.result().getHoverName().getString(), LIST_W - 90), 24, y + 6, 0xFFFFFFFF, false);
+            g.drawString(font, font.plainSubstrByWidth(e.result().getHoverName().getString(), LIST_W - 90), 24, y + 6, hover ? Kit.GOLD_LIGHT : Kit.BONE, false);
             String can = e.times() > 0 ? "x" + e.times() : e.times() < 0 ? "needs crafting table" : "missing items";
-            g.drawString(font, can, LIST_W - 6 - font.width(can), y + 6, e.times() > 0 ? 0xFF888890 : e.times() < 0 ? 0xFFE0C060 : 0xFFFF7755, false);
+            g.drawString(font, can, LIST_W - 6 - font.width(can), y + 6, e.times() > 0 ? Kit.ASH : e.times() < 0 ? Kit.GOLD : Kit.BLOOD_LIGHT, false);
             if (hover) {
                 tip = e.result();
             }
@@ -968,22 +993,19 @@ public class TarkovScreen extends Screen {
         g.disableScissor();
 
         // Grid, result, clear.
-        g.drawString(font, "CRAFTING GRID", PX, 2, 0xFFE0C060, false);
+        g.drawString(font, "CRAFTING GRID", PX, 2, Kit.ASH, false);
         boolean clearHover = mx >= CLEAR_X && mx < W && my >= 0 && my < 12;
-        g.fill(CLEAR_X, 0, W, 12, clearHover ? 0xFF4C4C58 : 0xFF33333C);
-        g.drawString(font, "CLEAR", CLEAR_X + (40 - font.width("CLEAR")) / 2, 2, 0xFFDDDDDD, false);
+        Kit.button(g, font, "CLEAR", CLEAR_X, 0, 40, 12, true, clearHover, false);
         if (craft.selected() != null && !craft.selected().isEmpty()) {
             boolean pinHover = mx >= PIN_X && mx < PIN_X + PIN_W && my >= PIN_Y && my < PIN_Y + 12;
-            g.fill(PIN_X, PIN_Y, PIN_X + PIN_W, PIN_Y + 12, pinHover ? 0xFF4C8C4C : 0xFF3A6A3A);
-            g.drawString(font, "PIN TO HUD", PIN_X + (PIN_W - font.width("PIN TO HUD")) / 2, PIN_Y + 2, 0xFFFFFFFF, false);
+            Kit.button(g, font, "PIN TO HUD", PIN_X, PIN_Y, PIN_W, 12, true, pinHover, false);
         }
         for (int c = 0; c < 9; c++) {
             int x = PX + (c % 3) * CELL;
             int y = GRID_Y + (c / 3) * CELL;
             boolean hover = cellAt(mx, my) == c;
             boolean small = !craft.table() && (c % 3 == 2 || c / 3 == 2);
-            g.fill(x, y, x + CELL - 1, y + CELL - 1, hover ? 0xFF4A4A56 : 0xFF2A2A30);
-            g.fill(x + 1, y + 1, x + CELL - 2, y + CELL - 2, small ? 0xFF141418 : 0xFF1A1A1F);
+            Kit.slot(g, x, y, CELL, small ? Kit.SlotState.LOCKED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             ItemStack in = c < craft.grid().size() ? craft.grid().get(c) : ItemStack.EMPTY;
             boolean lifted = heldFrom != null && heldFrom.kind() == Loc.CRAFT && heldFrom.a() == c && heldCount == 0;
             if (!in.isEmpty() && !lifted) {
@@ -994,10 +1016,9 @@ public class TarkovScreen extends Screen {
                 }
             }
         }
-        g.drawString(font, "→", PX + 3 * CELL + 9, RESULT_Y + 9, 0xFF888890, false);
+        Kit.blit(g, craft.result().isEmpty() ? "progress/arrow_empty" : "progress/arrow_full", PX + 3 * CELL + 2, RESULT_Y + 6, 22, 15);
         boolean resultHover = overResult(mx, my);
-        g.fill(RESULT_X, RESULT_Y, RESULT_X + 26, RESULT_Y + 26, resultHover && !craft.result().isEmpty() ? 0xFF4C8C4C : 0xFF2A2A30);
-        g.fill(RESULT_X + 1, RESULT_Y + 1, RESULT_X + 25, RESULT_Y + 25, 0xFF1A1A1F);
+        Kit.slot(g, RESULT_X, RESULT_Y, 26, resultHover && !craft.result().isEmpty() ? Kit.SlotState.HOVER : Kit.SlotState.RESULT);
         if (!craft.result().isEmpty()) {
             g.renderItem(craft.result(), RESULT_X + 5, RESULT_Y + 5);
             g.renderItemDecorations(font, craft.result(), RESULT_X + 5, RESULT_Y + 5);
@@ -1009,20 +1030,20 @@ public class TarkovScreen extends Screen {
         g.pose().translate(RESULT_X - 2, RESULT_Y + 30, 0);
         g.pose().scale(0.75f, 0.75f, 1);
         if (craft.needsTable()) {
-            g.drawString(font, "Needs a crafting table", 0, 0, 0xFFFF7755, false);
-            g.drawString(font, "or the hideout", 0, 9, 0xFFFF7755, false);
+            g.drawString(font, "Needs a crafting table", 0, 0, Kit.BLOOD_LIGHT, false);
+            g.drawString(font, "or the hideout", 0, 9, Kit.BLOOD_LIGHT, false);
         } else if (!craft.result().isEmpty()) {
-            g.drawString(font, "Click: craft", 0, 0, 0xFF888890, false);
-            g.drawString(font, "Shift: craft all", 0, 9, 0xFF888890, false);
+            g.drawString(font, "Click: craft", 0, 0, Kit.ASH, false);
+            g.drawString(font, "Shift: craft all", 0, 9, Kit.ASH, false);
         } else if (!craft.table()) {
-            g.drawString(font, "2x2 only here.", 0, 0, 0xFF666670, false);
-            g.drawString(font, "3x3: near a table", 0, 9, 0xFF666670, false);
+            g.drawString(font, "2x2 only here.", 0, 0, Kit.ASH, false);
+            g.drawString(font, "3x3: near a table", 0, 9, Kit.ASH, false);
         }
         g.pose().popPose();
 
         // Materials.
         List<ItemStack> mats = craft.materials();
-        g.drawString(font, "MATERIALS" + (craft.inHideout() ? " (incl. stash)" : ""), PX, MAT_Y, 0xFFE0C060, false);
+        g.drawString(font, "MATERIALS" + (craft.inHideout() ? " (incl. stash)" : ""), PX, MAT_Y, Kit.ASH, false);
         double mmax = Math.max(0, ((mats.size() + 8) / 9) * C - (MAT_BOTTOM - MAT_Y - 10));
         matScroll = Math.max(0, Math.min(mmax, matScroll));
         g.enableScissor((int) (ox + PX * scale), (int) (oy + (MAT_Y + 10) * scale), (int) (ox + W * scale), (int) (oy + MAT_BOTTOM * scale));
@@ -1031,8 +1052,7 @@ public class TarkovScreen extends Screen {
             int y = MAT_Y + 10 + (i / 9) * C - (int) matScroll;
             ItemStack m = mats.get(i);
             boolean hover = materialAt(mx, my) == i;
-            g.fill(x, y, x + C - 1, y + C - 1, hover ? 0xFF4A4A56 : 0xFF2A2A30);
-            g.fill(x + 1, y + 1, x + C - 2, y + C - 2, 0xFF1A1A1F);
+            Kit.slot(g, x, y, C, hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             g.renderItem(m, x + 1, y + 1);
             g.renderItemDecorations(font, m, x + 1, y + 1, m.getCount() > 999 ? "999+" : null);
             if (hover) {
@@ -1041,11 +1061,11 @@ public class TarkovScreen extends Screen {
         }
         g.disableScissor();
         if (mats.isEmpty()) {
-            g.drawString(font, "Nothing to craft with.", PX, MAT_Y + 14, 0xFF666670, false);
+            g.drawString(font, "Nothing to craft with.", PX, MAT_Y + 14, Kit.ASH, false);
         }
 
         // Hotbar.
-        g.drawString(font, "HOTBAR", PX, CRAFT_HOTBAR_Y - 10, 0xFFE0C060, false);
+        g.drawString(font, "HOTBAR", PX, CRAFT_HOTBAR_Y - 10, Kit.ASH, false);
         for (int i = 0; i < 9; i++) {
             int x = PX + i * C;
             ItemStack h = minecraft.player.getInventory().items.get(i);
@@ -1209,7 +1229,7 @@ public class TarkovScreen extends Screen {
             for (RecipeCell c : sec.cells) {
                 known += c.known ? 1 : 0;
             }
-            g.drawString(font, sec.category.label.toUpperCase(Locale.ROOT) + "  " + known + "/" + sec.cells.size(), 0, top + 1, 0xFFE0C060, false);
+            g.drawString(font, sec.category.label.toUpperCase(Locale.ROOT) + "  " + known + "/" + sec.cells.size(), 0, top + 1, Kit.ASH, false);
             int gridTop = top + 11;
             for (int i = 0; i < sec.cells.size(); i++) {
                 RecipeCell c = sec.cells.get(i);
@@ -1219,15 +1239,14 @@ public class TarkovScreen extends Screen {
                     continue;
                 }
                 boolean sel = c.known && c.holder.id().equals(selectedRecipe);
-                g.fill(x, y, x + RCELL - 1, y + RCELL - 1, sel ? 0xFF3A6A3A : c == hovered ? 0xFF4A4A56 : 0xFF2A2A30);
-                g.fill(x + 1, y + 1, x + RCELL - 2, y + RCELL - 2, 0xFF1A1A1F);
+                Kit.slot(g, x, y, RCELL, sel ? Kit.SlotState.SELECTED : c == hovered ? Kit.SlotState.HOVER : !c.known ? Kit.SlotState.LOCKED : Kit.SlotState.NORMAL);
                 if (c.known) {
                     g.renderItem(c.result, x + 1, y + 1);
                     if (c == hovered) {
                         tip = c.result;
                     }
                 } else {
-                    g.drawString(font, "?", x + 6, y + 5, 0xFF555560, false);
+                    g.drawString(font, "?", x + 6, y + 5, Kit.DISABLED, false);
                 }
             }
             top = gridTop + ((sec.cells.size() + RCOLS - 1) / RCOLS) * RCELL + 4;
@@ -1236,13 +1255,13 @@ public class TarkovScreen extends Screen {
         if (hovered != null && !hovered.known) {
             g.pose().pushPose();
             g.pose().translate(0, 0, 400);
-            g.fill(mx + 6, my - 12, mx + 50, my, 0xF0100010);
-            g.drawString(font, "??????", mx + 9, my - 10, 0xFF888888, false);
+            Kit.hudPanel(g, mx + 6, my - 13, 44, 14);
+            g.drawString(font, "??????", mx + 9, my - 10, Kit.ASH, false);
             g.pose().popPose();
         }
 
         // Selected recipe.
-        g.drawString(font, "RECIPE", PX, 2, 0xFFE0C060, false);
+        g.drawString(font, "RECIPE", PX, 2, Kit.ASH, false);
         RecipeCell sel = null;
         for (RecipeSection sec : recipeSections()) {
             for (RecipeCell c : sec.cells) {
@@ -1253,11 +1272,11 @@ public class TarkovScreen extends Screen {
         }
         if (sel == null) {
             g.drawWordWrap(font, Component.literal("Click a discovered recipe. You discover recipes by carrying one of their ingredients."),
-                    PX, 16, W - PX, 0xFF666670);
+                    PX, 16, W - PX, Kit.ASH);
         } else {
             g.renderItem(sel.result, PX, 14);
             g.renderItemDecorations(font, sel.result, PX, 14);
-            g.drawString(font, font.plainSubstrByWidth(sel.result.getHoverName().getString(), W - PX - 22), PX + 20, 18, 0xFFFFFFFF, false);
+            g.drawString(font, font.plainSubstrByWidth(sel.result.getHoverName().getString(), W - PX - 22), PX + 20, 18, Kit.BONE, false);
             int ly = 36;
             for (IngredientLine line : ingredientsOf(sel.holder.value())) {
                 if (ly > REC_BTN_Y - 12) {
@@ -1269,26 +1288,24 @@ public class TarkovScreen extends Screen {
                 g.pose().scale(0.625f, 0.625f, 1);
                 g.renderItem(line.display, 0, 0);
                 g.pose().popPose();
-                g.drawString(font, font.plainSubstrByWidth(line.display.getHoverName().getString(), W - PX - 50), PX + 13, ly, 0xFFCCCCCC, false);
+                g.drawString(font, font.plainSubstrByWidth(line.display.getHoverName().getString(), W - PX - 50), PX + 13, ly, Kit.BONE, false);
                 String c = have + "/" + line.need;
-                g.drawString(font, c, W - font.width(c), ly, have >= line.need ? 0xFF7CFC7C : 0xFFFF6666, false);
+                g.drawString(font, c, W - font.width(c), ly, have >= line.need ? Kit.MOSS : Kit.BLOOD_LIGHT, false);
                 ly += 11;
             }
             for (int b = 0; b < 2; b++) {
                 int bx = PX + b * 84;
                 boolean over = mx >= bx && mx < bx + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
-                g.fill(bx, REC_BTN_Y, bx + 80, REC_BTN_Y + 14, over ? 0xFF4C8C4C : 0xFF3A6A3A);
-                String t = b == 0 ? "LAY OUT" : "PIN TO HUD";
-                g.drawString(font, t, bx + (80 - font.width(t)) / 2, REC_BTN_Y + 3, 0xFFFFFFFF, false);
+                Kit.button(g, font, b == 0 ? "LAY OUT" : "PIN TO HUD", bx, REC_BTN_Y, 80, 14, true, over, false);
             }
         }
 
         // Tracker.
-        g.drawString(font, "TRACKING", PX, TRACK_Y, 0xFFE0C060, false);
+        g.drawString(font, "TRACKING", PX, TRACK_Y, Kit.ASH, false);
         g.pose().pushPose();
         g.pose().translate(PX + 52, TRACK_Y + 1, 0);
         g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(font, "press T on any item to add", 0, 0, 0xFF666670, false);
+        g.drawString(font, "press T on any item to add", 0, 0, Kit.ASH, false);
         g.pose().popPose();
         List<ClientTracker.Entry> entries = ClientTracker.entries();
         for (int i = 0; i < entries.size(); i++) {
@@ -1306,16 +1323,16 @@ public class TarkovScreen extends Screen {
             g.pose().pushPose();
             g.pose().translate(PX + 10, y, 0);
             g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, font.plainSubstrByWidth(e.name(), 80), 0, 0, 0xFFCCCCCC, false);
+            g.drawString(font, font.plainSubstrByWidth(e.name(), 80), 0, 0, Kit.BONE, false);
             String c = have + "/" + e.goal();
-            g.drawString(font, c, 112, 0, have >= e.goal() ? 0xFF7CFC7C : 0xFFFFAA55, false);
+            g.drawString(font, c, 112, 0, have >= e.goal() ? Kit.MOSS : Kit.BONE, false);
             g.pose().popPose();
             String[] marks = {"-", "+", "x"};
             for (int b = 0; b < 3; b++) {
                 int bx = W - 30 + b * 10;
                 boolean over = mx >= bx && mx < bx + 9 && my >= y - 1 && my < y + 7;
-                g.fill(bx, y - 1, bx + 9, y + 7, over ? 0xFF4C4C58 : 0xFF33333C);
-                g.drawString(font, marks[b], bx + 2, y - 1, 0xFFDDDDDD, false);
+                Kit.buttonBg(g, bx, y - 1, 9, 8, true, over, false);
+                g.drawString(font, marks[b], bx + 2, y - 1, over ? Kit.GOLD_LIGHT : Kit.BONE, false);
             }
         }
         return tip;
@@ -1369,18 +1386,19 @@ public class TarkovScreen extends Screen {
         String head = "Level " + data.level + (data.level < PlayerData.MAX_LEVEL ? "  (" + data.xp + " / " + PlayerData.xpToNext(data.level) + " xp)" : "")
                 + "   Free points " + data.freePoints()
                 + (data.origin != null ? "   " + data.origin.label + (data.spec != null ? ", " + data.spec.label : "") : "   No origin yet (K)");
-        g.drawString(font, head, 0, 0, 0xFFFFE080, false);
+        g.drawString(font, head, 0, 0, Kit.GOLD_LIGHT, false);
         int ax = 0;
         for (Attr attr : Attr.values()) {
             String t = attr.label + " " + String.format("%.1f", stats.attr(attr));
-            g.drawString(font, t, ax, 12, 0xFF000000 | attr.color, false);
-            ax += font.width(t) + 14;
+            Kit.blit(g, "icon/attribute/" + attr.name().toLowerCase(Locale.ROOT), ax, 11, 9, 9);
+            g.drawString(font, t, ax + 12, 12, Kit.BONE, false);
+            ax += font.width(t) + 26;
         }
         g.pose().pushPose();
         g.pose().translate(0, 21, 0);
         g.pose().scale(0.75f, 0.75f, 1);
         g.drawString(font, String.format("Crit chance %.0f%%, crit damage +%.0f%%   Attack speed +%.0f%%   Move speed +%.0f%%",
-                stats.critChance(), stats.critDamage(), stats.attackSpeedPct(), stats.moveSpeedPct()), 0, 0, 0xFFBBBBBB, false);
+                stats.critChance(), stats.critDamage(), stats.attackSpeedPct(), stats.moveSpeedPct()), 0, 0, Kit.ASH, false);
         g.pose().popPose();
         Skill[] skills = Skill.values();
         for (int i = 0; i < skills.length; i++) {
@@ -1391,19 +1409,15 @@ public class TarkovScreen extends Screen {
             double xp = data.skillXp.getOrDefault(skill, 0.0);
             double from = Skill.xpForLevel(level);
             double to = Skill.xpForLevel(Math.min(Skill.MAX_LEVEL, level + 1));
-            g.fill(x, y, x + 206, y + 29, 0xFF1C1C22);
-            g.fill(x, y, x + 2, y + 29, 0xFF000000 | skill.color());
-            g.drawString(font, skill.label, x + 6, y + 4, 0xFF000000 | skill.color(), false);
+            Kit.inset(g, x, y, 206, 29);
+            g.drawString(font, skill.label, x + 6, y + 4, Kit.BONE, false);
             String lv = String.valueOf(level);
-            g.drawString(font, lv, x + 200 - font.width(lv), y + 4, 0xFFFFFFFF, false);
-            g.fill(x + 6, y + 14, x + 200, y + 16, 0xFF000000);
-            if (level < Skill.MAX_LEVEL && to > from) {
-                g.fill(x + 6, y + 14, x + 6 + (int) (194 * Math.min(1, (xp - from) / (to - from))), y + 16, 0xFF000000 | skill.color());
-            }
+            g.drawString(font, lv, x + 200 - font.width(lv), y + 4, Kit.BONE, false);
+            Kit.bar(g, "xp", x + 6, y + 13, 194, level >= Skill.MAX_LEVEL || to <= from ? 1f : (float) Math.min(1, (xp - from) / (to - from)));
             g.pose().pushPose();
             g.pose().translate(x + 6, y + 19, 0);
             g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, skill.describe(level), 0, 0, 0xFFAAAAAA, false);
+            g.drawString(font, skill.describe(level), 0, 0, Kit.ASH, false);
             g.pose().popPose();
         }
     }
@@ -1439,8 +1453,7 @@ public class TarkovScreen extends Screen {
             return true;
         }
         for (int t = 0; t < TABS.length; t++) {
-            int x = tabX(t);
-            if (mouseX >= x && mouseX < x + 70 && mouseY >= 4 && mouseY < 20) {
+            if (overTab(t, mouseX, mouseY)) {
                 dropHeld();
                 setTab(t);
                 return true;

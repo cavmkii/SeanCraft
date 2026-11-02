@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.Cfg;
 import com.cavmkii.seancraft.tarkov.Distance;
 
@@ -29,13 +30,15 @@ final class RaidHud {
         int cx = g.guiWidth() / 2;
         int y = 6;
         int w = Math.max((int) (mc.font.width(b.title()) * 1.5f), mc.font.width(b.subtitle())) + 16;
-        g.fill(cx - w / 2, y - 3, cx + w / 2, y + 26, (int) (alpha * 0x90) << 24);
+        if (alpha > 0.5f) {
+            Kit.hudPanel(g, cx - w / 2, y - 4, w, 31);
+        }
         g.pose().pushPose();
         g.pose().translate(cx, y, 0);
         g.pose().scale(1.5f, 1.5f, 1);
         g.drawString(mc.font, b.title(), -mc.font.width(b.title()) / 2, 0, a | (b.color() & 0xFFFFFF), true);
         g.pose().popPose();
-        g.drawString(mc.font, b.subtitle(), cx - mc.font.width(b.subtitle()) / 2, y + 15, a | 0xDDDDDD, true);
+        g.drawString(mc.font, b.subtitle(), cx - mc.font.width(b.subtitle()) / 2, y + 15, a | (Kit.BONE & 0xFFFFFF), true);
     }
 
     /**
@@ -65,6 +68,45 @@ final class RaidHud {
         return (int) (g.guiHeight() - 40 - visible * lineHeight) - 4;
     }
 
+    /** One line for the inventory's top right (C.4): IN RAID, the band, threat and FOB time; or HIDEOUT / SPAWN. */
+    static String stateLine() {
+        TarkovNet.RaidState s = ClientTarkov.raid;
+        if (s == null || s.state() == 0) {
+            return "";
+        }
+        if (s.state() == 1) {
+            return "HIDEOUT";
+        }
+        if (s.state() == 3) {
+            return "SPAWN (SAFE)";
+        }
+        StringBuilder out = new StringBuilder("IN RAID ").append(String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60));
+        if (s.band() > 0) {
+            out.append("   ").append(Distance.values()[Math.min(s.band(), Distance.values().length - 1)].label.toUpperCase());
+        }
+        out.append("   THREAT ").append(s.threat());
+        if (s.fobLeft() >= 0) {
+            out.append("   FOB ").append(String.format("%d:%02d", s.fobLeft() / 60, s.fobLeft() % 60));
+        }
+        return out.toString();
+    }
+
+    /** The state line from longest to shortest, for wherever it has to fit. */
+    static java.util.List<String> stateLines() {
+        String full = stateLine();
+        TarkovNet.RaidState s = ClientTarkov.raid;
+        if (full.isEmpty() || s == null || s.state() != 2) {
+            return full.isEmpty() ? java.util.List.of() : java.util.List.of(full);
+        }
+        String time = String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60);
+        return java.util.List.of(full, "IN RAID " + time + "   THREAT " + s.threat(), "RAID " + time + " T" + s.threat(), time);
+    }
+
+    static int stateColor() {
+        TarkovNet.RaidState s = ClientTarkov.raid;
+        return s != null && s.state() == 2 ? com.cavmkii.seancraft.client.ui.Kit.BLOOD_LIGHT : com.cavmkii.seancraft.client.ui.Kit.ASH;
+    }
+
     static void render(GuiGraphics g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && !mc.options.hideGui) {
@@ -80,36 +122,37 @@ final class RaidHud {
         if (s.state() == 0) {
             return;
         }
-        if (s.state() == 1) {
-            g.drawString(mc.font, "HIDEOUT", x, y, 0xFF55FF55, true);
+        if (s.state() == 1 || s.state() == 3) {
+            // Safe places are gold: gold marks what's secure (C.2).
+            String safe = s.state() == 1 ? "HIDEOUT" : "SPAWN (SAFE)";
+            Kit.hudPanel(g, x - 5, y - 4, mc.font.width(safe) + 10, 15);
+            Kit.text(g, mc.font, safe, x, y, Kit.GOLD);
             return;
         }
-        if (s.state() == 3) {
-            g.drawString(mc.font, "SPAWN (safe)", x, y, 0xFF55FFFF, true);
-            return;
-        }
+        boolean fobLine = s.fobLeft() >= 0 && (s.fobPaused() || s.fobLeft() < Cfg.fobPauseMinutes * 60);
+        Kit.hudPanel(g, x - 5, y - 4, 150, fobLine ? 35 : 25);
         String time = String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60);
         String raid = "RAID " + time;
-        g.drawString(mc.font, raid, x, y, 0xFFFF5555, true);
+        Kit.text(g, mc.font, raid, x, y, Kit.BLOOD_LIGHT);
         int rx = x + mc.font.width(raid) + 6;
         if (s.band() > 0) {
             String band = Distance.values()[Math.min(s.band(), Distance.values().length - 1)].label;
-            g.drawString(mc.font, band, rx, y, s.band() >= 2 ? 0xFFFFAA00 : 0xFFE0D080, true);
+            Kit.text(g, mc.font, band.toUpperCase(), rx, y, Kit.BLOOD_LIGHT);
         }
         // FOB time left this raid, under the threat line; bright while a FOB table is holding the timer.
-        if (s.fobLeft() >= 0 && (s.fobPaused() || s.fobLeft() < Cfg.fobPauseMinutes * 60)) {
+        if (fobLine) {
             String fob = (s.fobPaused() ? "FOB: timer paused, " : "FOB time ") + String.format("%d:%02d", s.fobLeft() / 60, s.fobLeft() % 60)
                     + (s.fobPaused() ? " left" : "");
-            g.drawString(mc.font, fob, x, y + 20, s.fobPaused() ? 0xFF55FF55 : 0xFF888888, true);
+            Kit.text(g, mc.font, fob, x, y + 20, s.fobPaused() ? Kit.GOLD : Kit.ASH);
         }
-        StringBuilder threat = new StringBuilder("Threat ");
+        // Threat as the kit's pips, then when it rises next.
+        Kit.text(g, mc.font, "THREAT", x, y + 10, s.threat() == 0 ? Kit.ASH : Kit.BLOOD_LIGHT);
+        int px = x + mc.font.width("THREAT") + 4;
         for (int i = 1; i <= 4; i++) {
-            threat.append(i <= s.threat() ? '■' : '□');
+            Kit.blit(g, i <= s.threat() ? "hud/threat_pip_on" : "hud/threat_pip_off", px + (i - 1) * 7, y + 11, 5, 5);
         }
         if (s.nextThreat() >= 0) {
-            threat.append(String.format("  next %d:%02d", s.nextThreat() / 60, s.nextThreat() % 60));
+            Kit.text(g, mc.font, String.format("next %d:%02d", s.nextThreat() / 60, s.nextThreat() % 60), px + 32, y + 10, Kit.ASH);
         }
-        int color = s.threat() == 0 ? 0xFFAAAAAA : s.threat() < 3 ? 0xFFFFAA00 : 0xFFFF5555;
-        g.drawString(mc.font, threat.toString(), x, y + 10, color, true);
     }
 }
