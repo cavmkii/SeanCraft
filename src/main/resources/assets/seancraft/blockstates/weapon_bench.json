@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "seancraft:block/weapon_bench"
+    },
+    "facing=east": {
+      "model": "seancraft:block/weapon_bench",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/weapon_bench",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/weapon_bench",
+      "y": 270
     }
   }
 }

@@ -22,7 +22,7 @@ import net.minecraft.world.phys.Vec3;
  * A hideout module as its own block (design doc 2.5): crafted at the Hideout Bench and placed anywhere inside the
  * hideout, one of each kind. Using it opens its screen, where it's built and upgraded. Broken, it drops with its level.
  */
-public class ModuleBlock extends Block {
+public class ModuleBlock extends com.cavmkii.seancraft.FacingBlock {
     public final Module module;
 
     public ModuleBlock(Module module, Properties properties) {

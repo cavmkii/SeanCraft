@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /** Where you modify weapons and armor: swap parts in and out, and level parts up. */
-public class WeaponBenchBlock extends Block {
+public class WeaponBenchBlock extends com.cavmkii.seancraft.FacingBlock {
     public WeaponBenchBlock(Properties properties) {
         super(properties);
     }

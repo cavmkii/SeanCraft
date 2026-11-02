@@ -353,4 +353,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Lots of items borrow a vanilla texture for now. To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The pack's GUI sprites are in `textures/gui/sprites/` but the screens don't draw with them yet.
+
+A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.

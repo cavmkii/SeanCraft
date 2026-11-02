@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "seancraft:block/perimeter_top",
+    "bottom": "seancraft:block/perimeter_bottom",
+    "side": "seancraft:block/perimeter_side",
+    "front": "seancraft:block/perimeter_front"
+  }
+}

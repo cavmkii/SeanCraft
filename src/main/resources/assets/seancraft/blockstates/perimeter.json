@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "minecraft:block/chiseled_stone_bricks"
+    "facing=north": {
+      "model": "seancraft:block/perimeter"
+    },
+    "facing=east": {
+      "model": "seancraft:block/perimeter",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/perimeter",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/perimeter",
+      "y": 270
     }
   }
 }

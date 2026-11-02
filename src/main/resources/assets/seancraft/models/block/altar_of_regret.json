@@ -1,9 +1,9 @@
 {
-  "parent": "minecraft:block/enchanting_table",
+  "parent": "minecraft:block/orientable_with_bottom",
   "textures": {
-    "particle": "minecraft:block/crying_obsidian",
-    "top": "minecraft:block/crying_obsidian",
-    "side": "minecraft:block/obsidian",
-    "bottom": "minecraft:block/obsidian"
+    "top": "seancraft:block/altar_of_regret_top",
+    "bottom": "seancraft:block/altar_of_regret_bottom",
+    "side": "seancraft:block/altar_of_regret_side",
+    "front": "seancraft:block/altar_of_regret_front"
   }
 }

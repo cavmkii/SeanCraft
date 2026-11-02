@@ -1,1 +1,7 @@
-{ "variants": { "": { "model": "seancraft:block/fob_table" } } }
+{
+  "variants": {
+    "": {
+      "model": "seancraft:block/fob_table"
+    }
+  }
+}
