@@ -194,7 +194,11 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         if (ready) {
             ghost = null;
         }
-        char[] ghostAt = ghost == null ? null : ghost.ghost();
+        // Hovering a book entry previews its pattern; otherwise the picked one.
+        int hr = (int) Math.floor((mouseY - topPos - BOOK_Y) / (double) BOOK_ROW);
+        var shown = !ready && mouseX >= leftPos + BOOK_X && mouseX < leftPos + BOOK_X + BOOK_W && hr >= 0 && hr < BOOK_ROWS
+                && hr + bookScroll < book.size() ? book.get(hr + bookScroll) : ghost;
+        char[] ghostAt = shown == null ? null : shown.ghost();
         for (int i = 0; i < 9; i++) {
             Slot slot = menu.slots.get(gridSlot(i));
             int sx = x + slot.x - 1;
@@ -453,12 +457,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                     var p = book.get(r + bookScroll);
                     List<Component> lines = new ArrayList<>();
                     lines.add(Component.literal(bookName(p)));
-                    for (String row : p.rows) {
-                        lines.add(Component.literal(row.replace('.', '·').replace("", " ").trim()).withStyle(net.minecraft.ChatFormatting.GRAY));
-                    }
-                    lines.add(Component.literal("M metal, W wood, H hide, G gem, C catalyst, S stick").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
-                    lines.add(Component.literal("Click to show it in the grid").withStyle(net.minecraft.ChatFormatting.GRAY));
-                    g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
+                    lines.add(Component.literal("Shown in iron, logs, leather...: any one material of each kind works").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+                    lines.add(Component.literal("Click to keep it in the grid").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    g.renderTooltip(font, lines, java.util.Optional.of(com.cavmkii.seancraft.client.tarkov.RecipeGridTooltip.Data.of(p.ghost(),
+                            com.cavmkii.seancraft.parts.PartCrafting::example)), mouseX, mouseY);
                 }
             }
             return;

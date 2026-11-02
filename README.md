@@ -107,7 +107,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Food and rest
 
-- **No hunger.** You can't starve, and food doesn't heal you the vanilla way. Instead you have 3 food slots, shown above the injuries in the bottom left, each with a bar for the time it has left.
+- **No hunger.** You can't starve, and food doesn't heal you the vanilla way. Instead you have 3 food slots, shown in the top left next to the body figure, each with a bar for the time it has left.
 - **Meals.** Eating something puts it in a slot for a while, adding max health, max stamina and slow health regen. Hover a food to see what it gives.
   - Meat and stews are health food: lots of health, a little stamina.
   - Bread, berries, fruit and honey are stamina food.
@@ -150,18 +150,16 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
 - **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
 - **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** The CRAFTING tab has a recipe list on the left, grouped by category, and a crafting grid on the right. Right-clicking a crafting table opens the same tab.
+- **Crafting.** The CRAFTING tab is laid out like a vanilla crafting table with your inventory around it: your pockets, rig, pouch, backpack and hotbar on the left (same as on GEAR), the crafting grid and result top middle, the recipe list under the grid, and the stash (or the chest you opened) on the right. Click RECIPES above the list to fold it away. Right-clicking a crafting table opens the same tab.
+  - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory, and Shift-click the result to craft as many as you can. The same drag works on the hotbar.
   - Click a category heading to fold it shut, or click it again to open it.
-  - Click a recipe and it gets laid out in the grid with what you have. Your hotbar, grids and stash all count.
-  - Or lay it out yourself: click something in MATERIALS, then click a grid cell. Right-click puts down just one.
-  - Click the result to craft, or Shift-click to craft as many as you can. The recipe you picked stays selected and lays itself out again after each craft, so you can keep clicking.
-  - PIN TO HUD under the result puts the selected recipe's ingredients on your gather list.
+  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out yourself from either side. The Hideout Bench and Weapon Bench books do the same. The count beside each recipe includes your hotbar, grids and stash.
+  - PIN TO HUD under the result (while a recipe is picked) puts its ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
-  - Your hotbar shows under MATERIALS, so you can grab from it or drop things into it without switching tabs.
   - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the CRAFT list does the same ghost.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
-- **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
+- **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
 - **Ammo.** Bows and crossbows pull arrows from your rig, pockets or backpack.
 
 ### Health
@@ -180,7 +178,8 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A **surgery case** (2x2, Medstation level 3, rare in chests) brings a part back to new, lasting damage and all.
 - **Locked health.** A destroyed part locks away its share of your health, and lasting damage locks part of a part's share. Food, regen and potions can't fill it. It shows as a dark, striped end on the health bar.
 - **On screen.**
-  - Bottom left lists your injuries with their severity and what fixes them.
+  - A small body shows each part's health at a glance: green, then orange, then red, dark when destroyed. A bleeding part flashes and a fracture gets a white mark. It sits in the top left with your food slots beside it, and the gather list under them, so the top right stays free for a minimap like JourneyMap.
+  - Bottom left lists your injuries with their severity and what fixes them. Long lines wrap or shrink so they never run under the health bar.
   - Above that, a small line shows what they're doing to you right now, like `Walk -24%  Sprint -38%  Jump -6%`. It turns cyan while painkillers are taking the edge off.
   - Above that, every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.
   - The edges of the screen glow while you're hurt: pulsing red while you bleed, white for a fracture, grey for a destroyed part. They get stronger the worse it is.

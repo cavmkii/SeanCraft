@@ -160,9 +160,11 @@ public final class ClientTracker {
             return;
         }
         // Top left, on the kit's HUD panel (C.5).
+        // Under the body figure and food slots.
+        int top = EffectHud.TOP_H;
         int x = 11;
-        int y = 9;
-        Kit.hudPanel(g, 6, 6, 136, 13 + list.size() * 12);
+        int y = 9 + top;
+        Kit.hudPanel(g, 6, 6 + top, 136, 13 + list.size() * 12);
         Kit.text(g, mc.font, "GATHER", x, y, Kit.GOLD_LIGHT);
         y += 11;
         for (Entry e : list) {

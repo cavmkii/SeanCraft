@@ -49,6 +49,10 @@ public final class Kit {
     }
 
     public static void blit(GuiGraphics g, String sprite, int x, int y, int w, int h) {
+        // Translucent sprites (the ghost overlay, tints) need blending on; an item drawn just before leaves it off,
+        // which made the ghost overlay opaque and hid the item under it.
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
         g.blitSprite(sprite(sprite), x, y, w, h);
     }
 

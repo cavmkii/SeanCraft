@@ -119,6 +119,7 @@ final class RaidHud {
         int x = 4;
         int y = g.guiHeight() - 30;
         EffectHud.render(g, mc, x, Math.min(s.state() == 0 ? g.guiHeight() - 4 : y - 4, chatTop(g, mc)));
+        EffectHud.topLeft(g, mc);
         if (s.state() == 0) {
             return;
         }

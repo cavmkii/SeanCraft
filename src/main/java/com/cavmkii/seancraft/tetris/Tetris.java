@@ -183,6 +183,11 @@ public final class Tetris {
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.QuickMove.TYPE, (p, ctx) -> {
             quickMove(ctx.player(), p.from());
             sync(ctx.player());
+            if (p.from().kind() == Loc.CRAFT) {
+                // Shift-clicked out of the craft grid: the grid changed.
+                rt(ctx.player()).lastRecipe = null;
+                sendCraftList(ctx.player());
+            }
         });
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Action.TYPE, (p, ctx) -> {
             action(ctx.player(), p.action());
@@ -1079,9 +1084,9 @@ public final class Tetris {
                 dst.set(source);
                 src.set(other);
             }
-        } else if (whole && (to.kind() == Loc.HAND || (to.kind() == Loc.EQUIP && to.a() != 4 && to.a() != 5))
+        } else if (whole && (to.kind() == Loc.HAND || to.kind() == Loc.CRAFT || (to.kind() == Loc.EQUIP && to.a() != 4 && to.a() != 5))
                 && (from.kind() == Loc.GRID || from.kind() == Loc.CONTAINER || from.kind() == Loc.UNSORTED)) {
-            // Dropped on an occupied hotbar or equipment slot: swap, and the displaced item takes the moved one's place.
+            // Dropped on an occupied hotbar, craft cell or equipment slot: swap, and the displaced item takes the moved one's place.
             Ref dst = ref(player, data, to);
             if (dst != null && !dst.get().isEmpty() && locked(player, data, to, dst.get()) == null
                     && accepts(player, to, source) && source.getCount() <= slotLimit(to, source, null)) {
