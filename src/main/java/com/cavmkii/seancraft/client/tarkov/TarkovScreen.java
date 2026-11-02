@@ -578,12 +578,16 @@ public class TarkovScreen extends Screen {
     }
 
     private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg) {
+        drawPlaced(g, stack, px, py, w, h, rotated, bg, true);
+    }
+
+    private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg, boolean framed) {
         int pw = w * C;
         int ph = h * C;
         if (bg != 0) {
             g.fill(px, py, px + pw - 1, py + ph - 1, bg);
         }
-        if (w > 1 || h > 1) {
+        if (framed && (w > 1 || h > 1)) {
             // A multi-cell item reads as one piece: an inset across its whole footprint.
             Kit.inset(g, px + 1, py + 1, pw - 2, ph - 2);
         }
@@ -796,6 +800,9 @@ public class TarkovScreen extends Screen {
         int[] size = ItemSize.of(held);
         int w = heldRot ? size[1] : size[0];
         int h = heldRot ? size[0] : size[1];
+        // Over a grid the held item snaps to the cells it would land in, so it and the highlight always line up.
+        int drawX = mx - 9;
+        int drawY = my - 9;
         if (gridFor(hover) != null) {
             GridRef b = gridFor(hover);
             if (b != null) {
@@ -809,11 +816,14 @@ public class TarkovScreen extends Screen {
                 g.pose().translate(0, 0, 150);
                 g.fill(gx, gy, gx + (merge ? there.width() : w) * C - 1, gy + (merge ? there.height() : h) * C - 1, ok ? 0x60B08A3E : 0x608E1F1F);
                 g.pose().popPose();
+                drawX = merge ? b.x + there.x * C : gx;
+                drawY = merge ? b.y + there.y * C : gy;
             }
         }
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        drawPlaced(g, shown, mx - 9, my - 9, w, h, heldRot && size[0] != size[1], 0);
+        // See-through, so the highlight and the cells under it still show.
+        drawPlaced(g, shown, drawX, drawY, w, h, heldRot && size[0] != size[1], 0x400E0C0B, false);
         g.pose().popPose();
     }
 
