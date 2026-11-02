@@ -107,7 +107,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Food and rest
 
-- **No hunger.** You can't starve, and food doesn't heal you the vanilla way. Instead you have 3 food slots, shown above the injuries in the bottom left, each with a bar for the time it has left.
+- **No hunger.** You can't starve, and food doesn't heal you the vanilla way. Instead you have 3 food slots, shown in the top left next to the body figure, each with a bar for the time it has left.
 - **Meals.** Eating something puts it in a slot for a while, adding max health, max stamina and slow health regen. Hover a food to see what it gives.
   - Meat and stews are health food: lots of health, a little stamina.
   - Bread, berries, fruit and honey are stamina food.
@@ -159,7 +159,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the CRAFT list does the same ghost.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
-- **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
+- **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
 - **Ammo.** Bows and crossbows pull arrows from your rig, pockets or backpack.
 
 ### Health
@@ -178,7 +178,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A **surgery case** (2x2, Medstation level 3, rare in chests) brings a part back to new, lasting damage and all.
 - **Locked health.** A destroyed part locks away its share of your health, and lasting damage locks part of a part's share. Food, regen and potions can't fill it. It shows as a dark, striped end on the health bar.
 - **On screen.**
-  - A small body shows each part's health at a glance: green, then orange, then red, dark when destroyed. A bleeding part flashes and a fracture gets a white mark. It sits just left of the hotbar when there's room, or in the top right on narrow screens.
+  - A small body shows each part's health at a glance: green, then orange, then red, dark when destroyed. A bleeding part flashes and a fracture gets a white mark. It sits in the top left with your food slots beside it, and the gather list under them, so the top right stays free for a minimap like JourneyMap.
   - Bottom left lists your injuries with their severity and what fixes them. Long lines wrap or shrink so they never run under the health bar.
   - Above that, a small line shows what they're doing to you right now, like `Walk -24%  Sprint -38%  Jump -6%`. It turns cyan while painkillers are taking the edge off.
   - Above that, every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.

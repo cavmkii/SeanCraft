@@ -159,9 +159,13 @@ final class EffectHud {
     private static final String[] PART_SPRITES = {"head", "thorax", "stomach", "arm_left", "arm_right", "leg_left", "leg_right"};
     static final int FIG_W = 21;
 
-    /** True if the figure fits between the raid panel and the hotbar. */
-    static boolean figureBeside(GuiGraphics g, int x) {
-        return limit(g) - FIG_W - 2 >= x + 152;
+    /** Height the top-left block (body figure, food) takes; the gather list goes under it. */
+    static final int TOP_H = 36 + 10;
+
+    /** Top left: limb status, with the food slots beside it (the top right is left free for minimaps). */
+    static void topLeft(GuiGraphics g, Minecraft mc) {
+        body(g, mc, 9, 9);
+        meals(g, mc, 9 + FIG_W + 10, 9 + ICON + 5);
     }
     static final int FIG_H = 36;
 
@@ -262,7 +266,7 @@ final class EffectHud {
     static int render(GuiGraphics g, Minecraft mc, int x, int bottom) {
         int y = bottom;
         // Leave the body figure its place beside the hotbar (RaidHud puts it there when the screen is wide enough).
-        int room = limit(g) - x - 2 - (figureBeside(g, x) ? FIG_W + 10 : 0);
+        int room = limit(g) - x - 2;
         List<Wound> injuries = wounds();
         List<String> penalties = wrap(mc, penalties(), room);
         // Injuries and penalties share one HUD panel (C.5), sized to what's in it.
@@ -321,14 +325,16 @@ final class EffectHud {
             }
         }
 
-        y = meals(g, mc, x, injuries.isEmpty() && penalties.isEmpty() ? y : y - 6);
+        if (!injuries.isEmpty() || !penalties.isEmpty()) {
+            y -= 6;
+        }
 
         List<Chip> chips = chips(mc);
         if (chips.isEmpty()) {
             return y;
         }
         // One row of chips, wrapping before it gets in the way.
-        int maxW = Math.min(200, limit(g) - x - (figureBeside(g, x) ? FIG_W + 10 : 0));
+        int maxW = Math.min(200, limit(g) - x);
         List<List<Chip>> rows = new ArrayList<>();
         List<Chip> row = new ArrayList<>();
         int w = 0;

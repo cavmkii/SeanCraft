@@ -119,13 +119,7 @@ final class RaidHud {
         int x = 4;
         int y = g.guiHeight() - 30;
         EffectHud.render(g, mc, x, Math.min(s.state() == 0 ? g.guiHeight() - 4 : y - 4, chatTop(g, mc)));
-        // Limb status: against the hotbar's left side when there's room past the raid panel, else the top-right corner.
-        int fx = EffectHud.limit(g) - EffectHud.FIG_W - 2;
-        if (EffectHud.figureBeside(g, x)) {
-            EffectHud.body(g, mc, fx, g.guiHeight() - EffectHud.FIG_H - 6);
-        } else {
-            EffectHud.body(g, mc, g.guiWidth() - EffectHud.FIG_W - 6, 6);
-        }
+        EffectHud.topLeft(g, mc);
         if (s.state() == 0) {
             return;
         }
