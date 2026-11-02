@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Totems",
+ "pattern": [
+  "C1C",
+  "2X.",
+  "C.C"
+ ],
+ "key": {
+  "C": "minecraft:copper_ingot",
+  "X": "minecraft:fishing_rod",
+  "1": "minecraft:cod",
+  "2": "minecraft:writable_book"
+ },
+ "result": {
+  "id": "seancraft:mark_totem",
+  "count": 1
+ }
+}

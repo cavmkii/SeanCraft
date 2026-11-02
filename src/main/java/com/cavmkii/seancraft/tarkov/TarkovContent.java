@@ -51,6 +51,8 @@ public final class TarkovContent {
         }
     }
 
+    /** The first pouch as an item (4.8): crafted, then put in the centre of the Beta pattern. */
+    public static final Item SECURE_ALPHA = secure("secure_alpha", SecureTier.ALPHA);
     public static final Item SECURE_BETA = secure("secure_beta", SecureTier.BETA);
     public static final Item SECURE_GAMMA = secure("secure_gamma", SecureTier.GAMMA);
     public static final Item SECURE_KAPPA = secure("secure_kappa", SecureTier.KAPPA);
@@ -73,6 +75,10 @@ public final class TarkovContent {
         return Registry.register(BuiltInRegistries.ITEM, SeanCraft.id(name),
                 new SecureItem(tier, new Item.Properties().stacksTo(1).rarity(tier == SecureTier.KAPPA ? Rarity.EPIC : Rarity.RARE)));
     }
+
+    public static final net.minecraft.world.inventory.MenuType<HideoutCraftMenu> HIDEOUT_CRAFT_MENU = Registry.register(BuiltInRegistries.MENU,
+            SeanCraft.id("hideout_bench"), new net.minecraft.world.inventory.MenuType<>(HideoutCraftMenu::new,
+                    net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
 
     static void init() {
         // Loading the class registers everything.

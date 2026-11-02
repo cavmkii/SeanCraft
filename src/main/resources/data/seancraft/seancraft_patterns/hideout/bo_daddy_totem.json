@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Totems",
+ "pattern": [
+  "C1C",
+  "2X.",
+  "C.C"
+ ],
+ "key": {
+  "C": "minecraft:copper_ingot",
+  "X": "minecraft:note_block",
+  "1": "minecraft:leather",
+  "2": "minecraft:poppy"
+ },
+ "result": {
+  "id": "seancraft:bo_daddy_totem",
+  "count": 1
+ }
+}

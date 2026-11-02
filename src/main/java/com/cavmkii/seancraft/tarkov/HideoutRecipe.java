@@ -21,13 +21,6 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
                 List.of(Cost.of(Items.DIAMOND, 8), Cost.of(Items.GOLD_INGOT, 20)), Module.WORKSHOP, 3));
         ALL.add(new HideoutRecipe("fire_arrow", () -> new ItemStack(com.cavmkii.seancraft.item.ModItems.FIRE_ARROW, 4),
                 List.of(Cost.of(Items.ARROW, 4), Cost.tag(net.minecraft.tags.ItemTags.COALS, 1, "Coal or charcoal"), Cost.of(Items.STRING, 1)), null, 0));
-        // Arrow types (9.4.4).
-        ALL.add(new HideoutRecipe("arrow_broadhead", () -> new ItemStack(com.cavmkii.seancraft.item.ModItems.BROADHEAD_ARROW, 4),
-                List.of(Cost.of(Items.ARROW, 4), Cost.of(Items.IRON_NUGGET, 4), Cost.of(Items.FLINT, 1)), null, 0));
-        ALL.add(new HideoutRecipe("arrow_bodkin", () -> new ItemStack(com.cavmkii.seancraft.item.ModItems.BODKIN_ARROW, 4),
-                List.of(Cost.of(Items.ARROW, 4), Cost.of(Items.IRON_INGOT, 1)), Module.WORKSHOP, 1));
-        ALL.add(new HideoutRecipe("arrow_blunt", () -> new ItemStack(com.cavmkii.seancraft.item.ModItems.BLUNT_ARROW, 4),
-                List.of(Cost.of(Items.ARROW, 4), Cost.tag(net.minecraft.tags.ItemTags.PLANKS, 1, "Planks"), Cost.of(Items.LEATHER, 1)), null, 0));
         ALL.add(new HideoutRecipe("mark_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.MARK_TOTEM),
                 List.of(Cost.of(Items.COPPER_INGOT, 4), Cost.of(Items.FISHING_ROD, 1), Cost.of(Items.COD, 1), Cost.of(Items.WRITABLE_BOOK, 1)), null, 0));
         ALL.add(new HideoutRecipe("daylan_totem", () -> new ItemStack(com.cavmkii.seancraft.boss.BossContent.DAYLAN_TOTEM),

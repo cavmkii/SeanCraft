@@ -1,0 +1,17 @@
+{
+ "station": "hideout",
+ "category": "Pouches",
+ "pattern": [
+  ".S.",
+  "L.L",
+  ".L."
+ ],
+ "key": {
+  "S": "minecraft:string",
+  "L": "minecraft:leather"
+ },
+ "result": {
+  "id": "seancraft:secure_alpha",
+  "count": 1
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Rigs",
+ "pattern": [
+  "SLS",
+  "LXL",
+  "SLS"
+ ],
+ "key": {
+  "S": "minecraft:string",
+  "L": "minecraft:leather",
+  "X": "seancraft:rig_scav"
+ },
+ "result": {
+  "id": "seancraft:rig_chest",
+  "count": 1
+ },
+ "previous": "X"
+}

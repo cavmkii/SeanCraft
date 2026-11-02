@@ -278,5 +278,7 @@
   "item.seancraft.limbs_log": "Log Limbs",
   "item.seancraft.limbs_bone": "Bone Limbs",
   "item.seancraft.limbs_blaze": "Blaze Rod Limbs",
-  "item.seancraft.limbs_breeze": "Breeze Rod Limbs"
+  "item.seancraft.limbs_breeze": "Breeze Rod Limbs",
+  "item.seancraft.secure_alpha": "Secure Container Alpha",
+  "item.seancraft.secure_alpha.desc": "2x2, the pouch you start with. Its only use as an item: the centre of the Beta container's pattern at the Hideout Bench."
 }

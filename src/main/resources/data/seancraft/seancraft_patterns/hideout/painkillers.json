@@ -1,0 +1,22 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "U",
+  "M",
+  "B"
+ ],
+ "key": {
+  "U": "minecraft:sugar",
+  "M": "minecraft:brown_mushroom",
+  "B": "minecraft:glass_bottle"
+ },
+ "result": {
+  "id": "seancraft:painkillers",
+  "count": 2
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 2
+ }
+}

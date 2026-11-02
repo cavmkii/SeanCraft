@@ -882,6 +882,30 @@ public class TarkovScreen extends Screen {
     }
 
     /** Puts a recipe's ingredients on the gather list. */
+    /** Recipe whose pattern is drawn as a ghost in the CRAFTING grid, or null. */
+    private String ghostRecipe;
+
+    /** The ghost's item for each of the 9 squares (null where the pattern has nothing). Tag ingredients cycle. */
+    private ItemStack[] ghostCells() {
+        ItemStack[] out = new ItemStack[9];
+        var key = ghostRecipe == null ? null : net.minecraft.resources.ResourceLocation.tryParse(ghostRecipe);
+        var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
+        if (holder == null || !(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe recipe)) {
+            return out;
+        }
+        var ingredients = recipe.getIngredients();
+        int w = recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe shaped ? shaped.getWidth() : 3;
+        int frame = (int) (minecraft.level.getGameTime() / 20);
+        for (int i = 0; i < ingredients.size() && i < 9; i++) {
+            ItemStack[] options = ingredients.get(i).getItems();
+            int cell = (i / w) * 3 + i % w;
+            if (options.length > 0 && cell < 9) {
+                out[cell] = options[frame % options.length];
+            }
+        }
+        return out;
+    }
+
     private void pinRecipe(String id) {
         var key = net.minecraft.resources.ResourceLocation.tryParse(id);
         var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
@@ -1001,7 +1025,7 @@ public class TarkovScreen extends Screen {
             }
             TetrisNet.CraftEntry e = row.entry;
             boolean hover = mx >= 0 && mx < LIST_W && my >= y && my < y + ROW - 2 && my >= top;
-            boolean selected = e.id().equals(craft.selected());
+            boolean selected = e.id().equals(ghostRecipe);
             Kit.blit(g, selected ? "list/row_selected" : hover ? "list/row_hover" : "list/row", 0, y, LIST_W, ROW - 2);
             g.renderItem(e.result(), 3, y + 2);
             g.renderItemDecorations(font, e.result(), 3, y + 2);
@@ -1018,17 +1042,31 @@ public class TarkovScreen extends Screen {
         g.drawString(font, "CRAFTING GRID", PX, 2, Kit.ASH, false);
         boolean clearHover = mx >= CLEAR_X && mx < W && my >= 0 && my < 12;
         Kit.button(g, font, "CLEAR", CLEAR_X, 0, 40, 12, true, clearHover, false);
-        if (craft.selected() != null && !craft.selected().isEmpty()) {
+        if (ghostRecipe != null) {
             boolean pinHover = mx >= PIN_X && mx < PIN_X + PIN_W && my >= PIN_Y && my < PIN_Y + 12;
             Kit.button(g, font, "PIN TO HUD", PIN_X, PIN_Y, PIN_W, 12, true, pinHover, false);
         }
+        // The picked recipe's pattern as a ghost (4.1): faded icons in the empty squares, until it's complete.
+        if (!craft.result().isEmpty()) {
+            ghostRecipe = null;
+        }
+        ItemStack[] ghostAt = ghostCells();
         for (int c = 0; c < 9; c++) {
             int x = PX + (c % 3) * CELL;
             int y = GRID_Y + (c / 3) * CELL;
             boolean hover = cellAt(mx, my) == c;
             boolean small = !craft.table() && (c % 3 == 2 || c / 3 == 2);
-            Kit.slot(g, x, y, CELL, small ? Kit.SlotState.LOCKED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             ItemStack in = c < craft.grid().size() ? craft.grid().get(c) : ItemStack.EMPTY;
+            if (in.isEmpty() && ghostAt[c] != null && !ghostAt[c].isEmpty()) {
+                Kit.blit(g, "slot/ghost", x, y, CELL, CELL);
+                g.renderItem(ghostAt[c], x + 3, y + 3);
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                Kit.blit(g, "slot/ghost_overlay", x + 3, y + 3, 16, 16);
+                g.pose().popPose();
+                continue;
+            }
+            Kit.slot(g, x, y, CELL, small ? Kit.SlotState.LOCKED : hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             boolean lifted = heldFrom != null && heldFrom.kind() == Loc.CRAFT && heldFrom.a() == c && heldCount == 0;
             if (!in.isEmpty() && !lifted) {
                 g.renderItem(in, x + 3, y + 3);
@@ -1315,11 +1353,8 @@ public class TarkovScreen extends Screen {
                 g.drawString(font, c, W - font.width(c), ly, have >= line.need ? Kit.MOSS : Kit.BLOOD_LIGHT, false);
                 ly += 11;
             }
-            for (int b = 0; b < 2; b++) {
-                int bx = PX + b * 84;
-                boolean over = mx >= bx && mx < bx + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
-                Kit.button(g, font, b == 0 ? "LAY OUT" : "PIN TO HUD", bx, REC_BTN_Y, 80, 14, true, over, false);
-            }
+            boolean over = mx >= PX && mx < PX + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
+            Kit.button(g, font, "PIN TO HUD", PX, REC_BTN_Y, 80, 14, true, over, false);
         }
 
         // Tracker.
@@ -1365,16 +1400,13 @@ public class TarkovScreen extends Screen {
         if (cell != null) {
             if (cell.known) {
                 selectedRecipe = cell.holder.id();
+                // Discovered recipes show their ghost pattern in the grid.
+                ghostRecipe = selectedRecipe.toString();
             }
             return true;
         }
         if (selectedRecipe != null && y >= REC_BTN_Y && y < REC_BTN_Y + 14) {
             if (x >= PX && x < PX + 80) {
-                ClientPlayNetworking.send(new TetrisNet.Craft(selectedRecipe.toString(), 0));
-                craftView = 0;
-                return true;
-            }
-            if (x >= PX + 84 && x < PX + 164) {
                 pinRecipe(selectedRecipe.toString());
                 return true;
             }
@@ -1618,8 +1650,8 @@ public class TarkovScreen extends Screen {
             ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
             return true;
         }
-        if (craft.selected() != null && !craft.selected().isEmpty() && x >= PIN_X && x < PIN_X + PIN_W && y >= PIN_Y && y < PIN_Y + 12) {
-            pinRecipe(craft.selected());
+        if (ghostRecipe != null && x >= PIN_X && x < PIN_X + PIN_W && y >= PIN_Y && y < PIN_Y + 12) {
+            pinRecipe(ghostRecipe);
             return true;
         }
         if (overResult(x, y)) {
@@ -1715,7 +1747,8 @@ public class TarkovScreen extends Screen {
                 return true;
             }
             if (row.entry != null && at >= row.y && at < row.y + ROW - 2) {
-                ClientPlayNetworking.send(new TetrisNet.Craft(row.entry.id(), 0));
+                // Shows the pattern; nothing places items for the player (4.1).
+                ghostRecipe = row.entry.id().equals(ghostRecipe) ? null : row.entry.id();
                 break;
             }
         }

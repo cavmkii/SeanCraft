@@ -1,0 +1,21 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "BTB",
+  "LLL"
+ ],
+ "key": {
+  "B": "seancraft:bandage",
+  "T": "seancraft:tourniquet",
+  "L": "minecraft:leather"
+ },
+ "result": {
+  "id": "seancraft:field_kit",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 2
+ }
+}

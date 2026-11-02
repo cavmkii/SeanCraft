@@ -1,0 +1,21 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  ".T.",
+  "SLS"
+ ],
+ "key": {
+  "T": "minecraft:stick",
+  "S": "minecraft:string",
+  "L": "minecraft:leather"
+ },
+ "result": {
+  "id": "seancraft:tourniquet",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 1
+ }
+}

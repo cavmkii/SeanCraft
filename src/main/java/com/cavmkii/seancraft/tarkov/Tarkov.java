@@ -513,9 +513,10 @@ public final class Tarkov {
     private static final Map<UUID, Module> FOCUS = new HashMap<>();
 
     /** The Hideout Bench's screen: its crafts, module blocks among them. */
+    /** The Hideout Bench: its 3x3 crafting grid (4.8). */
     public static void openBench(ServerPlayer player, BlockPos pos) {
         FOCUS.remove(player.getUUID());
-        openHideout(player, pos);
+        HideoutCraftMenu.open(player, pos);
     }
 
     /** A module block's screen: build and upgrade that module (2.5). Actions still go through the hideout's bench. */

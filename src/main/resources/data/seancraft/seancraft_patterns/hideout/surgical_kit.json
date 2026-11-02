@@ -1,0 +1,24 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "ISI",
+  "BFB",
+  "LLL"
+ ],
+ "key": {
+  "I": "minecraft:iron_ingot",
+  "S": "minecraft:shears",
+  "B": "seancraft:bandage",
+  "F": "seancraft:field_kit",
+  "L": "minecraft:leather"
+ },
+ "result": {
+  "id": "seancraft:surgical_kit",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 3
+ }
+}

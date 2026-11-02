@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Backpacks",
+ "pattern": [
+  "LSL",
+  "LXL",
+  "LSL"
+ ],
+ "key": {
+  "S": "minecraft:string",
+  "L": "minecraft:leather",
+  "X": "seancraft:pack_scav"
+ },
+ "result": {
+  "id": "seancraft:pack_pilgrim",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 1
+ },
+ "previous": "X"
+}

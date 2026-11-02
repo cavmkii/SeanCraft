@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "SSS"
+ ],
+ "key": {
+  "S": "minecraft:string"
+ },
+ "result": {
+  "id": "seancraft:bandage",
+  "count": 2
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 1
+ }
+}

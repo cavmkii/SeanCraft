@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Pouches",
+ "pattern": [
+  "LIL",
+  "IXI",
+  "LIL"
+ ],
+ "key": {
+  "L": "minecraft:leather",
+  "I": "minecraft:iron_ingot",
+  "X": "seancraft:secure_beta"
+ },
+ "result": {
+  "id": "seancraft:secure_gamma",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 2
+ },
+ "previous": "X"
+}

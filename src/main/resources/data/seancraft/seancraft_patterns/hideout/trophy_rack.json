@@ -1,0 +1,17 @@
+{
+ "station": "hideout",
+ "category": "Stations",
+ "pattern": [
+  "PPP",
+  "FFF",
+  "PPP"
+ ],
+ "key": {
+  "P": "#minecraft:planks",
+  "F": "minecraft:item_frame"
+ },
+ "result": {
+  "id": "seancraft:trophy_rack",
+  "count": 1
+ }
+}

@@ -1,0 +1,22 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "III",
+  "KGK",
+  "III"
+ ],
+ "key": {
+  "I": "minecraft:iron_ingot",
+  "K": "seancraft:surgical_kit",
+  "G": "minecraft:glistering_melon_slice"
+ },
+ "result": {
+  "id": "seancraft:surgery_case",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 3
+ }
+}

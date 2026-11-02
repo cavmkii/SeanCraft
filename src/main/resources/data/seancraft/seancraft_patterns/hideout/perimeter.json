@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Modules",
+ "pattern": [
+  "PPP",
+  "PFP",
+  "CCC"
+ ],
+ "key": {
+  "P": "#minecraft:planks",
+  "F": "#minecraft:wooden_fences",
+  "C": "minecraft:cobblestone"
+ },
+ "result": {
+  "id": "seancraft:perimeter",
+  "count": 1
+ }
+}

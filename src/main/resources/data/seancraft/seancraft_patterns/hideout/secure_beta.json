@@ -1,0 +1,23 @@
+{
+ "station": "hideout",
+ "category": "Pouches",
+ "pattern": [
+  "LNL",
+  "NXN",
+  "LNL"
+ ],
+ "key": {
+  "L": "minecraft:leather",
+  "N": "minecraft:iron_nugget",
+  "X": "seancraft:secure_alpha"
+ },
+ "result": {
+  "id": "seancraft:secure_beta",
+  "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 1
+ },
+ "previous": "X"
+}

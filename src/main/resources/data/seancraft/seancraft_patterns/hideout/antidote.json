@@ -1,0 +1,20 @@
+{
+ "station": "hideout",
+ "category": "Meds",
+ "pattern": [
+  "F",
+  "H"
+ ],
+ "key": {
+  "F": "minecraft:fermented_spider_eye",
+  "H": "minecraft:honey_bottle"
+ },
+ "result": {
+  "id": "seancraft:antidote",
+  "count": 1
+ },
+ "gate": {
+  "module": "MEDSTATION",
+  "level": 1
+ }
+}

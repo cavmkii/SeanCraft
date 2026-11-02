@@ -56,6 +56,8 @@ public final class SeanCraftClient implements ClientModInitializer {
         com.cavmkii.seancraft.client.carry.ClientCarry.init();
         net.minecraft.client.gui.screens.MenuScreens.register(com.cavmkii.seancraft.parts.PartItems.BENCH_MENU,
                 com.cavmkii.seancraft.client.parts.WeaponBenchScreen::new);
+        net.minecraft.client.gui.screens.MenuScreens.register(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_CRAFT_MENU,
+                com.cavmkii.seancraft.client.tarkov.HideoutCraftScreen::new);
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             com.cavmkii.seancraft.food.Food.Def meal = com.cavmkii.seancraft.food.Food.def(stack);
             if (meal != null) {
