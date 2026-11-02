@@ -138,6 +138,7 @@ public final class Tetris {
         TetrisNet.register();
         ContainerGrid.init();
         FurnaceFeed.init();
+        StashFeed.init();
         ServerTickEvents.END_SERVER_TICK.register(Tetris::tick);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> rt(handler.player).dirty = true);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -767,6 +768,16 @@ public final class Tetris {
         }
         out.sort((a, b) -> Integer.compare(Integer.bitCount(a.grid().filter()), Integer.bitCount(b.grid().filter())));
         return out;
+    }
+
+    /** Puts a stack away into the stash the way STASH ALL would (filters first). Leaves what didn't fit in the stack. */
+    static void storeInStash(ServerPlayer player, ItemStack stack) {
+        for (Shown c : routeFor(containers(player), stack)) {
+            storeIn(c, stack);
+            if (stack.isEmpty()) {
+                return;
+            }
+        }
     }
 
     /** Puts a stack into a container's grid: top up first, then wherever it fits. Leaves the rest in the stack. */

@@ -60,5 +60,6 @@ public final class ClientTarkov {
         HudRenderCallback.EVENT.register(ClientTracker::render);
         ClientTetris.init();
         FurnacePanel.init();
+        GridPanel.init();
     }
 }

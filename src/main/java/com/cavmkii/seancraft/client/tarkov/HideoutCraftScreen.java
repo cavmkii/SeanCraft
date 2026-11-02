@@ -65,6 +65,10 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
         int x = leftPos;
         int y = topPos;
         Kit.panel(g, x, y, imageWidth, imageHeight);
+        // The hotbar row under the stash box: framed so it reads as usable slots.
+        for (int col = 0; col < 9; col++) {
+            Kit.slot(g, x + 7 + col * 18, y + 187, 18, Kit.SlotState.NORMAL);
+        }
         Kit.inset(g, x + BOOK_X - 1, y + BOOK_Y - 1, BOOK_W + 2, ROWS * ROW + 2);
         List<Pattern> book = book();
         scroll = Math.max(0, Math.min(Math.max(0, book.size() - ROWS), scroll));
@@ -152,7 +156,7 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
             if (!menu.allowed(p)) {
                 lines.add(Component.literal("Needs " + gateText(p) + " in this hideout").withStyle(ChatFormatting.RED));
             }
-            lines.add(Component.literal("Click to keep the pattern in the grid").withStyle(ChatFormatting.DARK_GRAY));
+            lines.add(Component.literal("Click: keep in grid").withStyle(ChatFormatting.DARK_GRAY));
             g.renderTooltip(font, lines, java.util.Optional.of(RecipeGridTooltip.Data.of(p.ghost(), p::example)), mouseX, mouseY);
         }
         if (menu.gated() && mouseX >= leftPos + HideoutCraftMenu.RESULT_X - 5 && mouseX < leftPos + HideoutCraftMenu.RESULT_X + 21

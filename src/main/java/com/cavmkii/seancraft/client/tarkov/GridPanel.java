@@ -35,6 +35,61 @@ import org.lwjgl.glfw.GLFW;
 public final class GridPanel {
     private static boolean rotated;
     private static boolean swallowRelease;
+    /** The hideout stash, from the server, for the STASH box on station screens. */
+    public static TetrisNet.StashStock stash = new TetrisNet.StashStock(false, List.of());
+    private static int stashPage;
+
+    public static void init() {
+        ClientPlayNetworking.registerGlobalReceiver(TetrisNet.StashStock.TYPE, (p, ctx) -> stash = p);
+    }
+
+    /** The box over the menu's dead main-inventory slots: x, y, right, bottom, or null if the menu has none. */
+    private static int[] deadArea(AbstractContainerScreen<?> screen, int left, int top) {
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        for (Slot slot : screen.getMenu().slots) {
+            if (deadSlot(slot)) {
+                minX = Math.min(minX, left + slot.x);
+                minY = Math.min(minY, top + slot.y);
+                maxX = Math.max(maxX, left + slot.x + 16);
+                maxY = Math.max(maxY, top + slot.y + 16);
+            }
+        }
+        return minX < maxX ? new int[] {minX, minY, maxX, maxY} : null;
+    }
+
+    private static final int SC = 18;
+
+    /** Stash cells that fit the box (a column is kept for the page arrow when there are more). */
+    private static int stashCols(int[] a) {
+        return Math.max(1, (a[2] - a[0] + 2) / SC);
+    }
+
+    private static int stashRows(int[] a) {
+        return Math.max(1, (a[3] - a[1] + 2) / SC);
+    }
+
+    /** Index into the stash list of the cell at mx, my; -2 for the page arrow, -1 for empty space in the box, null off it. */
+    private static Integer stashAt(int[] a, double mx, double my) {
+        if (a == null || mx < a[0] - 1 || mx >= a[2] + 1 || my < a[1] - 1 || my >= a[3] + 1) {
+            return null;
+        }
+        int cols = stashCols(a);
+        int per = cols * stashRows(a);
+        int n = stash.items().size();
+        boolean paged = n > per;
+        int shown = paged ? per - 1 : per;
+        int cx = (int) ((mx - a[0] + 1) / SC);
+        int cy = (int) ((my - a[1] + 1) / SC);
+        int cell = cy * cols + cx;
+        if (paged && cell == per - 1) {
+            return -2;
+        }
+        int i = stashPage * shown + cell;
+        return cell < shown && i < n ? i : -1;
+    }
 
     private GridPanel() {}
 
@@ -158,10 +213,16 @@ public final class GridPanel {
         }
         g.pose().pushPose();
         g.pose().translate(0, 0, 100);
+        ItemStack stashTip = ItemStack.EMPTY;
         if (minX < maxX) {
             Kit.inset(g, minX - 1, minY - 1, maxX - minX + 2, maxY - minY + 2);
-            String hint = "Your inventory is in the grids";
-            g.drawString(font, hint, (minX + maxX - font.width(hint)) / 2, (minY + maxY) / 2 - 4, Kit.ASH, false);
+            if (stash.home()) {
+                // In a hideout this box is the stash: click to take, drop something on it to put it away.
+                stashTip = renderStash(g, font, new int[] {minX, minY, maxX, maxY}, mx, my, carried);
+            } else {
+                String hint = "Your inventory is in the grids";
+                g.drawString(font, hint, (minX + maxX - font.width(hint)) / 2, (minY + maxY) / 2 - 4, Kit.ASH, false);
+            }
         }
 
         List<Box> boxes = layout(screen, left, top, imageWidth, imageHeight);
@@ -210,9 +271,57 @@ public final class GridPanel {
                 tip = furnaceTip;
             }
         }
+        if (tip.isEmpty()) {
+            tip = stashTip;
+        }
         if (!tip.isEmpty() && carried.isEmpty()) {
             g.renderTooltip(font, tip, mx, my);
         }
+    }
+
+    private static ItemStack renderStash(GuiGraphics g, Font font, int[] a, int mx, int my, ItemStack carried) {
+        List<ItemStack> items = stash.items();
+        int cols = stashCols(a);
+        int per = cols * stashRows(a);
+        boolean paged = items.size() > per;
+        int shown = paged ? per - 1 : per;
+        int pages = paged ? (items.size() + shown - 1) / shown : 1;
+        stashPage = Math.max(0, Math.min(pages - 1, stashPage));
+        // The kit's label sits on the box's top edge.
+        Kit.label(g, font, "STASH" + (pages > 1 ? "  " + (stashPage + 1) + "/" + pages : ""), a[0], a[1] - 11, Kit.GOLD);
+        Integer hover = stashAt(a, mx, my);
+        ItemStack tip = ItemStack.EMPTY;
+        if (items.isEmpty()) {
+            String hint = "Stash is empty";
+            g.drawString(font, hint, (a[0] + a[2] - font.width(hint)) / 2, (a[1] + a[3]) / 2 - 4, Kit.ASH, false);
+        }
+        for (int cell = 0; cell < shown; cell++) {
+            int i = stashPage * shown + cell;
+            if (i >= items.size()) {
+                break;
+            }
+            int x = a[0] - 1 + (cell % cols) * SC;
+            int y = a[1] - 1 + (cell / cols) * SC;
+            boolean over = hover != null && hover == i;
+            Kit.slot(g, x, y, SC, over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
+            ItemStack s = items.get(i);
+            g.renderItem(s, x + 1, y + 1);
+            g.renderItemDecorations(font, s, x + 1, y + 1, s.getCount() > 999 ? "999+" : null);
+            if (over) {
+                tip = s;
+            }
+        }
+        if (paged) {
+            int x = a[0] - 1 + ((per - 1) % cols) * SC;
+            int y = a[1] - 1 + ((per - 1) / cols) * SC;
+            boolean over = hover != null && hover == -2;
+            Kit.slot(g, x, y, SC, over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
+            g.drawString(font, ">", x + 6, y + 5, over ? Kit.GOLD_LIGHT : Kit.BONE, false);
+        }
+        if (!carried.isEmpty() && hover != null) {
+            g.renderOutline(a[0] - 1, a[1] - 1, a[2] - a[0] + 2, a[3] - a[1] + 2, Kit.GOLD_LIGHT);
+        }
+        return tip;
     }
 
     private static void drawPlaced(GuiGraphics g, Font font, ItemStack stack, int px, int py, int w, int h, int c, boolean rot) {
@@ -251,6 +360,28 @@ public final class GridPanel {
         if (FurnacePanel.applies(screen) && screen.getMenu().getCarried().isEmpty() && (button == 0 || button == 1)) {
             int[] a = furnaceArea(screen, boxes, left, top, imageWidth);
             if (FurnacePanel.click(a[0], a[1], a[2], mx, my, button)) {
+                swallowRelease = true;
+                return true;
+            }
+        }
+        if (stash.home() && (button == 0 || button == 1)) {
+            int[] a = deadArea(screen, left, top);
+            Integer at = stashAt(a, mx, my);
+            if (at != null) {
+                ItemStack carried = screen.getMenu().getCarried();
+                if (at == -2) {
+                    stashPage++;
+                    int per = stashCols(a) * stashRows(a) - 1;
+                    if (stashPage * per >= stash.items().size()) {
+                        stashPage = 0;
+                    }
+                } else if (!carried.isEmpty() && (at < 0 || !ItemStack.isSameItemSameComponents(carried, stash.items().get(at)))) {
+                    // Something on the cursor dropped on the stash: put it away.
+                    ClientPlayNetworking.send(new TetrisNet.StashTake(ItemStack.EMPTY, 0));
+                } else if (at >= 0) {
+                    // Left: a stack onto the cursor; right: one.
+                    ClientPlayNetworking.send(new TetrisNet.StashTake(stash.items().get(at), button == 1 ? 1 : 0));
+                }
                 swallowRelease = true;
                 return true;
             }

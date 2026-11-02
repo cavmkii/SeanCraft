@@ -320,6 +320,29 @@ public final class TetrisNet {
         @Override public Type<FurnaceFill> type() { return TYPE; }
     }
 
+    /** Server to client: the hideout stash, merged by item, for the STASH panel on station screens. */
+    public record StashStock(boolean home, List<ItemStack> items) implements CustomPacketPayload {
+        public static final Type<StashStock> TYPE = payloadType("stash_stock");
+        public static final StreamCodec<RegistryFriendlyByteBuf, StashStock> CODEC = StreamCodec.of((buf, p) -> {
+            buf.writeBoolean(p.home);
+            writeStacks(buf, p.items);
+        }, buf -> new StashStock(buf.readBoolean(), readStacks(buf)));
+        @Override public Type<StashStock> type() { return TYPE; }
+    }
+
+    /**
+     * Client to server, on a station screen: take {@code count} of an item from the stash onto the cursor (0 for a full
+     * stack), or with an empty item put the cursor's stack away into the stash.
+     */
+    public record StashTake(ItemStack item, int count) implements CustomPacketPayload {
+        public static final Type<StashTake> TYPE = payloadType("stash_take");
+        public static final StreamCodec<RegistryFriendlyByteBuf, StashTake> CODEC = StreamCodec.of((buf, p) -> {
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.item.isEmpty() ? ItemStack.EMPTY : p.item.copyWithCount(1));
+            buf.writeVarInt(p.count);
+        }, buf -> new StashTake(ItemStack.OPTIONAL_STREAM_CODEC.decode(buf), buf.readVarInt()));
+        @Override public Type<StashTake> type() { return TYPE; }
+    }
+
     static void register() {
         PayloadTypeRegistry.playS2C().register(Sync.TYPE, Sync.CODEC);
         PayloadTypeRegistry.playS2C().register(Open.TYPE, Open.CODEC);
@@ -334,5 +357,7 @@ public final class TetrisNet {
         PayloadTypeRegistry.playC2S().register(Track.TYPE, Track.CODEC);
         PayloadTypeRegistry.playS2C().register(FurnaceStock.TYPE, FurnaceStock.CODEC);
         PayloadTypeRegistry.playC2S().register(FurnaceFill.TYPE, FurnaceFill.CODEC);
+        PayloadTypeRegistry.playS2C().register(StashStock.TYPE, StashStock.CODEC);
+        PayloadTypeRegistry.playC2S().register(StashTake.TYPE, StashTake.CODEC);
     }
 }

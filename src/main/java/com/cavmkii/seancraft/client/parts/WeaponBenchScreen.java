@@ -101,7 +101,16 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
 
     private static String bookName(com.cavmkii.seancraft.pattern.Pattern p) {
         try {
-            return PartKind.valueOf(p.part).label;
+            PartKind kind = PartKind.valueOf(p.part);
+            // What the part is called in the BUILD slots that take it.
+            String also = switch (kind) {
+                case HANDLE -> " / grip";
+                case HAFT -> " / long grip";
+                case WRAP -> " / string";
+                case GUARD -> " / rim";
+                default -> "";
+            };
+            return kind.label + also;
         } catch (Exception e) {
             return p.id;
         }
@@ -114,6 +123,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         int x = leftPos;
         int y = topPos;
         Kit.panel(g, x, y, imageWidth, imageHeight);
+        // The hotbar row under the stash box: framed so it reads as usable slots.
+        for (int col = 0; col < 9; col++) {
+            Kit.slot(g, x + 7 + col * 18, y + 187, 18, Kit.SlotState.NORMAL);
+        }
         for (int t = 0; t < TABS.length; t++) {
             boolean active = t == tab;
             boolean over = mouseX >= tabX(t) && mouseX < tabX(t) + 30 && mouseY >= y + TAB_Y && mouseY < y + TAB_Y + 11;
@@ -176,7 +189,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             } else if (over) {
                 Kit.blit(g, "list/row_hover", x + BOOK_X, ry, BOOK_W, BOOK_ROW);
             }
-            small(g, bookName(p), BOOK_X + 2 + leftPos, ry + 2, p == ghost || over ? Kit.GOLD_LIGHT : Kit.BONE);
+            fitted(g, bookName(p), BOOK_X + 2 + leftPos, ry + 2, BOOK_W - 4, p == ghost || over ? Kit.GOLD_LIGHT : Kit.BONE);
         }
         Slot center = menu.slots.get(gridSlot(4));
         int ringLeft = 0;
@@ -321,7 +334,6 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             small(g, "restores 25%", 30, 84, Kit.ASH);
             return;
         }
-        Kit.label(g, font, playerInventoryTitle.getString().toUpperCase(java.util.Locale.ROOT), inventoryLabelX, inventoryLabelY);
         ItemStack weapon = menu.weapon();
         Family family = menu.family();
         if (Parts.modular(weapon)) {
@@ -373,6 +385,16 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 g.pose().popPose();
             }
         }
+    }
+
+    /** Small text, shrunk further if it would run past {@code width} (longer book names like "Haft / long grip"). */
+    private void fitted(GuiGraphics g, String text, int x, int y, int width, int color) {
+        float k = Math.min(0.75f, width / (float) Math.max(1, font.width(text)));
+        g.pose().pushPose();
+        g.pose().translate(x, y + (0.75f - k) * 4, 0);
+        g.pose().scale(k, k, 1);
+        g.drawString(font, text, 0, 0, color, false);
+        g.pose().popPose();
     }
 
     private void small(GuiGraphics g, String text, int x, int y, int color) {
@@ -457,8 +479,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                     var p = book.get(r + bookScroll);
                     List<Component> lines = new ArrayList<>();
                     lines.add(Component.literal(bookName(p)));
-                    lines.add(Component.literal("Shown in iron, logs, leather...: any one material of each kind works").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
-                    lines.add(Component.literal("Click to keep it in the grid").withStyle(net.minecraft.ChatFormatting.GRAY));
+                    lines.add(Component.literal("Click: keep in grid").withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
                     g.renderTooltip(font, lines, java.util.Optional.of(com.cavmkii.seancraft.client.tarkov.RecipeGridTooltip.Data.of(p.ghost(),
                             com.cavmkii.seancraft.parts.PartCrafting::example)), mouseX, mouseY);
                 }
