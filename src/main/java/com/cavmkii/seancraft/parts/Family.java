@@ -113,6 +113,10 @@ public enum Family {
         return STOCK.get(stack.getItem());
     }
 
+    public static Stock stock(Item item) {
+        return STOCK.get(item);
+    }
+
     /** The vanilla item a family makes at a metal tier, for crafting from parts. */
     public static Item itemFor(Family family, int metal) {
         for (Map.Entry<Item, Stock> e : STOCK.entrySet()) {

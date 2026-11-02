@@ -8,6 +8,7 @@
     "BetterCombatSwingMixin",
     "BrewedPotionTriggerMixin",
     "ContainerNameAccessor",
+    "CraftingMenuMixin",
     "FurnaceAccessor",
     "FoodDataMixin",
     "FurnaceMixin",

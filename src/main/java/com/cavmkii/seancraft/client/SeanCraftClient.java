@@ -23,8 +23,6 @@ public final class SeanCraftClient implements ClientModInitializer {
         if (def.stamina(level) != 0) parts.add(String.format("+%.0f%% swing speed", -def.stamina(level) * 100));
         if (def.durability(level) != 0) parts.add(String.format("+%.0f%% durability", def.durability(level) * 100));
         if (def.block(level) != 0) parts.add(String.format("+%.0f%% block", def.block(level) * 100));
-        if (def.spirit(level) != 0) parts.add(String.format("+%.0f%% vs undead", def.spirit(level) * 100));
-        if (def.fire(level) != 0) parts.add("sets targets alight");
         if (def.weight(level) != 0) parts.add("lighter armor");
         return String.join(", ", parts) + " (vs. no part)";
     }
@@ -60,12 +58,21 @@ public final class SeanCraftClient implements ClientModInitializer {
                 lines.add(1, Component.literal("Level " + com.cavmkii.seancraft.parts.Parts.level(stack) + "/4  -  "
                         + part.def.kind().label + ", tier " + part.def.tier()).withStyle(ChatFormatting.GOLD));
                 lines.add(2, Component.literal(partEffects(part.def, com.cavmkii.seancraft.parts.Parts.level(stack))).withStyle(ChatFormatting.GRAY));
+                com.cavmkii.seancraft.parts.MaterialTraits.Trait trait = com.cavmkii.seancraft.parts.MaterialTraits.of(part.def);
+                if (trait != null && trait != com.cavmkii.seancraft.parts.MaterialTraits.Trait.BALANCED) {
+                    lines.add(3, Component.literal(trait.label + ": " + trait.effect).withStyle(ChatFormatting.LIGHT_PURPLE));
+                }
             } else if (com.cavmkii.seancraft.parts.Parts.modular(stack)) {
                 com.cavmkii.seancraft.parts.Family family = com.cavmkii.seancraft.parts.Family.stock(stack).family();
                 int line = 1;
                 for (var e : com.cavmkii.seancraft.parts.Parts.installed(stack).entrySet()) {
-                    lines.add(line++, Component.literal(family.slotName(e.getKey()) + ": " + e.getValue().part().label() + " L" + e.getValue().level())
-                            .withStyle(ChatFormatting.DARK_AQUA));
+                    com.cavmkii.seancraft.parts.MaterialTraits.Trait trait = com.cavmkii.seancraft.parts.MaterialTraits.of(e.getValue().part());
+                    Component row = Component.literal(family.slotName(e.getKey()) + ": " + e.getValue().part().label() + " L" + e.getValue().level())
+                            .withStyle(ChatFormatting.DARK_AQUA);
+                    if (trait != null && trait != com.cavmkii.seancraft.parts.MaterialTraits.Trait.BALANCED) {
+                        row = row.copy().append(Component.literal("  " + trait.label + ": " + trait.effect).withStyle(ChatFormatting.LIGHT_PURPLE));
+                    }
+                    lines.add(line++, row);
                 }
                 for (var slot : family.slots) {
                     if (!com.cavmkii.seancraft.parts.Parts.installed(stack).containsKey(slot)) {

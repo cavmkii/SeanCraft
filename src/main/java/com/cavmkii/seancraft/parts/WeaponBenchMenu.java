@@ -87,6 +87,9 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         this.access = access;
         this.server = !inventory.player.level().isClientSide;
         this.owner = inventory.player instanceof ServerPlayer sp ? sp : null;
+        if (owner != null) {
+            viewer = com.cavmkii.seancraft.rpg.Rpg.data(owner);
+        }
         addSlot(new Slot(item, 0, ITEM_X, ITEM_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -206,6 +209,26 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     }
 
     private ServerPlayer owner;
+    /** The player's character, for recipe ladders (4.7). The screen sets the client's copy. */
+    public com.cavmkii.seancraft.rpg.PlayerData viewer;
+
+    /** Why a family can't be built from scratch yet, or null. */
+    public String lockReason(Family family) {
+        return viewer == null ? null : com.cavmkii.seancraft.rpg.Ladders.lockReason(viewer, com.cavmkii.seancraft.rpg.Ladders.key(family));
+    }
+
+    /** A striking part only the locked families use (4.7): it can't be made yet. */
+    public boolean headLocked(PartDef def) {
+        if (def.kind().slot != PartSlot.HEAD || viewer == null) {
+            return false;
+        }
+        for (Family f : BUILDABLE) {
+            if (f.head == def.kind() && lockReason(f) == null) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     private void refreshAffordable() {
         if (owner == null) {
@@ -214,7 +237,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Hideouts.Hideout hideout = Hideouts.at(owner.serverLevel(), owner.position());
         int[] bits = new int[affordable.length];
         for (int i = 0; i < PartDef.ALL.size(); i++) {
-            if (Stash.canAfford(owner, hideout, PartDef.ALL.get(i).costs())) {
+            if (!headLocked(PartDef.ALL.get(i)) && Stash.canAfford(owner, hideout, PartDef.ALL.get(i).costs())) {
                 bits[i / 16] |= 1 << (i % 16);
             }
         }
@@ -229,6 +252,11 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             return false;
         }
         PartDef def = PartDef.ALL.get(partIndex);
+        if (headLocked(def)) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You haven't unlocked a weapon that uses a "
+                    + def.kind().label.toLowerCase() + " yet.").withStyle(net.minecraft.ChatFormatting.RED), true);
+            return false;
+        }
         Hideouts.Hideout hideout = Hideouts.at(player.serverLevel(), player.position());
         int made = 0;
         for (int t = 0; t < times && Stash.canAfford(player, hideout, def.costs()); t++) {
@@ -302,6 +330,10 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Family family = family();
         if (!buildMode() || family == null) {
             return "Pick what to build";
+        }
+        String locked = lockReason(family);
+        if (locked != null) {
+            return "Locked: " + locked;
         }
         for (int i = 0; i < family.slots.size(); i++) {
             PartSlot slot = family.slots.get(i);

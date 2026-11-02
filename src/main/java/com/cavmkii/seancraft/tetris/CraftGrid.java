@@ -95,6 +95,9 @@ final class CraftGrid {
         if (holder == null) {
             return new Preview(ItemStack.EMPTY, false, null, positioned);
         }
+        if (!com.cavmkii.seancraft.rpg.Ladders.canCraft(player, holder.value().getResultItem(player.registryAccess()))) {
+            return new Preview(ItemStack.EMPTY, false, null, positioned);
+        }
         boolean big = input.width() > 2 || input.height() > 2;
         if (big && !Tetris.nearTable(player)) {
             return new Preview(ItemStack.EMPTY, true, holder, positioned);

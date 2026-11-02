@@ -127,6 +127,7 @@ public final class Rpg {
         RpgContent.init();
         RpgNet.register();
         Ultimates.init();
+        Ladders.init();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             Scheduler.tick(server);
@@ -778,6 +779,19 @@ public final class Rpg {
                                     }
                                     data(target).skillXp.put(skill, Skill.xpForLevel(IntegerArgumentType.getInteger(ctx, "level")));
                                     markDirty(target);
+                                    return 1;
+                                })))))
+                .then(Commands.literal("ladder").then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> {
+                            PlayerData d = data(EntityArgument.getPlayer(ctx, "player"));
+                            ctx.getSource().sendSuccess(() -> Component.literal("Known: " + String.join(", ", Ladders.knownList(d))
+                                    + "  Rungs: STR " + Ladders.rung(d, Attr.STR) + ", AGI " + Ladders.rung(d, Attr.AGI) + "  " + d.ladder), false);
+                            return 1;
+                        })
+                        .then(Commands.argument("id", StringArgumentType.string())
+                                .then(Commands.argument("value", IntegerArgumentType.integer(0)).executes(ctx -> {
+                                    Ladders.set(EntityArgument.getPlayer(ctx, "player"), StringArgumentType.getString(ctx, "id"),
+                                            IntegerArgumentType.getInteger(ctx, "value"));
                                     return 1;
                                 })))))
                 .then(Commands.literal("reset").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {

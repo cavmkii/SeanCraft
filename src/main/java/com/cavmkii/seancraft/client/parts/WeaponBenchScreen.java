@@ -286,6 +286,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             g.pose().scale(0.75f, 0.75f, 1);
             g.renderItem(new ItemStack(PICK_ICONS[i]), 0, 0);
             g.pose().popPose();
+            if (menu.lockReason(WeaponBenchMenu.BUILDABLE[i]) != null) {
+                // Not on the player's ladders yet (4.7).
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 300);
+                g.fill(px, py, px + PICK_PITCH - 1, py + PICK_PITCH - 1, 0xB0303038);
+                g.pose().popPose();
+            }
         }
         ItemStack preview = menu.assemblyResult();
         boolean ready = !preview.isEmpty();
@@ -373,7 +380,8 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             for (Cost c : def.costs()) {
                 lines.add(Component.literal("  " + c.count() + " " + c.label()).withStyle(net.minecraft.ChatFormatting.GRAY));
             }
-            lines.add(Component.literal(menu.canMake(hovered) ? "Click: make one. Shift: make 5." : "Not enough materials")
+            boolean headLocked = menu.headLocked(PartDef.ALL.get(hovered));
+            lines.add(Component.literal(headLocked ? "Locked: unlock a weapon that uses it first" : menu.canMake(hovered) ? "Click: make one. Shift: make 5." : "Not enough materials")
                     .withStyle(menu.canMake(hovered) ? net.minecraft.ChatFormatting.GREEN : net.minecraft.ChatFormatting.RED));
             g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
         }
@@ -381,6 +389,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        menu.viewer = com.cavmkii.seancraft.client.rpg.ClientRpg.data;
         super.render(g, mouseX, mouseY, partialTick);
         StationTabs.render(g, font, leftPos, topPos - 14, imageWidth, StationTabs.WEAPON_BENCH, mouseX, mouseY);
         if (partsTab) {
@@ -392,7 +401,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         if (menu.buildMode()) {
             for (int i = 0; i < PICK_ICONS.length; i++) {
                 if (mouseX >= pickX(i) && mouseX < pickX(i) + PICK_PITCH - 1 && mouseY >= pickY(i) && mouseY < pickY(i) + PICK_PITCH - 1) {
-                    g.renderTooltip(font, Component.literal("Build a " + PICK_NAMES[i].toLowerCase()), mouseX, mouseY);
+                    String locked = menu.lockReason(WeaponBenchMenu.BUILDABLE[i]);
+                    if (locked != null) {
+                        g.renderTooltip(font, List.of(Component.literal(PICK_NAMES[i] + " (locked)"),
+                                Component.literal(locked).withStyle(net.minecraft.ChatFormatting.GRAY)), java.util.Optional.empty(), mouseX, mouseY);
+                    } else {
+                        g.renderTooltip(font, Component.literal("Build a " + PICK_NAMES[i].toLowerCase()), mouseX, mouseY);
+                    }
                 }
             }
         }

@@ -52,6 +52,8 @@ public final class PlayerData {
     public boolean revealed;
     int webVersion = WEB_VERSION;
     public int lostPoints;
+    /** Recipe ladder progress and unlocks (4.7, see {@link Ladders}). */
+    public final Map<String, Double> ladder = new HashMap<>();
     public float mana;
     public float rage;
     public float stamina;
@@ -71,12 +73,13 @@ public final class PlayerData {
             Codec.STRING.listOf().optionalFieldOf("slots", List.of()).forGetter(d -> slotList(d.slots)),
             Codec.INT.optionalFieldOf("lostPoints", 0).forGetter(d -> d.lostPoints),
             Codec.FLOAT.optionalFieldOf("mana", 0f).forGetter(d -> d.mana),
-            Codec.FLOAT.optionalFieldOf("stamina", 0f).forGetter(d -> d.stamina)
+            Codec.FLOAT.optionalFieldOf("stamina", 0f).forGetter(d -> d.stamina),
+            Codec.unboundedMap(Codec.STRING, Codec.DOUBLE).optionalFieldOf("ladder", Map.of()).forGetter(d -> d.ladder)
     ).apply(i, PlayerData::fromSaved));
 
     private static PlayerData fromSaved(String origin, String spec, Map<String, Double> attrs, Map<String, Double> progress,
             Map<String, Integer> ranks, int flags, int unassigned, int level, long xp, Map<String, Double> skills, List<Integer> nodes,
-            List<String> slots, int lostPoints, float mana, float stamina) {
+            List<String> slots, int lostPoints, float mana, float stamina, Map<String, Double> ladder) {
         PlayerData d = new PlayerData();
         d.origin = parse(Origin.class, origin);
         d.spec = parse(Specialization.class, spec);
@@ -102,6 +105,7 @@ public final class PlayerData {
         d.lostPoints = lostPoints;
         d.mana = mana;
         d.stamina = stamina;
+        d.ladder.putAll(ladder);
         d.migrate();
         return d;
     }
@@ -305,6 +309,11 @@ public final class PlayerData {
             buf.writeUtf(s == null ? "" : s);
         }
         buf.writeVarInt(lostPoints);
+        buf.writeVarInt(ladder.size());
+        ladder.forEach((k, v) -> {
+            buf.writeUtf(k);
+            buf.writeDouble(v);
+        });
     }
 
     public static PlayerData read(FriendlyByteBuf buf) {
@@ -338,6 +347,10 @@ public final class PlayerData {
             d.slots[s] = name.isEmpty() ? null : name;
         }
         d.lostPoints = buf.readVarInt();
+        int ladders = buf.readVarInt();
+        for (int i = 0; i < ladders; i++) {
+            d.ladder.put(buf.readUtf(), buf.readDouble());
+        }
         return d;
     }
 }

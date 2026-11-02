@@ -82,7 +82,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - elemental: fire, frost, lightning, poison;
   - spirit.
 
-  Swords are mostly slash, axes slash plus chop, maces and fists blunt, arrows and tridents pierce. Gold weapons add 15% as spirit and netherite 20% as fire, on top. Chop only hurts wood, so it does nothing to monsters.
+  Swords are mostly slash, axes slash plus chop, maces and fists blunt, arrows and tridents pierce. Some materials add an element on top (see material traits under Weapons and armor). Chop only hurts wood, so it does nothing to monsters.
 - **Resistances.** Skeletons take 50% from pierce and 150% from blunt. Iron golems shrug off slash and pierce. Fire does nothing to fire-immune mobs. Spirit only hurts the undead, at 150%.
 - **Armor** works per body part: your helmet only protects your head, your chestplate your body and arms, and leggings and boots your legs.
   - A hit is multiplied by 20 / (armor + 20). Leather is 5, chainmail and gold 8, iron 12, diamond 20, netherite 25. So iron takes a third off, and diamond takes half.
@@ -201,6 +201,19 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Halberd (halberd head, haft, wrap): 45, slash and pierce, reach.
   - Spear (spearhead, haft, wrap): 32, pierce, reach, ignores an extra 25% of armor. Pike: 40, pierce, even longer reach.
   - Materials scale damage: copper ×0.85, iron ×1, gold ×1.1, diamond ×1.2, netherite ×1.35.
+- **Material traits.** Every material also has one trait, shown in pink on the part and on the item's part list. Vanilla items come with the traits of their standard parts, so a plain iron sword already has 300 durability instead of 250.
+  - Heads (and bow limbs): copper +10% added lightning, iron +20% durability, gold +15% added spirit, diamond +5% crit chance, netherite +20% added fire and doesn't burn in lava. Iron plates get the +20% durability too.
+  - Handles and hafts: planks +5% swing speed but −15% durability, log nothing, bone +15% durability, blaze rod +5% added fire, breeze rod +10% swing speed.
+  - Wraps and padding: leather nothing, rabbit hide makes you harder for mobs to spot while sneaking (stacks per piece), phantom membrane is lighter, scute padding gives +2 armor.
+  - The old "gold does more to undead, netherite sets things on fire" part bonuses are gone; the trait is the bonus now.
+- **Recipe ladders.** You can use any weapon you find, but you can only make the ones you've unlocked. Each attribute has a ladder:
+  - STR: wooden club → mace, axe, sword → warhammer, greatsword, halberd.
+  - AGI: bow, dagger → sword, spear, crossbow → pike.
+  - INT: wands and staves, once they're in. Until then an Arcanist can make the club.
+  - You start knowing the first rung of your origin's ladder. 5,000 damage to monsters with rung 1 weapons opens rung 2, and 25,000 with rung 2 weapons opens rung 3. Swords are on both ladders.
+  - Crossing over: do 1,000 damage with a found weapon from another ladder and you unlock that weapon, plus the first rung of its ladder, which you can then climb too.
+  - Locked weapons are greyed out at the bench, and hovering one shows your progress. Heads that only locked weapons use can't be made. The wooden club recipe is locked the same way.
+  - Shields and armor aren't on a ladder.
 - Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it.
 
 ### Character
@@ -327,7 +340,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
-  - `/character xp|skill|reset` is for testing the character system (op).
+  - `/character xp|skill|reset` is for testing the character system (op). `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with

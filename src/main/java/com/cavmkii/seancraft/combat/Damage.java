@@ -1,6 +1,7 @@
 package com.cavmkii.seancraft.combat;
 
 import com.cavmkii.seancraft.SeanCraft;
+import com.cavmkii.seancraft.parts.MaterialTraits;
 import com.cavmkii.seancraft.parts.PartKind;
 import com.cavmkii.seancraft.parts.PartSlot;
 import com.cavmkii.seancraft.parts.Parts;
@@ -256,9 +257,8 @@ public final class Damage {
                 // Flame: a smaller fire share than a fire arrow's.
                 split.add(Type.FIRE, 0.15f);
             }
-            if (arrow instanceof ThrownTrident) {
-                materialElements(split, arrow.getWeaponItem());
-            }
+            // A trident's own material, or the bow's limbs and grip.
+            materialElements(split, arrow.getWeaponItem());
             return split;
         }
         if (direct instanceof Projectile) {
@@ -351,18 +351,35 @@ public final class Damage {
         return BREACH_PENETRATION * level(player, player.getMainHandItem(), Enchantments.BREACH);
     }
 
-    /** Gold adds +15% as spirit and netherite +20% as fire, on top of the physical damage (9.1). */
+    /**
+     * Material traits that add an element on top of the physical damage (4.4.1): copper +10% lightning, gold +15%
+     * spirit, netherite +20% fire, a blaze-rod handle +5% fire. Unmodular gold and netherite tools count by name.
+     */
     static void materialElements(Split split, ItemStack weapon) {
         if (weapon == null || weapon.isEmpty()) {
             return;
         }
-        Parts.Installed head = Parts.installed(weapon).get(PartSlot.HEAD);
-        String id = BuiltInRegistries.ITEM.getKey(weapon.getItem()).getPath();
-        int tier = head != null ? head.part().tier() : id.startsWith("golden_") ? 3 : id.startsWith("netherite_") ? 5 : 0;
-        if (tier == 3) {
-            split.add(Type.SPIRIT, 0.15f);
-        } else if (tier == 5) {
-            split.add(Type.FIRE, 0.20f);
+        if (!Parts.modular(weapon)) {
+            String id = BuiltInRegistries.ITEM.getKey(weapon.getItem()).getPath();
+            if (id.startsWith("golden_")) {
+                split.add(Type.SPIRIT, 0.15f);
+            } else if (id.startsWith("netherite_")) {
+                split.add(Type.FIRE, 0.20f);
+            }
+            return;
+        }
+        for (Parts.Installed inst : Parts.installed(weapon).values()) {
+            MaterialTraits.Trait trait = MaterialTraits.of(inst.part());
+            if (trait == null) {
+                continue;
+            }
+            switch (trait) {
+                case CONDUCTIVE -> split.add(Type.LIGHTNING, 0.10f);
+                case BLESSED -> split.add(Type.SPIRIT, 0.15f);
+                case INFERNAL -> split.add(Type.FIRE, 0.20f);
+                case SMOLDERING -> split.add(Type.FIRE, 0.05f);
+                default -> { }
+            }
         }
     }
 

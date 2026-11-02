@@ -110,7 +110,7 @@ public final class RpgDamage {
                 if (deadeye) {
                     rt.deadeyeShots--;
                 }
-                double crit = deadeye ? forcedCrit(attacker, victim, stats) : crit(attacker, victim, stats);
+                double crit = deadeye ? forcedCrit(attacker, victim, stats) : crit(attacker, victim, stats, bow);
                 amount = (float) (amount * (1 + Skill.BOWS.effectValue(bows) / 100.0 + stats.projectileDamagePct() / 100
                         + stats.scalingPct(scaling[0], scaling[1]) / 100 + crit));
                 // The Archer's signatures and Deadeye: arrows slow, and crits pin.
@@ -134,8 +134,9 @@ public final class RpgDamage {
     }
 
     /** Rolls a crit: returns the extra damage multiplier (0 if it didn't crit), with a flash and a sound when it does. */
-    private static double crit(ServerPlayer attacker, LivingEntity victim, Stats stats) {
-        if (attacker.getRandom().nextDouble() * 100 >= stats.critChance()) {
+    private static double crit(ServerPlayer attacker, LivingEntity victim, Stats stats, ItemStack weapon) {
+        // A diamond head's Keen trait adds to the chance (4.4.1).
+        if (attacker.getRandom().nextDouble() * 100 >= stats.critChance() + com.cavmkii.seancraft.parts.MaterialTraits.critBonus(weapon)) {
             return 0;
         }
         return forcedCrit(attacker, victim, stats);
@@ -183,19 +184,8 @@ public final class RpgDamage {
             mult *= 1.5;
             attacker.removeEffect(MobEffects.INVISIBILITY);
         }
-        mult += crit(attacker, victim, stats);
+        mult += crit(attacker, victim, stats, weapon);
         amount *= (float) mult;
-
-        // Weapon parts: gold heads hurt undead more, netherite heads set things alight.
-        if (Parts.modular(weapon)) {
-            Parts.Totals parts = Parts.totals(weapon);
-            if (parts.spirit > 0 && victim.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
-                amount *= 1 + parts.spirit;
-            }
-            if (parts.fire > 0) {
-                victim.igniteForSeconds(parts.fire * 40);
-            }
-        }
 
         if (weaponSkill != null) {
             Rpg.addSkillXp(attacker, weaponSkill, Math.min(amount, 15) * 0.5);

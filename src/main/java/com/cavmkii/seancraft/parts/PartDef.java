@@ -139,16 +139,6 @@ public record PartDef(String id, PartKind kind, int tier) {
         return kind == PartKind.GUARD ? at(0.05f * tier, 0.02f, level) : 0;
     }
 
-    /** Gold heads (Valheim's silver) hurt undead more. */
-    public float spirit(int level) {
-        return kind.slot == PartSlot.HEAD && tier == 3 ? at(0.10f, 0.03f, level) : 0;
-    }
-
-    /** Netherite heads (Valheim's flametal) set things alight. */
-    public float fire(int level) {
-        return kind.slot == PartSlot.HEAD && tier == 5 ? at(0.10f, 0.03f, level) : 0;
-    }
-
     public float armor(int level) {
         return switch (kind) {
             case PLATE -> at(0.06f * tier, 0.025f, level);
