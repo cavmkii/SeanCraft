@@ -159,12 +159,11 @@ public final class Hideouts extends SavedData {
             }
         }
         if (level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
-            double spawnSpacing = Math.max(Cfg.spawnRadius + 16, Cfg.spawnPointSpacing);
             for (BlockPos p : SpawnPoints.get(level).points) {
                 double d = Math.sqrt(Vec3.atCenterOf(p).distanceToSqr(at));
-                if (d < spawnSpacing) {
-                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spawnSpacing + "). Head "
-                            + away(Vec3.atCenterOf(p), at) + " another " + (int) Math.ceil(spawnSpacing - d) + ".";
+                if (d < spacing) {
+                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spacing + "). Head "
+                            + away(Vec3.atCenterOf(p), at) + " another " + (int) Math.ceil(spacing - d) + ".";
                 }
             }
         }

@@ -35,7 +35,7 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
 
 ### Raids, spawn and hideout
 
-- **Spawn points.** A new world gets 3 fixed spawn points, one at world spawn and two about 400 blocks out. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies without a bed.
+- **Spawn points.** A new world gets 3 fixed spawn points, one at world spawn and two about 1,000 blocks out, on opposite sides, so there's room for a hideout between them. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies without a bed.
 - **Safe zones.** The area around a spawn point is safe, and so is your hideout. Anywhere else, you're **in raid**. The HUD in the bottom left says which one you're in, and a short banner at the top of the screen tells you when a raid starts or you extract.
 - **Threat.** The longer a raid goes, the worse it gets. Threat 1 hits at 5 minutes, 2 at 20, 3 at 40 and 4 at 60. Mobs start spawning as elites with more health and damage, and hunting parties come after you.
 - **Distance.** The further you get from world spawn, the tougher the monsters, and the more XP they give. The HUD shows which band you're in, and a banner pops up when you cross into a new one.
@@ -51,7 +51,7 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
 - **FOB tables.** Made at the Hideout Bench from 8 planks, 4 sticks and a campfire. While you're in the same chunk as one, the raid timer stops. Each raid only gets 15 minutes of that, shared between every table, and it fills back up when you extract. It doesn't count while a monster is within 16 blocks or for 10 seconds after you get hit. One per chunk, and not in a safe zone. It's not a safe zone itself, and it has no stash.
 - **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
 - **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
-  - Hideouts have to be at least 500 blocks from each other, and 150 from a spawn point. If you try too close to a spawn point, the message says which way to go and how much further.
+  - Hideouts have to be at least 500 blocks from each other and from spawn points. If you try too close, the message says which way to go and how much further.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
 - **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
@@ -353,12 +353,13 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - **Common changes:**
   - `Raid.DeathRule`: `LOSE_EVERYTHING`, `KEEP_SECURE` (normal drops, but you keep the pouch), or `VANILLA`.
   - `Raid.DistanceScaling`: turn the distance bands off.
-  - `Raid.HideoutSpacing` (500, between hideouts), `Raid.SpawnPointSpacing` (150, from spawn points), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
+  - `Raid.HideoutSpacing` (500), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
   - `Raid.ThreatMinutes`: when each threat level starts (default `5,20,40,60`).
-  - `Spawn.*`: number of spawn points, distance, safe radius, restock time.
+  - `Spawn.*`: number of spawn points, distance (1000), safe radius, restock time. A config still on the old 400 is moved to 1000.
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
+  - `/seancraft spawnpoints respread` (op) moves the spawn points other than world spawn out to `Spawn.Distance`, for worlds made before the change. New shelters get built; the old ones stay as plain buildings and stop restocking.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op). `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).

@@ -100,12 +100,11 @@ public final class Cfg {
     public static double sleepHealPercent = 50;
     public static boolean distanceScaling = true;
     public static double hideoutSpacing = 500;
-    /** How far a Hideout Bench has to be from a spawn point (kept separate so a first hideout isn't a 900-block hike). */
-    public static double spawnPointSpacing = 150;
     public static int maxHideouts = 3;
     public static double fobPauseMinutes = 15;
     public static int spawnPoints = 3;
-    public static double spawnDistance = 400;
+    /** Far enough that the 500-block hideout spacing around each spawn point leaves room to build between them (2.4). */
+    public static double spawnDistance = 1000;
     public static double spawnRadius = 24;
     public static double spawnRefillMinutes = 30;
 
@@ -184,9 +183,7 @@ public final class Cfg {
         b("Raid", "HuntingParties", "Send hunting parties at raiding players as threat rises.", v -> huntingParties = v, () -> huntingParties);
         b("Raid", "DistanceScaling", "Hostile mobs get more health, damage and XP the further from world spawn they appear (Heartland, Wilds, Frontier, Far lands).",
                 v -> distanceScaling = v, () -> distanceScaling);
-        d("Raid", "HideoutSpacing", "A Hideout Bench can't be placed within this many blocks of another hideout.", v -> hideoutSpacing = v, () -> hideoutSpacing);
-        d("Raid", "SpawnPointSpacing", "A Hideout Bench can't be placed within this many blocks of a spawn point.",
-                v -> spawnPointSpacing = v, () -> spawnPointSpacing);
+        d("Raid", "HideoutSpacing", "A Hideout Bench can't be placed within this many blocks of another hideout or a spawn point.", v -> hideoutSpacing = v, () -> hideoutSpacing);
         i("Raid", "MaxHideouts", "How many Hideout Benches each player can have placed at once.", v -> maxHideouts = v, () -> maxHideouts);
         d("Raid", "FobPauseMinutes", "Minutes of paused raid time each raid gets from FOB tables, shared between all of them. Refills when you extract.",
                 v -> fobPauseMinutes = v, () -> fobPauseMinutes);
@@ -252,6 +249,10 @@ public final class Cfg {
                 } catch (RuntimeException e) {
                     problems.add(entry.section + "." + entry.key + "=" + raw);
                 }
+            }
+            if (spawnDistance == 400) {
+                // The old default, from before spawn points moved out to make room for hideouts between them.
+                spawnDistance = 1000;
             }
             write(path);
         } catch (IOException e) {
