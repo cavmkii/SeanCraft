@@ -557,6 +557,28 @@ public final class Tetris {
         return out;
     }
 
+    /** What a death can take (9.4.9): everything carried and worn, the pouch only if {@code pouchToo}. */
+    public static List<ItemStack> atRisk(ServerPlayer player, boolean pouchToo) {
+        List<ItemStack> out = new ArrayList<>(player.getInventory().items);
+        out.addAll(player.getInventory().armor);
+        out.addAll(player.getInventory().offhand);
+        InvData data = data(player);
+        for (GridId id : AUTO) {
+            for (Placed p : data.list(id)) {
+                out.add(p.stack);
+            }
+        }
+        if (pouchToo) {
+            for (Placed p : data.pouch) {
+                out.add(p.stack);
+            }
+        }
+        out.add(data.rig);
+        out.add(data.backpack);
+        out.removeIf(ItemStack::isEmpty);
+        return out;
+    }
+
     /** A random live stack from pockets, rig or backpack, for Joe to steal from. Empty if there's nothing. */
     public static ItemStack stealable(ServerPlayer player, net.minecraft.util.RandomSource random) {
         List<Placed> all = new ArrayList<>();
@@ -1438,17 +1460,21 @@ public final class Tetris {
         data.rig = ItemStack.EMPTY;
         data.backpack = ItemStack.EMPTY;
         int lost = 0;
+        List<ItemStack> gone = new ArrayList<>();
         for (ItemStack s : carried) {
             if (s.isEmpty()) {
                 continue;
             }
             if (player.getRandom().nextFloat() < share) {
                 lost++;
+                gone.add(s);
             } else {
                 player.drop(s, true, false);
             }
         }
         rt(player).dirty = true;
+        // Striking parts of the lost part-built gear go back to the hideout (9.4.9).
+        com.cavmkii.seancraft.tarkov.Recovery.onDeath(player, gone);
         return lost;
     }
 

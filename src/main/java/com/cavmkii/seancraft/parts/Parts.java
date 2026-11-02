@@ -44,7 +44,23 @@ public final class Parts {
     private static final float NO_HANDLE_DURABILITY = -0.3f;
     private static final float NO_PLATE_ARMOR = -0.6f;
 
-    public record Installed(PartDef part, int level) {}
+    /** A wrap's infusion (9.4.3): "heavy", "keen" or "arcane", on the part item and kept when it's installed. */
+    public static final DataComponentType<String> INFUSION = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+            SeanCraft.id("infusion"), DataComponentType.<String>builder()
+                    .persistent(Codec.STRING)
+                    .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
+    /** {@code infusion} is null for a plain part. */
+    public record Installed(PartDef part, int level, String infusion) {
+        public Installed(PartDef part, int level) {
+            this(part, level, null);
+        }
+    }
+
+    public static String infusion(ItemStack partStack) {
+        return partStack.get(INFUSION);
+    }
 
     /** Summed differences from the standard build. */
     public static final class Totals {
@@ -79,6 +95,9 @@ public final class Parts {
         if (installed.level() > 1) {
             stack.set(LEVEL, installed.level());
         }
+        if (installed.infusion() != null) {
+            stack.set(INFUSION, installed.infusion());
+        }
         return stack;
     }
 
@@ -100,8 +119,9 @@ public final class Parts {
                 String[] bits = value.split(":");
                 PartDef def = PartDef.byId(bits[0]);
                 int level = bits.length > 1 ? Integer.parseInt(bits[1]) : 1;
+                String infusion = bits.length > 2 && !bits[2].isEmpty() ? bits[2] : null;
                 if (def != null && stock.family().fits(def) && def.kind().slot == slot) {
-                    out.put(slot, new Installed(def, Math.max(1, Math.min(PartDef.MAX_LEVEL, level))));
+                    out.put(slot, new Installed(def, Math.max(1, Math.min(PartDef.MAX_LEVEL, level)), infusion));
                 }
             } catch (RuntimeException ignored) {
                 // A part that no longer exists.
@@ -113,7 +133,7 @@ public final class Parts {
     /** Record the parts and rewrite the item's stats from them. */
     public static void setInstalled(ItemStack stack, Map<PartSlot, Installed> parts) {
         Map<String, String> raw = new HashMap<>();
-        parts.forEach((slot, inst) -> raw.put(slot.name(), inst.part().id() + ":" + inst.level()));
+        parts.forEach((slot, inst) -> raw.put(slot.name(), inst.part().id() + ":" + inst.level() + (inst.infusion() != null ? ":" + inst.infusion() : "")));
         stack.set(INSTALLED, raw);
         applyStats(stack);
     }

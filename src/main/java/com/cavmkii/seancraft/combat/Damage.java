@@ -65,6 +65,18 @@ public final class Damage {
     /** Damage to a destroyed limb or stomach goes to the thorax at this share (5.2). */
     static final float SPILL_TO_THORAX = 0.7f;
     public static final String FIRE_ARROW_TAG = "seancraft_fire_arrow";
+    /** Arrow types (9.4.4): broadhead bleeds harder but penetrates less, bodkin penetrates, blunt breaks bones. */
+    public static final String BROADHEAD_TAG = "seancraft_broadhead";
+    public static final String BODKIN_TAG = "seancraft_bodkin";
+    public static final String BLUNT_ARROW_TAG = "seancraft_blunt_arrow";
+    static final float BODKIN_PENETRATION = 0.25f;
+    static final float BROADHEAD_PENETRATION = -0.10f;
+    public static final float BROADHEAD_BLEED = 1.5f;
+
+    /** The arrow behind a hit, if any. */
+    public static boolean arrowHas(DamageSource source, String tag) {
+        return source.getDirectEntity() instanceof AbstractArrow a && a.getTags().contains(tag);
+    }
 
     private static final ResourceLocation HEALTH_SCALE = SeanCraft.id("health_scale");
     private static final ResourceLocation BASE_HEALTH = SeanCraft.id("base_health");
@@ -192,8 +204,9 @@ public final class Damage {
             return amount;
         }
         boolean armored = !source.is(DamageTypeTags.BYPASSES_ARMOR);
-        float armor = !armored ? 0 : victim instanceof ServerPlayer player ? partArmor(player, part) : victim.getArmorValue() * 2f;
+        float armor = !armored ? 0 : victim instanceof ServerPlayer player ? partArmor(player, part) + resistanceArmor(player) : victim.getArmorValue() * 2f;
         float total = 0;
+        float blunt = 0;
         for (Type type : Type.values()) {
             float share = split.get(type);
             if (share <= 0) {
@@ -201,14 +214,21 @@ public final class Damage {
             }
             float dealt = amount * share * resistance(victim, type);
             if (type.physical() && armor > 0) {
-                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source), breach(source));
+                float pen = breach(source) + (arrowHas(source, BODKIN_TAG) ? BODKIN_PENETRATION : arrowHas(source, BROADHEAD_TAG) ? BROADHEAD_PENETRATION : 0);
+                float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source), pen);
                 dealt *= ARMOR_K / (x + ARMOR_K);
             }
             if (type.elemental() && victim instanceof ServerPlayer player) {
                 dealt *= ARMOR_K / (elementPoints(player, type) + ARMOR_K);
             }
             total += dealt;
+            if (type == Type.BLUNT) {
+                blunt += dealt;
+            }
         }
+        // Blunt hits build poise (9.6.1); a heavy attack builds twice as much (9.4.1).
+        Poise.add(victim, blunt * (source.getEntity() instanceof ServerPlayer attacker && source.getDirectEntity() == attacker
+                && Combat.heavySwing(attacker) ? 2 : 1));
         if (victim instanceof ServerPlayer player) {
             float points = sourcePoints(player, source);
             if (points > 0) {
@@ -250,7 +270,7 @@ public final class Damage {
             return new Split().set(Type.PIERCE, 1);
         }
         if (direct instanceof AbstractArrow arrow) {
-            Split split = new Split().set(Type.PIERCE, 1);
+            Split split = new Split().set(arrow.getTags().contains(BLUNT_ARROW_TAG) ? Type.BLUNT : Type.PIERCE, 1);
             if (arrow.getTags().contains(FIRE_ARROW_TAG)) {
                 split.add(Type.FIRE, 0.3f);
             } else if (arrow.isOnFire()) {
@@ -456,7 +476,14 @@ public final class Damage {
             });
             points *= (float) (now[0] / base);
         }
-        return points + PROTECTION_ARMOR * level(player, stack, Enchantments.PROTECTION);
+        // Worn-out armor holds half as well (9.4.8).
+        return points * com.cavmkii.seancraft.parts.Wear.factor(stack) + PROTECTION_ARMOR * level(player, stack, Enchantments.PROTECTION);
+    }
+
+    /** The Resistance effect: 10 armor per level on every part (9.7.2). */
+    static float resistanceArmor(ServerPlayer player) {
+        var effect = player.getEffect(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE);
+        return effect == null ? 0 : Potions.RESISTANCE_ARMOR * (effect.getAmplifier() + 1);
     }
 
     /** Armor points by tier (9.3.1). */
@@ -482,7 +509,8 @@ public final class Damage {
     /** Elemental resistance points (9.3.2). For now from Fire Protection; food, web nodes and trophy powers come later. */
     static float elementPoints(ServerPlayer player, Type type) {
         float web = (float) com.cavmkii.seancraft.rpg.Rpg.stats(player).resistance(type);
-        return web + (type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0);
+        float potion = type == Type.FIRE && player.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE) ? Potions.FIRE_RESISTANCE_POINTS : 0;
+        return web + potion + (type == Type.FIRE ? protection(player, Enchantments.FIRE_PROTECTION) : 0);
     }
 
     /** Blast and Projectile Protection: resistance points against explosions and projectiles. */

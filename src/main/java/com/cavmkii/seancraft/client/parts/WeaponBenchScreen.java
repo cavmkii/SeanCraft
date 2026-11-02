@@ -39,7 +39,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int TAB_Y = 3;
     /** One icon per buildable family: its iron item (or its only item), in the menu's order. */
     private static final Item[] PICK_ICONS = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
-            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD : Family.itemFor(f, 2)).toArray(Item[]::new);
+            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD
+                    : f == Family.BUCKLER ? com.cavmkii.seancraft.parts.WeaponItems.BUCKLER
+                    : f == Family.TOWER_SHIELD ? com.cavmkii.seancraft.parts.WeaponItems.TOWER_SHIELD
+                    : f == Family.BOOMERANG ? com.cavmkii.seancraft.parts.WeaponItems.BOOMERANG : Family.itemFor(f, 2)).toArray(Item[]::new);
     private static final String[] PICK_NAMES = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
             .map(f -> f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
             .toArray(String[]::new);
@@ -51,13 +54,14 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int COL = 21;
     private static final int ROW = 18;
     private static final String[] KIND_SHORT = {"Blade", "Long", "Knife", "Axe", "Mace", "Spear", "Halb.", "Limbs", "Guard", "Plates",
-            "Handle", "Haft", "Wrap", "Pad"};
+            "Handle", "Haft", "Wrap", "Pad", "Crystal", "Focus"};
     /** The PARTS tab's two pages: striking parts, then everything else. Each is a list of kind ordinals. */
     private static final PartKind[][] PAGES = {
             {PartKind.BLADE, PartKind.LONG_BLADE, PartKind.KNIFE_BLADE, PartKind.AXE_HEAD, PartKind.MACE_HEAD, PartKind.SPEARHEAD,
                     PartKind.HALBERD_HEAD, PartKind.LIMBS},
-            {PartKind.GUARD, PartKind.PLATE, PartKind.HANDLE, PartKind.HAFT, PartKind.WRAP, PartKind.PADDING}};
-    private static final String[] PAGE_NAMES = {"Heads", "Other parts"};
+            {PartKind.GUARD, PartKind.PLATE, PartKind.HANDLE, PartKind.HAFT, PartKind.WRAP, PartKind.PADDING},
+            {PartKind.CRYSTAL, PartKind.FOCUS}};
+    private static final String[] PAGE_NAMES = {"Heads", "Other parts", "Magic"};
 
     private boolean partsTab;
     private int page;
@@ -174,6 +178,13 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             case CROSSBOW -> new int[][] {{70, 30, 164, 38}, {66, 34, 72, 44}, {162, 34, 168, 44}, {112, 38, 124, 114}, {72, 44, 110, 46},
                     {126, 44, 162, 46}};
             case SHIELD -> new int[][] {{84, 18, 150, 92}, {90, 92, 144, 104}, {100, 104, 134, 112}};
+            case BUCKLER -> new int[][] {{94, 28, 140, 84}};
+            case TOWER_SHIELD -> new int[][] {{86, 14, 148, 110}};
+            case THROWING_KNIFE -> new int[][] {{113, 28, 121, 70}, {111, 70, 123, 100}};
+            case JAVELIN -> new int[][] {{113, 16, 121, 40}, {115, 40, 119, 116}};
+            case BOOMERANG -> new int[][] {{90, 40, 140, 52}, {128, 52, 140, 90}};
+            case WAND -> new int[][] {{111, 22, 123, 42}, {109, 42, 125, 50}, {115, 50, 119, 104}};
+            case STAFF -> new int[][] {{111, 14, 123, 34}, {109, 34, 125, 42}, {115, 42, 119, 116}};
             case HELMET -> new int[][] {{92, 22, 142, 30}, {84, 30, 150, 72}, {84, 72, 98, 86}, {136, 72, 150, 86}, {104, 108, 130, 112}};
             case CHEST -> new int[][] {{86, 22, 148, 112}, {72, 22, 86, 52}, {148, 22, 162, 52}};
             case LEGS -> new int[][] {{84, 16, 150, 38}, {84, 38, 113, 114}, {121, 38, 150, 114}};
@@ -203,7 +214,7 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 lines.add(pct("Armor", t.armor));
             } else {
                 lines.add(pct("Damage", t.damage));
-                if (family != Family.BOW && family != Family.CROSSBOW && family != Family.SHIELD) {
+                if (family != Family.BOW && family != Family.CROSSBOW && !family.shield()) {
                     lines.add(pct("Speed", -t.stamina));
                 }
             }
@@ -263,6 +274,27 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
 
     private static String pct(String label, float value) {
         return String.format("%s %+d%%", label, Math.round(value * 100));
+    }
+
+    /** Modify mode: REPAIR for a worn item, 1 of its striking part's material per 25% (9.4.8). */
+    private void renderRepair(GuiGraphics g, int mouseX, int mouseY) {
+        ItemStack w = menu.weapon();
+        int steps = com.cavmkii.seancraft.parts.Wear.stepsToFull(w);
+        net.minecraft.world.item.Item mat = com.cavmkii.seancraft.parts.Wear.material(w);
+        if (w.isEmpty() || mat == null || !w.isDamageableItem()) {
+            return;
+        }
+        int ax = leftPos + ASSEMBLE_X;
+        int ay = topPos + ASSEMBLE_Y;
+        boolean hover = steps > 0 && mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14;
+        Kit.button(g, font, "REPAIR", ax, ay, 54, 14, steps > 0, hover, false);
+        if (mouseX >= ax && mouseX < ax + 54 && mouseY >= ay && mouseY < ay + 14) {
+            String matName = new ItemStack(mat).getHoverName().getString();
+            g.renderTooltip(font, steps == 0 ? List.of(Component.literal("Not worn")) : List.of(
+                    Component.literal("Click: 1 " + matName + " for 25%"),
+                    Component.literal("Shift: all the way (" + steps + " " + matName + ")").withStyle(net.minecraft.ChatFormatting.GRAY)),
+                    java.util.Optional.empty(), mouseX, mouseY);
+        }
     }
 
     private void renderBuild(GuiGraphics g, int mouseX, int mouseY) {
@@ -335,6 +367,14 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         return leftPos + GRID_X;
     }
 
+    private String catalystLabel() {
+        return "CATALYST: " + com.cavmkii.seancraft.rpg.Magic.ELEMENT_LABELS[menu.catalystIndex()].toUpperCase();
+    }
+
+    private String infusionLabel() {
+        return "INFUSION: " + WeaponBenchMenu.INFUSION_LABELS[menu.infusionIndex()].toUpperCase();
+    }
+
     private int pageButtonY() {
         return topPos + GRID_Y + 5 * ROW + 2;
     }
@@ -354,6 +394,33 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
         int by = pageButtonY();
         boolean over = mouseX >= bx && mouseX < bx + font.width(label) + 6 && mouseY >= by && mouseY < by + 11;
         Kit.button(g, font, label, bx, by, font.width(label) + 6, 11, true, over, false);
+        if (page == 2) {
+            // Crystals made here get this element (9.4.5).
+            String cat = catalystLabel();
+            int iy = by + 13;
+            boolean overCat = mouseX >= bx && mouseX < bx + font.width(cat) + 6 && mouseY >= iy && mouseY < iy + 11;
+            Kit.button(g, font, cat, bx, iy, font.width(cat) + 6, 11, true, overCat, true);
+            if (overCat) {
+                g.renderTooltip(font, List.of(Component.literal("Crystals you make get this element"),
+                        Component.literal("Fire: blaze powder. Frost: packed ice. Lightning: lightning rod.").withStyle(net.minecraft.ChatFormatting.GRAY),
+                        Component.literal("Poison: fermented spider eye. Spirit: golden carrot.").withStyle(net.minecraft.ChatFormatting.GRAY)),
+                        java.util.Optional.empty(), mouseX, mouseY);
+            }
+        }
+        if (page == 1) {
+            // Wraps made here carry this infusion (9.4.3).
+            String inf = infusionLabel();
+            int iy = by + 13;
+            boolean overInf = mouseX >= bx && mouseX < bx + font.width(inf) + 6 && mouseY >= iy && mouseY < iy + 11;
+            Kit.button(g, font, inf, bx, iy, font.width(inf) + 6, 11, true, overInf, menu.infusionIndex() > 0);
+            if (overInf) {
+                g.renderTooltip(font, List.of(Component.literal("Wraps you make get this infusion"),
+                        Component.literal("Heavy: +2 iron nuggets, 25% of scaling to STR").withStyle(net.minecraft.ChatFormatting.GRAY),
+                        Component.literal("Keen: +1 flint, 25% to AGI").withStyle(net.minecraft.ChatFormatting.GRAY),
+                        Component.literal("Arcane: +1 lapis, 25% to INT").withStyle(net.minecraft.ChatFormatting.GRAY)),
+                        java.util.Optional.empty(), mouseX, mouseY);
+            }
+        }
         int hovered = partAt(mouseX, mouseY);
         for (int k = 0; k < kinds.length; k++) {
             for (int t = 0; t < 5; t++) {
@@ -373,7 +440,18 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             PartDef def = PartDef.ALL.get(hovered);
             List<Component> lines = new ArrayList<>();
             lines.add(Component.literal(def.label()));
-            for (Cost c : def.costs()) {
+            List<Cost> all = new ArrayList<>(def.costs());
+            if (def.kind() == PartKind.CRYSTAL) {
+                all.addAll(WeaponBenchMenu.catalystCost(menu.catalystIndex()));
+                lines.set(0, Component.literal(com.cavmkii.seancraft.rpg.Magic.ELEMENT_LABELS[menu.catalystIndex()] + " " + def.label().toLowerCase()));
+            }
+            if (def.kind() == PartKind.WRAP) {
+                all.addAll(WeaponBenchMenu.infusionCost(menu.infusionIndex()));
+                if (menu.infusionIndex() > 0) {
+                    lines.set(0, Component.literal(WeaponBenchMenu.INFUSION_LABELS[menu.infusionIndex()] + " " + def.label().toLowerCase()));
+                }
+            }
+            for (Cost c : all) {
                 lines.add(Component.literal("  " + c.count() + " " + c.label()).withStyle(net.minecraft.ChatFormatting.GRAY));
             }
             boolean headLocked = menu.headLocked(PartDef.ALL.get(hovered));
@@ -393,6 +471,9 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             return;
         }
         renderBuild(g, mouseX, mouseY);
+        if (!partsTab && !menu.buildMode()) {
+            renderRepair(g, mouseX, mouseY);
+        }
         renderTooltip(g, mouseX, mouseY);
         if (menu.buildMode()) {
             for (int i = 0; i < PICK_ICONS.length; i++) {
@@ -448,6 +529,15 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 page = (page + 1) % PAGES.length;
                 return true;
             }
+            int iy = pageButtonY() + 13;
+            if (page == 2 && mouseX >= pageButtonX() && mouseX < pageButtonX() + font.width(catalystLabel()) + 6 && mouseY >= iy && mouseY < iy + 11) {
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.CATALYST_BUTTON);
+                return true;
+            }
+            if (page == 1 && mouseX >= pageButtonX() && mouseX < pageButtonX() + font.width(infusionLabel()) + 6 && mouseY >= iy && mouseY < iy + 11) {
+                minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.INFUSE_BUTTON);
+                return true;
+            }
             int i = partAt(mouseX, mouseY);
             if (i >= 0) {
                 minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
@@ -469,6 +559,10 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 minecraft.gameMode.handleInventoryButtonClick(menu.containerId, WeaponBenchMenu.ASSEMBLE_BUTTON);
                 return true;
             }
+        } else if (!partsTab && mouseX >= leftPos + ASSEMBLE_X && mouseX < leftPos + ASSEMBLE_X + 54 && mouseY >= topPos + ASSEMBLE_Y
+                && mouseY < topPos + ASSEMBLE_Y + 14 && com.cavmkii.seancraft.parts.Wear.stepsToFull(menu.weapon()) > 0) {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, hasShiftDown() ? WeaponBenchMenu.REPAIR_ALL_BUTTON : WeaponBenchMenu.REPAIR_BUTTON);
+            return true;
         } else {
             for (int i = 0; i < WeaponBenchMenu.PARTS; i++) {
                 Slot slot = menu.partSlot(i);

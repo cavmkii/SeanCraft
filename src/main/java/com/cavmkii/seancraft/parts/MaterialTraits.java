@@ -87,7 +87,7 @@ public final class MaterialTraits {
             case HANDLE, HAFT -> GRIPS[t];
             case WRAP -> HIDES[t] == Trait.PLATED ? null : HIDES[t];
             case PADDING -> HIDES[t];
-            case GUARD -> null;
+            case GUARD, CRYSTAL, FOCUS -> null;
         };
     }
 

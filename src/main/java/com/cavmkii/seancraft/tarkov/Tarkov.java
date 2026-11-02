@@ -476,7 +476,12 @@ public final class Tarkov {
         boolean raid = inRaid(player);
         Runtime rt = runtime(player);
         String time = rt.inRaid != null && rt.inRaid ? " Raid time " + clock(player.serverLevel().getGameTime() - rt.raidStart) + "." : "";
-        if (com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
+        boolean bossFight = com.cavmkii.seancraft.boss.Arenas.inFight(player);
+        if (raid && !bossFight && !player.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
+            // Striking parts of lost part-built gear go back to the hideout (9.4.9).
+            Recovery.onDeath(player, com.cavmkii.seancraft.tetris.Tetris.atRisk(player, Cfg.raidDeathRule == Cfg.DeathRule.VANILLA));
+        }
+        if (bossFight) {
             // A boss death costs a random share of what you carry, lighter than a raid death (8.4.7). The rest drops
             // where you fell, for the run back.
             int lost = com.cavmkii.seancraft.tetris.Tetris.onBossDeath(player, BOSS_DEATH_LOSS);

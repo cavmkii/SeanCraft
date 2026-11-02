@@ -24,6 +24,10 @@ public final class TarkovContent {
             new HideoutBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD)));
     public static final Item HIDEOUT_BENCH_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("hideout_bench"),
             new HideoutBenchItem(HIDEOUT_BENCH, new Item.Properties()));
+    public static final Block RECOVERY_CRATE = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("recovery_crate"),
+            new RecoveryCrateBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2f).sound(SoundType.WOOD)));
+    public static final Item RECOVERY_CRATE_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("recovery_crate"),
+            new net.minecraft.world.item.BlockItem(RECOVERY_CRATE, new Item.Properties()));
     public static final Block FOB_TABLE = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("fob_table"),
             new FobTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2f).sound(SoundType.WOOD)));
     public static final Item FOB_TABLE_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("fob_table"),

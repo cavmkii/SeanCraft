@@ -29,6 +29,8 @@ public final class Hideouts extends SavedData {
         public java.util.UUID owner;
         /** Where each module's block stands, or null: a module only works while its block is in the hideout (2.5). */
         public final BlockPos[] modules = new BlockPos[Module.values().length];
+        /** Parts waiting in the Recovery crate (9.4.9), by player. */
+        public final java.util.Map<java.util.UUID, List<net.minecraft.world.item.ItemStack>> recovery = new java.util.HashMap<>();
 
         Hideout(BlockPos pos) {
             this.pos = pos;
@@ -209,6 +211,14 @@ public final class Hideouts extends SavedData {
                     h.modules[m.ordinal()] = BlockPos.of(c.getLong("module_" + m.name()));
                 }
             }
+            for (Tag rt : c.getList("recovery", Tag.TAG_COMPOUND)) {
+                CompoundTag r = (CompoundTag) rt;
+                List<net.minecraft.world.item.ItemStack> items = new ArrayList<>();
+                for (Tag it : r.getList("items", Tag.TAG_COMPOUND)) {
+                    net.minecraft.world.item.ItemStack.parse(registries, it).ifPresent(items::add);
+                }
+                h.recovery.put(r.getUUID("player"), items);
+            }
             data.list.add(h);
         }
         return data;
@@ -235,6 +245,20 @@ public final class Hideouts extends SavedData {
                     c.putLong("module_" + m.name(), h.modules[m.ordinal()].asLong());
                 }
             }
+            ListTag rec = new ListTag();
+            h.recovery.forEach((player, items) -> {
+                CompoundTag r = new CompoundTag();
+                r.putUUID("player", player);
+                ListTag its = new ListTag();
+                for (net.minecraft.world.item.ItemStack s : items) {
+                    if (!s.isEmpty()) {
+                        its.add(s.save(registries));
+                    }
+                }
+                r.put("items", its);
+                rec.add(r);
+            });
+            c.put("recovery", rec);
             list.add(c);
         }
         tag.put("hideouts", list);

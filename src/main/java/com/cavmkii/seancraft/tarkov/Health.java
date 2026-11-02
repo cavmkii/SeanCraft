@@ -153,7 +153,10 @@ public final class Health {
         }
         // Slash and pierce mostly bleed, blunt mostly breaks bones (9.1).
         if (player.getRandom().nextFloat() < chance * cut) {
-            inflict(player, severity >= Body.HEAVY ? Body.HEAVY_BLEED : Body.LIGHT_BLEED, part, severity);
+            // Broadheads make bleeds half again as bad (9.4.4).
+            float bleed = com.cavmkii.seancraft.combat.Damage.arrowHas(source, com.cavmkii.seancraft.combat.Damage.BROADHEAD_TAG)
+                    ? Math.min(1, severity * com.cavmkii.seancraft.combat.Damage.BROADHEAD_BLEED) : severity;
+            inflict(player, bleed >= Body.HEAVY ? Body.HEAVY_BLEED : Body.LIGHT_BLEED, part, bleed);
         }
         if (part.limb() && player.getRandom().nextFloat() < chance * (1 - cut)) {
             inflict(player, Body.FRACTURE, part, severity);

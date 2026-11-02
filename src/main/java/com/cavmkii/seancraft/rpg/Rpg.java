@@ -360,6 +360,13 @@ public final class Rpg {
         ServerPlayNetworking.send(player, new RpgNet.Resources(data.mana, data.rage, data.stamina, cooldowns, totals));
     }
 
+    /** The Blademaster's Riposte window after a block or parry (9.4.6). */
+    public static void openRiposte(ServerPlayer player) {
+        if (stats(player).get(Stat.RIPOSTE) > 0) {
+            runtime(player).riposteUntil = player.serverLevel().getGameTime() + 30;
+        }
+    }
+
     public static void markDirty(ServerPlayer player) {
         Runtime rt = runtime(player);
         rt.dirty = true;
@@ -518,6 +525,14 @@ public final class Rpg {
     }
 
     /** Picks the character's origin, once (6.2.1), and hands over its starting weapon. */
+    /** The Arcanist's first weapon (6.2.1): a quartz wand with a copper focus and a fire crystal. */
+    private static ItemStack apprenticeWand() {
+        net.minecraft.world.item.Item wand = com.cavmkii.seancraft.parts.WeaponItems.ITEMS.get(com.cavmkii.seancraft.parts.Family.WAND)[0];
+        ItemStack stack = new ItemStack(wand);
+        com.cavmkii.seancraft.parts.Parts.setInstalled(stack, com.cavmkii.seancraft.parts.Parts.installed(stack));
+        return stack;
+    }
+
     private static void chooseOrigin(ServerPlayer player, int index) {
         PlayerData data = data(player);
         if (data.origin != null || index < 0 || index >= Origin.values().length) {
@@ -527,7 +542,7 @@ public final class Rpg {
         ItemStack weapon = switch (data.origin) {
             case VANGUARD -> new ItemStack(com.cavmkii.seancraft.parts.WeaponItems.WOODEN_CLUB);
             case SCOUT -> new ItemStack(net.minecraft.world.item.Items.BOW);
-            case ARCANIST -> ItemStack.EMPTY;
+            case ARCANIST -> apprenticeWand();
         };
         if (!weapon.isEmpty()) {
             com.cavmkii.seancraft.tetris.Tetris.give(player, weapon);
@@ -535,8 +550,7 @@ public final class Rpg {
         if (data.origin == Origin.SCOUT) {
             com.cavmkii.seancraft.tetris.Tetris.give(player, new ItemStack(net.minecraft.world.item.Items.ARROW, 16));
         }
-        toast(player, "Origin: " + data.origin.label, data.origin == Origin.ARCANIST
-                ? "Your apprentice wand comes with wands; for now, your skills are your weapon." : "Here's your " + data.origin.weapon.toLowerCase() + ".");
+        toast(player, "Origin: " + data.origin.label, "Here's your " + data.origin.weapon.toLowerCase() + ".");
         markDirty(player);
     }
 

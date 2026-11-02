@@ -16,7 +16,8 @@ abstract class LocalPlayerSprintMixin {
     @Inject(method = "hasEnoughFoodToStartSprinting", at = @At("HEAD"), cancellable = true)
     private void seancraft$injuredLegs(CallbackInfoReturnable<Boolean> cir) {
         if (InjuryCamera.noSprint() || com.cavmkii.seancraft.client.carry.ClientCarry.carrying()
-                || com.cavmkii.seancraft.client.combat.ClientCombat.exhausted()) {
+                || com.cavmkii.seancraft.client.combat.ClientCombat.exhausted()
+                || com.cavmkii.seancraft.client.combat.ClientCombat.overloaded()) {
             cir.setReturnValue(false);
         }
     }

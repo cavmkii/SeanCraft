@@ -41,6 +41,12 @@ public final class SeanCraftClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.SPELL, ctx -> new ThrownItemRenderer<>(ctx, 1.75f, true));
         EntityRendererRegistry.register(ModEntities.BABY_BOTTLE, ThrownItemRenderer::new);
         EntityRendererRegistry.register(RpgContent.SKILL_PROJECTILE, ctx -> new ThrownItemRenderer<>(ctx, 1.25f, true));
+        com.cavmkii.seancraft.client.parts.PartModels.init();
+        // The vanilla theme from the asset pack (Appendix C.8): on by default, switchable in Resource Packs.
+        net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer(com.cavmkii.seancraft.SeanCraft.MOD_ID).ifPresent(mod ->
+                net.fabricmc.fabric.api.resource.ResourceManagerHelper.registerBuiltinResourcePack(com.cavmkii.seancraft.SeanCraft.id("vanilla_theme"), mod,
+                        Component.literal("SeanCraft vanilla theme"), net.fabricmc.fabric.api.resource.ResourcePackActivationType.DEFAULT_ENABLED));
+        EntityRendererRegistry.register(com.cavmkii.seancraft.parts.Throwing.THROWN, com.cavmkii.seancraft.client.parts.ThrownWeaponRenderer::new);
         ClientRpg.init();
         ClientTarkov.init();
         com.cavmkii.seancraft.client.food.ClientFood.init();
@@ -62,9 +68,34 @@ public final class SeanCraftClient implements ClientModInitializer {
                 if (trait != null && trait != com.cavmkii.seancraft.parts.MaterialTraits.Trait.BALANCED) {
                     lines.add(3, Component.literal(trait.label + ": " + trait.effect).withStyle(ChatFormatting.LIGHT_PURPLE));
                 }
+                String inf = com.cavmkii.seancraft.parts.Parts.infusion(stack);
+                if (inf != null && part.def.kind() == com.cavmkii.seancraft.parts.PartKind.CRYSTAL) {
+                    lines.add(Math.min(lines.size(), 3), Component.literal("Element: " + inf).withStyle(ChatFormatting.AQUA));
+                } else if (inf != null) {
+                    lines.add(Math.min(lines.size(), 3), Component.literal(Character.toUpperCase(inf.charAt(0)) + inf.substring(1)
+                            + " infusion: shifts 25% of a weapon's scaling to " + (inf.equals("heavy") ? "STR" : inf.equals("keen") ? "AGI" : "INT"))
+                            .withStyle(ChatFormatting.AQUA));
+                }
             } else if (com.cavmkii.seancraft.parts.Parts.modular(stack)) {
                 com.cavmkii.seancraft.parts.Family family = com.cavmkii.seancraft.parts.Family.stock(stack).family();
                 int line = 1;
+                if (com.cavmkii.seancraft.parts.Wear.isWorn(stack)) {
+                    lines.add(line++, Component.literal("Worn out: half as effective until repaired at the Weapon Bench").withStyle(ChatFormatting.RED));
+                }
+                // Requirement (9.4.2) and scaling (6.3.1, 9.4.3), red when you're under it.
+                var need = com.cavmkii.seancraft.rpg.Scaling.requirement(stack);
+                if (!family.armor()) {
+                    StringBuilder sc = new StringBuilder("Scaling:");
+                    com.cavmkii.seancraft.rpg.Scaling.weights(stack).forEach((a, w) -> sc.append(' ').append(Math.round(w * 100)).append("% ").append(a.name()));
+                    lines.add(line++, Component.literal(sc.toString()).withStyle(ChatFormatting.GRAY));
+                }
+                if (!need.isEmpty()) {
+                    boolean ok = com.cavmkii.seancraft.rpg.Scaling.meets(stack, com.cavmkii.seancraft.client.rpg.ClientRpg.stats);
+                    StringBuilder rq = new StringBuilder("Requires");
+                    need.forEach((a, v) -> rq.append(' ').append(v).append(' ').append(a.name()));
+                    lines.add(line++, Component.literal(rq + (ok ? "" : " (x0.7 damage, +30% stamina)"))
+                            .withStyle(ok ? ChatFormatting.GRAY : ChatFormatting.RED));
+                }
                 for (var e : com.cavmkii.seancraft.parts.Parts.installed(stack).entrySet()) {
                     com.cavmkii.seancraft.parts.MaterialTraits.Trait trait = com.cavmkii.seancraft.parts.MaterialTraits.of(e.getValue().part());
                     Component row = Component.literal(family.slotName(e.getKey()) + ": " + e.getValue().part().label() + " L" + e.getValue().level())

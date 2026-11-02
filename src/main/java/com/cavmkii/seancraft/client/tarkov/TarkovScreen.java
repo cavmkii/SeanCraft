@@ -491,6 +491,18 @@ public class TarkovScreen extends Screen {
         for (int i = 0; i < 9; i++) {
             slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)), null);
         }
+        // Load and roll under the hotbar, so packing shows what it does to the dodge (C.4, 9.4.7).
+        com.cavmkii.seancraft.combat.Load.State load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
+        com.cavmkii.seancraft.combat.Load.Tier tier = load.tier();
+        String loadText = String.format("LOAD %d%%   %s   %s", Math.round(load.fraction() * 100), tier.label,
+                tier.rollTicks == 0 ? "NO ROLL" : String.format("ROLL %.1f S", tier.rollTicks / 20f));
+        g.pose().pushPose();
+        g.pose().translate(0, 211, 0);
+        g.pose().scale(0.75f, 0.75f, 1);
+        g.drawString(font, loadText, 0, 0, tier == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT
+                : tier == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.ASH, false);
+        g.pose().popPose();
+        Kit.bar(g, "load", 9 * C - 40, 210, 40, (float) Math.min(1, load.fraction()));
 
         for (Box b : boxes()) {
             // Every grid is labelled with what it is and its size (C.4).

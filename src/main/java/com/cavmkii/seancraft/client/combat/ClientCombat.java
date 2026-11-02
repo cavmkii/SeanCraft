@@ -26,11 +26,21 @@ public final class ClientCombat {
     }
 
     /** Rolls need the stamina for one, and can't start during a swing: you commit to an attack (9.6.3). */
+    /** The local player's equip load, worked out the same way the server does. */
+    public static com.cavmkii.seancraft.combat.Load.State load() {
+        return com.cavmkii.seancraft.combat.Load.of(Minecraft.getInstance().player, ClientRpg.stats.str());
+    }
+
+    /** Overloaded players can't sprint (9.4.7). */
+    public static boolean overloaded() {
+        return Minecraft.getInstance().player != null && !creative() && load().tier() == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED;
+    }
+
     public static boolean canRoll() {
         if (creative()) {
             return true;
         }
-        if (exhausted() || ClientRpg.stamina < Combat.ROLL_COST) {
+        if (exhausted() || ClientRpg.stamina < Combat.ROLL_COST || load().tier() == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED) {
             return false;
         }
         return !((MinecraftClient_BetterCombat) Minecraft.getInstance()).isWeaponSwingInProgress();

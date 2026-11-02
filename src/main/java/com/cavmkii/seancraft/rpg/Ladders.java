@@ -48,6 +48,11 @@ public final class Ladders {
         rung("spear", 0, 2, 0);
         rung("crossbow", 0, 2, 0);
         rung("pike", 0, 3, 0);
+        rung("throwing_knife", 0, 2, 0);
+        rung("javelin", 0, 3, 0);
+        rung("boomerang", 0, 3, 0);
+        rung("wand", 0, 0, 1);
+        rung("staff", 0, 0, 2);
     }
 
     private static void rung(String key, int str, int agi, int intl) {
@@ -101,6 +106,15 @@ public final class Ladders {
         return RUNGS.containsKey(key) ? key : null;
     }
 
+    /** The highest rung a weapon sits on, on any line (1 if it's off the ladders). */
+    public static int rungOf(String key) {
+        int[] r = RUNGS.get(key);
+        if (r == null) {
+            return 1;
+        }
+        return Math.max(r[0], Math.max(r[1], r[2]));
+    }
+
     public static String label(String key) {
         return Character.toUpperCase(key.charAt(0)) + key.substring(1);
     }
@@ -139,10 +153,6 @@ public final class Ladders {
             return false;
         }
         if (d.ladder.containsKey("u:" + key)) {
-            return true;
-        }
-        if (d.origin.attr == Attr.INT && key.equals("club")) {
-            // Wands aren't in yet; until they are, an Arcanist can make the club.
             return true;
         }
         for (int l = 0; l < LINES.length; l++) {

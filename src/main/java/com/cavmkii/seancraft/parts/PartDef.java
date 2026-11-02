@@ -18,6 +18,9 @@ public record PartDef(String id, PartKind kind, int tier) {
     public static final String[] WOOD_LABELS = {"Plank", "Log", "Bone", "Blaze rod", "Breeze rod"};
     public static final String[] HIDES = {"string", "leather", "rabbit", "membrane", "scute"};
     public static final String[] HIDE_LABELS = {"String", "Leather", "Rabbit hide", "Membrane", "Scute"};
+    /** Crystals, weakest to strongest; their factor runs 0.85 to 1.35 like the metals (4.4.1). */
+    public static final String[] GEMS = {"quartz", "lapis", "amethyst", "prismarine", "echo"};
+    public static final String[] GEM_LABELS = {"Quartz", "Lapis", "Amethyst", "Prismarine", "Echo"};
 
     public static final List<PartDef> ALL = new ArrayList<>();
 
@@ -28,6 +31,7 @@ public record PartDef(String id, PartKind kind, int tier) {
                     case METAL -> METALS[t - 1];
                     case WOOD -> WOODS[t - 1];
                     case HIDE -> HIDES[t - 1];
+                    case GEM -> GEMS[t - 1];
                 };
                 ALL.add(new PartDef(kind.name().toLowerCase() + "_" + material, kind, t));
             }
@@ -57,6 +61,7 @@ public record PartDef(String id, PartKind kind, int tier) {
             case METAL -> METAL_LABELS[tier - 1];
             case WOOD -> WOOD_LABELS[tier - 1];
             case HIDE -> HIDE_LABELS[tier - 1];
+            case GEM -> GEM_LABELS[tier - 1];
         };
     }
 
@@ -70,6 +75,7 @@ public record PartDef(String id, PartKind kind, int tier) {
             case METAL -> new Item[] {Items.COPPER_INGOT, Items.IRON_INGOT, Items.GOLD_INGOT, Items.DIAMOND, Items.NETHERITE_SCRAP}[tier - 1];
             case WOOD -> new Item[] {Items.OAK_PLANKS, Items.OAK_LOG, Items.BONE, Items.BLAZE_ROD, Items.BREEZE_ROD}[tier - 1];
             case HIDE -> new Item[] {Items.STRING, Items.LEATHER, Items.RABBIT_HIDE, Items.PHANTOM_MEMBRANE, Items.ARMADILLO_SCUTE}[tier - 1];
+            case GEM -> new Item[] {Items.QUARTZ, Items.LAPIS_LAZULI, Items.AMETHYST_SHARD, Items.PRISMARINE_SHARD, Items.ECHO_SHARD}[tier - 1];
         };
     }
 
@@ -91,7 +97,7 @@ public record PartDef(String id, PartKind kind, int tier) {
         Cost main = switch (kind.material) {
             case METAL -> Cost.of(material(), n);
             case WOOD -> tier == 1 ? Cost.planks(n) : tier == 2 ? Cost.logs(n) : Cost.of(material(), n);
-            case HIDE -> Cost.of(material(), n);
+            case HIDE, GEM -> Cost.of(material(), n);
         };
         return kind == PartKind.GUARD ? List.of(main, Cost.of(Items.STICK, 1)) : List.of(main);
     }
@@ -107,12 +113,13 @@ public record PartDef(String id, PartKind kind, int tier) {
 
     // Stats (fractions), by kind.
     public float damage(int level) {
-        return kind.slot == PartSlot.HEAD ? at(0.06f * tier, 0.025f, level) : 0;
+        // Each level above 1 adds 6% (9.5.1, step 1).
+        return kind.slot == PartSlot.HEAD ? at(0.06f * tier, 0.06f, level) : 0;
     }
 
     public float durability(int level) {
         return switch (kind) {
-            case BLADE, LONG_BLADE, KNIFE_BLADE, AXE_HEAD, MACE_HEAD, SPEARHEAD, HALBERD_HEAD, LIMBS, PLATE -> at(0.05f * tier, 0.05f, level);
+            case BLADE, LONG_BLADE, KNIFE_BLADE, AXE_HEAD, MACE_HEAD, SPEARHEAD, HALBERD_HEAD, LIMBS, PLATE, CRYSTAL, FOCUS -> at(0.05f * tier, 0.05f, level);
             case HANDLE, HAFT, PADDING -> at(0.04f * tier, 0.04f, level);
             default -> 0;
         };

@@ -33,6 +33,34 @@ public abstract class LivingEntityMixin {
         return Damage.apply(self, source, RpgDamage.modify(self, source, amount));
     }
 
+    /** Fire Resistance no longer makes players immune to fire and lava; it gives resistance points instead (9.7.2). */
+    @Redirect(method = "hurt", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z"))
+    private boolean seancraft$noFireImmunity(LivingEntity self, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect) {
+        if (self instanceof Player && effect.equals(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) {
+            return false;
+        }
+        return self.hasEffect(effect);
+    }
+
+    /** Resistance becomes armor on every part for players (9.7.2), not vanilla's flat 20% a level. */
+    @Redirect(method = "getDamageAfterMagicAbsorb", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z"))
+    private boolean seancraft$resistanceAsArmor(LivingEntity self, net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect) {
+        if (self instanceof Player && effect.equals(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE)) {
+            return false;
+        }
+        return self.hasEffect(effect);
+    }
+
+    /** Players' shields are handled by SeanCraft (combat/Blocking), so vanilla's full block never happens for them. */
+    @Inject(method = "isDamageSourceBlocked", at = @At("HEAD"), cancellable = true)
+    private void seancraft$ownBlocking(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
+        if ((Object) this instanceof net.minecraft.server.level.ServerPlayer) {
+            cir.setReturnValue(false);
+        }
+    }
+
     /** Rabbit-hide wraps and padding (the Quiet trait, 4.4.1): a sneaking player is harder for mobs to spot. */
     @Inject(method = "getVisibilityPercent", at = @At("RETURN"), cancellable = true)
     private void seancraft$quiet(net.minecraft.world.entity.Entity looker, CallbackInfoReturnable<Double> cir) {

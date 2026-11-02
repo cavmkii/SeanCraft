@@ -21,6 +21,29 @@ public class SkillProjectile extends ThrowableItemProjectile {
     private float damage;
     private float radius;
     private boolean fire;
+    /** A wand or staff bolt's element (9.4.5), or null for an ability's own damage. */
+    private com.cavmkii.seancraft.combat.Damage.Type element;
+
+    /** A magic bolt: one element, damage on the 9.5 scale already divided down. */
+    public static SkillProjectile bolt(Level level, LivingEntity owner, ItemStack look, float damage, float radius,
+            com.cavmkii.seancraft.combat.Damage.Type element) {
+        SkillProjectile p = new SkillProjectile(level, owner, look, damage, radius, element == com.cavmkii.seancraft.combat.Damage.Type.FIRE);
+        p.element = element;
+        return p;
+    }
+
+    private void hit(ServerPlayer owner, LivingEntity target) {
+        if (element == null) {
+            SkillEffects.damage(owner, target, damage);
+            return;
+        }
+        com.cavmkii.seancraft.combat.Damage.forced(java.util.Map.of(element, 1f));
+        try {
+            SkillEffects.damage(owner, target, damage);
+        } finally {
+            com.cavmkii.seancraft.combat.Damage.forced(null);
+        }
+    }
 
     public SkillProjectile(EntityType<? extends SkillProjectile> type, Level level) {
         super(type, level);
@@ -56,7 +79,7 @@ public class SkillProjectile extends ThrowableItemProjectile {
     @Override
     protected void onHitEntity(EntityHitResult result) {
         if (radius <= 0 && getOwner() instanceof ServerPlayer owner && result.getEntity() instanceof LivingEntity target) {
-            SkillEffects.damage(owner, target, damage);
+            hit(owner, target);
         }
     }
 
@@ -68,7 +91,7 @@ public class SkillProjectile extends ThrowableItemProjectile {
         }
         if (radius > 0 && getOwner() instanceof ServerPlayer owner) {
             for (LivingEntity e : SkillEffects.enemiesAround(owner, result.getLocation(), radius)) {
-                SkillEffects.damage(owner, e, damage);
+                hit(owner, e);
                 if (fire) {
                     e.igniteForSeconds(4);
                 }

@@ -21,10 +21,21 @@ public enum Family {
     BOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     CROSSBOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     SHIELD(List.of(PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), null),
+    /** The Blademaster's buckler (9.4.6): light, 60% block, a wider parry window. */
+    BUCKLER(List.of(PartSlot.HANDLE, PartSlot.GUARD), null),
+    /** The Knight's tower shield: heavy, blocks everything frontal including arrows, no parry. */
+    TOWER_SHIELD(List.of(PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), null),
     HELMET(List.of(PartSlot.PLATE, PartSlot.PADDING, PartSlot.WRAP), null),
     CHEST(List.of(PartSlot.PLATE, PartSlot.PADDING, PartSlot.WRAP), null),
     LEGS(List.of(PartSlot.PLATE, PartSlot.PADDING, PartSlot.WRAP), null),
-    BOOTS(List.of(PartSlot.PLATE, PartSlot.PADDING, PartSlot.WRAP), null);
+    BOOTS(List.of(PartSlot.PLATE, PartSlot.PADDING, PartSlot.WRAP), null),
+    /** Throwables (9.4): thrown with the use key, held like the trident. */
+    THROWING_KNIFE(List.of(PartSlot.HEAD, PartSlot.WRAP), PartKind.KNIFE_BLADE),
+    JAVELIN(List.of(PartSlot.HEAD, PartSlot.HANDLE), PartKind.SPEARHEAD),
+    BOOMERANG(List.of(PartSlot.HANDLE, PartSlot.WRAP), null),
+    /** Magic (9.4.5): crystal, focus and a grip; attacks fire bolts that cost mana. */
+    WAND(List.of(PartSlot.HEAD, PartSlot.GUARD, PartSlot.HANDLE), PartKind.CRYSTAL),
+    STAFF(List.of(PartSlot.HEAD, PartSlot.GUARD, PartSlot.HANDLE), PartKind.CRYSTAL, PartKind.HAFT);
 
     public final List<PartSlot> slots;
     public final PartKind head;
@@ -41,6 +52,23 @@ public enum Family {
         this.grip = grip;
     }
 
+    public boolean magic() {
+        return this == WAND || this == STAFF;
+    }
+
+    public boolean throwable() {
+        return this == SPEAR || this == THROWING_KNIFE || this == JAVELIN || this == BOOMERANG;
+    }
+
+    public boolean shield() {
+        return this == SHIELD || this == BUCKLER || this == TOWER_SHIELD;
+    }
+
+    /** For items registered elsewhere (the new shields): their family and standard tiers. */
+    static void stock(Item item, Stock stock) {
+        STOCK.put(item, stock);
+    }
+
     public boolean armor() {
         return this == HELMET || this == CHEST || this == LEGS || this == BOOTS;
     }
@@ -52,6 +80,7 @@ public enum Family {
         return switch (part.kind().slot) {
             case HEAD -> part.kind() == head;
             case HANDLE -> part.kind() == grip;
+            case GUARD -> part.kind() == (magic() ? PartKind.FOCUS : PartKind.GUARD);
             default -> true;
         };
     }
@@ -60,11 +89,11 @@ public enum Family {
         return switch (slot) {
             case HEAD -> head == null ? "Head" : head.label;
             case HANDLE -> grip == PartKind.HAFT ? (this == GREATSWORD ? "Long grip" : "Haft")
-                    : this == AXE ? "Haft" : this == CROSSBOW ? "Stock" : this == SHIELD ? "Handle" : "Grip";
-            case GUARD -> this == SHIELD ? "Rim" : "Guard";
+                    : this == AXE ? "Haft" : this == CROSSBOW ? "Stock" : shield() ? "Handle" : this == BOOMERANG ? "Arms" : "Grip";
+            case GUARD -> shield() ? "Rim" : magic() ? "Focus" : "Guard";
             case PLATE -> this == HELMET ? "Shell" : this == LEGS ? "Greaves" : "Plates";
             case PADDING -> this == HELMET ? "Liner" : "Padding";
-            case WRAP -> this == BOW || this == CROSSBOW ? "String" : this == SHIELD || armor() ? "Straps" : "Wrap";
+            case WRAP -> this == BOW || this == CROSSBOW ? "String" : shield() || armor() ? "Straps" : "Wrap";
         };
     }
 
@@ -75,7 +104,7 @@ public enum Family {
             for (PartSlot slot : family.slots) {
                 PartDef def = switch (slot) {
                     case HEAD -> PartDef.of(family.head, metal);
-                    case GUARD -> PartDef.of(PartKind.GUARD, metal);
+                    case GUARD -> PartDef.of(family.magic() ? PartKind.FOCUS : PartKind.GUARD, metal);
                     case PLATE -> PartDef.of(PartKind.PLATE, metal);
                     case HANDLE -> PartDef.of(family.grip, wood);
                     case PADDING -> PartDef.of(PartKind.PADDING, hide);

@@ -368,7 +368,8 @@ public final class SkillEffects {
         }
         RpgDamage.applyingSkill = true;
         try {
-            target.hurt(player.damageSources().indirectMagic(player, player), amount);
+            // A held wand or staff's crystal is the base for spells (9.4.5).
+            target.hurt(player.damageSources().indirectMagic(player, player), amount * Magic.spellPower(player));
         } finally {
             RpgDamage.applyingSkill = false;
         }

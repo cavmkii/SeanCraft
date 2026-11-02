@@ -76,6 +76,15 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Stamina refills at 25 a second, but only after a second without spending any. Keep swinging and it never refills.
 - **Running dry.** A swing you start with too little stamina does half damage. At 0 you can't sprint or roll until the bar is back to 25.
 - **Rolling.** For the first 0.4 seconds of a roll, attacks (hits, arrows, explosions) can't touch you. Falls, fire, lava, bleeding and poison still can. You can't roll in the middle of a swing, and there's a 0.75 second wait between rolls. Rolls don't use hunger.
+- **Equip load.** Your held weapons, shield and worn armor have a weight (light weapons 3, medium 5, heavy 9; armor weighs its armor points; netherite is 20% heavier, phantom membrane 15% lighter). Capacity is 40 plus your Strength. It shows under the hotbar on the GEAR tab.
+  - Under 30%: no penalty. 30 to 70%: walk 5% slower. 70 to 100%: walk 15% slower and the roll only protects for 0.2 seconds. Over 100%: no rolling, no sprinting.
+- **Heavy attacks.** Attack while sneaking. Twice the stamina, 75% more damage, twice the stagger. Swords and daggers lunge, maces and warhammers slam the ground and stagger everything close, axes and halberds spin, spears and pikes sweep the front. A staff fires a charged orb that bursts.
+- **Poise.** Blunt hits build up on whatever they hit. A mob staggers after blunt damage worth 30% of its health, a player after 60. It drains after 3 seconds without a blunt hit.
+- **Shields.** SeanCraft does its own blocking: a shield takes a share of a hit from the front and the rest gets through. Rim material sets it: copper 80%, iron 84%, gold 88%, diamond 92%, netherite 95%, plus 0.2% per Strength point over 10. Blocking costs half the blocked damage in stamina; a block that empties the bar breaks your guard (shield down for 3 seconds, staggered for 1).
+  - **Parry:** raise the shield within 0.2 seconds of a hit (0.35 with a buckler). No damage, no stamina, the attacker staggers, and the Blademaster's riposte opens.
+  - **Buckler** (Blademaster only): 60%, light. **Tower shield** (Knight only): blocks everything in front including arrows, can't parry, slows you 30% while raised, heavy.
+- **Throwing.** Spears, throwing knives, javelins and boomerangs: hold use to wind up, let go to throw. Thrown at iron: knife 22, javelin 35, spear 32, boomerang 20. They stay where they land for 5 minutes, glowing. The boomerang comes back.
+- **Wands and staves.** Attacking fires a bolt: 18 damage for 4 mana from a wand, 35 for 8 from a staff, times the crystal's factor. The crystal's catalyst sets the element. Holding one also makes your INT skills stronger by the same factor. The Arcanist now starts with a quartz wand.
 - **Swords** made at the Weapon Bench swing three times in a combo: two side slashes and a harder third slash.
 - **Damage types.** Every hit is split into types:
   - physical: slash, pierce, blunt;
@@ -91,6 +100,9 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Armor doesn't stop elemental damage. Each level of Fire, Blast or Projectile Protection gives 4 resistance points against its kind, through the same formula.
   - Monsters' armor uses the same formula.
 - **Fire arrows.** Made at the Hideout Bench: 4 arrows, a coal or charcoal and a string make 4. They hit with pierce plus some fire, and set what they hit alight. Bows with Flame add a smaller fire share.
+- **Other arrows** (Hideout Bench, 4 at a time): broadhead (4 iron nuggets and a flint) makes bleeds half again as bad but gets through 10% less armor; bodkin (an iron ingot, needs Workshop 1) ignores another 25% of armor; blunt (planks and leather) does blunt damage, so it breaks bones and staggers instead of bleeding.
+- **Potions.** One of each type every 5 minutes (long and strong versions count as the same type). Fire Resistance gives 20 fire resistance points instead of making you immune to fire and lava. Resistance adds 10 armor a level to every body part. Strength is 30% more damage a level instead of a flat bonus.
+- **The vanilla Mace.** Its smash bonus is capped at 50% and does nothing in a boss arena.
 
 ### Food and rest
 
@@ -208,13 +220,21 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - The old "gold does more to undead, netherite sets things on fire" part bonuses are gone; the trait is the bonus now.
 - **Recipe ladders.** You can use any weapon you find, but you can only make the ones you've unlocked. Each attribute has a ladder:
   - STR: wooden club → mace, axe, sword → warhammer, greatsword, halberd.
-  - AGI: bow, dagger → sword, spear, crossbow → pike.
-  - INT: wands and staves, once they're in. Until then an Arcanist can make the club.
+  - AGI: bow, dagger → sword, spear, crossbow, throwing knife → javelin, boomerang, pike.
+  - INT: wand → staff.
   - You start knowing the first rung of your origin's ladder. 5,000 damage to monsters with rung 1 weapons opens rung 2, and 25,000 with rung 2 weapons opens rung 3. Swords are on both ladders.
   - Crossing over: do 1,000 damage with a found weapon from another ladder and you unlock that weapon, plus the first rung of its ladder, which you can then climb too.
   - Locked weapons are greyed out at the bench, and hovering one shows your progress. Heads that only locked weapons use can't be made. The wooden club recipe is locked the same way.
-  - Shields and armor aren't on a ladder.
-- Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it.
+  - Shields and armor aren't on a ladder. The buckler is Blademaster only and the tower shield Knight only.
+  - Throwing knife is AGI rung 2; javelin and boomerang AGI rung 3; wand INT rung 1, staff INT rung 2.
+- Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it. Each level adds 6% to the head's damage.
+- **Requirements.** Rung 2 weapons want 15 in their scaling attribute and rung 3 want 30 (half of each for split weapons like the sword). Under that, they do 30% less damage and cost 30% more stamina. The tooltip shows it, red when you're short.
+- **Infusions.** On the PARTS tab's second page, pick an infusion before making wraps: Heavy (+2 iron nuggets) moves 25% of the weapon's scaling to STR, Keen (+1 flint) to AGI, Arcane (+1 lapis) to INT. A Keen sword scales 25% STR / 75% AGI.
+- **Magic parts.** The third page has crystals (quartz, lapis, amethyst, prismarine, echo) and foci. Pick the catalyst first: blaze powder for fire, packed ice for frost, a lightning rod for lightning, a fermented spider eye for poison, a golden carrot for spirit.
+- **Wear.** Part-built gear never breaks. At zero durability it works at half strength (half damage, half armor, half block) until you repair it: put it in the bench and hit REPAIR, 1 of its striking part's material per 25% (shift-click for all the way).
+- **Recovery.** When part-built gear is lost on a raid or boss death, its striking part (or the armor plates) comes back at level 1 in a Recovery crate in the hideout you respawn at. The crate appears beside the Hideout Bench; use it to take your parts.
+- Vanilla swords, axes, bows, crossbows and shields you pick up turn into part-built items with their standard parts.
+- Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bucklers, tower shields, throwing knives, javelins, boomerangs, wands and staves are drawn from the parts actually in them, so a swapped blade shows.
 
 ### Character
 
@@ -353,6 +373,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). Vanilla's own screens (pause menu, Mod Menu, other mods' configs) still look stock.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
 
 A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.

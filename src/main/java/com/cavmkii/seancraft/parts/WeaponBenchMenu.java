@@ -51,7 +51,14 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             // Limbs across the top, stock down the middle, string between the limb tips.
             case CROSSBOW -> new int[][] {{109, 22}, {109, 78}, {109, 46}};
             // Handle in the middle, rim at the top edge, straps below.
-            case SHIELD -> new int[][] {{109, 58}, {109, 24}, {109, 88}};
+            case SHIELD, TOWER_SHIELD -> new int[][] {{109, 58}, {109, 24}, {109, 88}};
+            case BUCKLER -> new int[][] {{109, 58}, {109, 30}};
+            case THROWING_KNIFE -> new int[][] {{109, 34}, {109, 76}};
+            case JAVELIN -> new int[][] {{109, 20}, {109, 70}};
+            case BOOMERANG -> new int[][] {{96, 50}, {124, 64}};
+            // Crystal on top, held by the focus, grip below.
+            case WAND -> new int[][] {{109, 26}, {109, 46}, {109, 80}};
+            case STAFF -> new int[][] {{109, 18}, {109, 38}, {109, 82}};
             case HELMET -> new int[][] {{109, 30}, {109, 54}, {109, 92}};
             case CHEST -> new int[][] {{109, 34}, {109, 60}, {109, 88}};
             // Greaves down one leg, padding down the other, straps at the waist.
@@ -73,7 +80,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
 
     /** What the bench can build from scratch: every part-built family (4.4). */
     public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.DAGGER, Family.MACE, Family.WARHAMMER,
-            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.CROSSBOW, Family.SHIELD,
+            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.CROSSBOW, Family.SHIELD, Family.BUCKLER, Family.TOWER_SHIELD, Family.THROWING_KNIFE, Family.JAVELIN, Family.BOOMERANG, Family.WAND, Family.STAFF,
             Family.HELMET, Family.CHEST, Family.LEGS, Family.BOOTS};
     public static final int ASSEMBLE_BUTTON = 200;
     public static final int PICK_BUTTON = 100;
@@ -126,6 +133,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         parts.addListener(c -> saveParts());
         building.set(-1);
         addDataSlot(building);
+        addDataSlot(infusion);
+        addDataSlot(catalyst);
         for (net.minecraft.world.inventory.DataSlot d : affordable) {
             addDataSlot(d);
         }
@@ -197,6 +206,61 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     }
 
     public static final int MAKE_BUTTON = 300;
+    /** Cycles the infusion for wraps made on the PARTS tab (9.4.3). */
+    public static final int INFUSE_BUTTON = 500;
+    /** Repairs the item in the slot by 25% (9.4.8); REPAIR_ALL repeats while you can pay. */
+    public static final int REPAIR_BUTTON = 501;
+    public static final int REPAIR_ALL_BUTTON = 502;
+    public static final String[] INFUSIONS = {null, "heavy", "keen", "arcane"};
+    public static final String[] INFUSION_LABELS = {"Plain", "Heavy", "Keen", "Arcane"};
+    private final net.minecraft.world.inventory.DataSlot infusion = net.minecraft.world.inventory.DataSlot.standalone();
+    /** The element for crystals made here (9.4.5); CATALYST_BUTTON cycles it. */
+    private final net.minecraft.world.inventory.DataSlot catalyst = net.minecraft.world.inventory.DataSlot.standalone();
+    public static final int CATALYST_BUTTON = 503;
+
+    public int catalystIndex() {
+        return Math.floorMod(catalyst.get(), com.cavmkii.seancraft.rpg.Magic.ELEMENTS.length);
+    }
+
+    /** Blaze powder for fire, packed ice for frost, a lightning rod, a fermented spider eye for poison, a golden carrot for spirit. */
+    public static List<Cost> catalystCost(int index) {
+        net.minecraft.world.item.Item item = switch (index) {
+            case 1 -> net.minecraft.world.item.Items.PACKED_ICE;
+            case 2 -> net.minecraft.world.item.Items.LIGHTNING_ROD;
+            case 3 -> net.minecraft.world.item.Items.FERMENTED_SPIDER_EYE;
+            case 4 -> net.minecraft.world.item.Items.GOLDEN_CARROT;
+            default -> net.minecraft.world.item.Items.BLAZE_POWDER;
+        };
+        return List.of(Cost.of(item, 1));
+    }
+
+    public int infusionIndex() {
+        return Math.floorMod(infusion.get(), INFUSIONS.length);
+    }
+
+    /** What an infused wrap costs on top of its material: iron nuggets for Heavy, flint for Keen, lapis for Arcane. */
+    public static List<Cost> infusionCost(int index) {
+        return switch (index) {
+            case 1 -> List.of(Cost.of(net.minecraft.world.item.Items.IRON_NUGGET, 2));
+            case 2 -> List.of(Cost.of(net.minecraft.world.item.Items.FLINT, 1));
+            case 3 -> List.of(Cost.of(net.minecraft.world.item.Items.LAPIS_LAZULI, 1));
+            default -> List.of();
+        };
+    }
+
+    private List<Cost> costsFor(PartDef def) {
+        if (def.kind() == PartKind.CRYSTAL) {
+            List<Cost> all = new java.util.ArrayList<>(def.costs());
+            all.addAll(catalystCost(catalystIndex()));
+            return all;
+        }
+        if (def.kind() != PartKind.WRAP || infusionIndex() == 0) {
+            return def.costs();
+        }
+        List<Cost> all = new java.util.ArrayList<>(def.costs());
+        all.addAll(infusionCost(infusionIndex()));
+        return all;
+    }
     public static final int MAKE_FIVE_BUTTON = 400;
 
     /** Server: refresh which parts can be made, twice a second. */
@@ -214,6 +278,13 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
 
     /** Why a family can't be built from scratch yet, or null. */
     public String lockReason(Family family) {
+        // Specialization-only families (4.7): the buckler is the Blademaster's, the tower shield the Knight's.
+        if (viewer != null && family == Family.BUCKLER && viewer.spec != com.cavmkii.seancraft.rpg.Specialization.BLADEMASTER) {
+            return "Blademaster only";
+        }
+        if (viewer != null && family == Family.TOWER_SHIELD && viewer.spec != com.cavmkii.seancraft.rpg.Specialization.KNIGHT) {
+            return "Knight only";
+        }
         return viewer == null ? null : com.cavmkii.seancraft.rpg.Ladders.lockReason(viewer, com.cavmkii.seancraft.rpg.Ladders.key(family));
     }
 
@@ -237,7 +308,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Hideouts.Hideout hideout = Hideouts.at(owner.serverLevel(), owner.position());
         int[] bits = new int[affordable.length];
         for (int i = 0; i < PartDef.ALL.size(); i++) {
-            if (!headLocked(PartDef.ALL.get(i)) && Stash.canAfford(owner, hideout, PartDef.ALL.get(i).costs())) {
+            if (!headLocked(PartDef.ALL.get(i)) && Stash.canAfford(owner, hideout, costsFor(PartDef.ALL.get(i)))) {
                 bits[i / 16] |= 1 << (i % 16);
             }
         }
@@ -259,9 +330,17 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         }
         Hideouts.Hideout hideout = Hideouts.at(player.serverLevel(), player.position());
         int made = 0;
-        for (int t = 0; t < times && Stash.canAfford(player, hideout, def.costs()); t++) {
-            Stash.consume(player, hideout, def.costs());
-            com.cavmkii.seancraft.tetris.Tetris.give(player, new ItemStack(PartItems.get(def)));
+        List<Cost> costs = costsFor(def);
+        for (int t = 0; t < times && Stash.canAfford(player, hideout, costs); t++) {
+            Stash.consume(player, hideout, costs);
+            ItemStack made1 = new ItemStack(PartItems.get(def));
+            if (def.kind() == PartKind.WRAP && infusionIndex() > 0) {
+                made1.set(Parts.INFUSION, INFUSIONS[infusionIndex()]);
+            }
+            if (def.kind() == PartKind.CRYSTAL) {
+                made1.set(Parts.INFUSION, com.cavmkii.seancraft.rpg.Magic.ELEMENTS[catalystIndex()]);
+            }
+            com.cavmkii.seancraft.tetris.Tetris.give(player, made1);
             made++;
         }
         if (made > 0) {
@@ -309,12 +388,15 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
                 // The blade, head or plates pick the item; the other parts can be any material.
                 metal = part.def.tier();
             }
-            map.put(slot, new Parts.Installed(part.def, Parts.level(stack)));
+            map.put(slot, new Parts.Installed(part.def, Parts.level(stack), Parts.infusion(stack)));
         }
         net.minecraft.world.item.Item result = switch (family) {
             case BOW -> net.minecraft.world.item.Items.BOW;
             case CROSSBOW -> net.minecraft.world.item.Items.CROSSBOW;
             case SHIELD -> net.minecraft.world.item.Items.SHIELD;
+            case BUCKLER -> WeaponItems.BUCKLER;
+            case TOWER_SHIELD -> WeaponItems.TOWER_SHIELD;
+            case BOOMERANG -> WeaponItems.BOOMERANG;
             default -> Family.itemFor(family, metal);
         };
         if (result == null) {
@@ -402,7 +484,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             PartSlot slot = slotFor(i);
             ItemStack stack = parts.getItem(i);
             if (slot != null && stack.getItem() instanceof PartItem part) {
-                map.put(slot, new Parts.Installed(part.def, Parts.level(stack)));
+                map.put(slot, new Parts.Installed(part.def, Parts.level(stack), Parts.infusion(stack)));
             }
         }
         Parts.setInstalled(weapon(), map);
@@ -411,6 +493,36 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     /** Button i levels up the part in slot i; PICK_BUTTON + n picks what to build; ASSEMBLE_BUTTON builds it. */
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if ((id == REPAIR_BUTTON || id == REPAIR_ALL_BUTTON) && player instanceof ServerPlayer sp && !weapon().isEmpty()) {
+            ItemStack w = weapon();
+            net.minecraft.world.item.Item mat = Wear.material(w);
+            if (mat == null || Wear.stepsToFull(w) == 0) {
+                return false;
+            }
+            Hideouts.Hideout hideout = Hideouts.at(sp.serverLevel(), sp.position());
+            List<Cost> cost = List.of(Cost.of(mat, 1));
+            int done = 0;
+            while (Wear.stepsToFull(w) > 0 && Stash.canAfford(sp, hideout, cost) && (done == 0 || id == REPAIR_ALL_BUTTON)) {
+                Stash.consume(sp, hideout, cost);
+                Wear.repairStep(w);
+                done++;
+            }
+            if (done > 0) {
+                item.setChanged();
+                sp.level().playSound(null, sp.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE, net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
+            }
+            return done > 0;
+        }
+        if (id == CATALYST_BUTTON) {
+            catalyst.set((catalystIndex() + 1) % com.cavmkii.seancraft.rpg.Magic.ELEMENTS.length);
+            refreshAffordable();
+            return true;
+        }
+        if (id == INFUSE_BUTTON) {
+            infusion.set((infusionIndex() + 1) % INFUSIONS.length);
+            refreshAffordable();
+            return true;
+        }
         if (id >= MAKE_BUTTON && id < MAKE_BUTTON + PartDef.ALL.size() && player instanceof ServerPlayer sp) {
             return makePart(sp, id - MAKE_BUTTON, 1);
         }

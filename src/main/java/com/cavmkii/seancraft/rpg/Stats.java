@@ -88,6 +88,15 @@ public final class Stats {
     }
 
     /** +1% increased damage per point of the scaling attribute; split scaling averages the two (6.3.1). */
+    /** +1% per point of the weapon's scaling attributes, weighted by its (infused) scaling (6.3.1, 9.4.3). */
+    public double scalingPct(net.minecraft.world.item.ItemStack weapon) {
+        double total = 0;
+        for (java.util.Map.Entry<Attr, Double> e : Scaling.weights(weapon).entrySet()) {
+            total += attr(e.getKey()) * e.getValue();
+        }
+        return total;
+    }
+
     public double scalingPct(Attr first, Attr second) {
         return second == null ? attr(first) : (attr(first) + attr(second)) / 2;
     }
