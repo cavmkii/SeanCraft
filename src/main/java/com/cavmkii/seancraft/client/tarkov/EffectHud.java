@@ -156,6 +156,52 @@ final class EffectHud {
         return y - 2;
     }
 
+    private static final String[] PART_SPRITES = {"head", "thorax", "stomach", "arm_left", "arm_right", "leg_left", "leg_right"};
+    static final int FIG_W = 21;
+
+    /** True if the figure fits between the raid panel and the hotbar. */
+    static boolean figureBeside(GuiGraphics g, int x) {
+        return limit(g) - FIG_W - 2 >= x + 152;
+    }
+    static final int FIG_H = 36;
+
+    /**
+     * Limb status (5.1): the STATUS tab's body at three-quarter size, each part tinted by its health (moss, ember, blood,
+     * dark when destroyed). A bleeding part flashes red.
+     */
+    static void body(GuiGraphics g, Minecraft mc, int x, int y) {
+        var body = ClientTarkov.body;
+        if (body == null || body.body() == null) {
+            return;
+        }
+        Kit.hudPanel(g, x - 3, y - 3, FIG_W + 6, FIG_H + 6);
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(0.75f, 0.75f, 1);
+        Kit.blit(g, "status/body_base", 0, 0, 28, 48);
+        boolean flash = mc.player.tickCount / 8 % 2 == 0;
+        for (int i = 0; i < PART_SPRITES.length && i < body.body().length; i++) {
+            float frac = body.body()[i];
+            int c = body.conditions()[i];
+            boolean bleeding = (c & com.cavmkii.seancraft.tarkov.Body.HEAVY_BLEED) != 0 || (c & com.cavmkii.seancraft.tarkov.Body.LIGHT_BLEED) != 0;
+            int color = frac <= 0.0001f ? 0xFF2A2522 : bleeding && flash ? 0xFFFF3020 : frac > 0.66f ? Kit.MOSS : frac > 0.33f ? Kit.EMBER : Kit.BLOOD_LIGHT;
+            g.setColor((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f, 1f);
+            Kit.blit(g, "status/part_" + PART_SPRITES[i], 0, 0, 28, 48);
+        }
+        g.setColor(1, 1, 1, 1);
+        g.pose().popPose();
+        // A fracture shows as a small white bar across the part's side of the figure.
+        for (int i = 0; i < body.body().length && i < PART_SPRITES.length; i++) {
+            if ((body.conditions()[i] & com.cavmkii.seancraft.tarkov.Body.FRACTURE) != 0) {
+                int[] at = FRACTURE_MARK[i];
+                g.fill(x + at[0], y + at[1], x + at[0] + 3, y + at[1] + 1, Kit.BONE);
+            }
+        }
+    }
+
+    /** Where to draw a fracture mark on the 21x36 figure, per part. */
+    private static final int[][] FRACTURE_MARK = {{9, 3}, {9, 11}, {9, 17}, {2, 13}, {16, 13}, {6, 28}, {12, 28}};
+
     private record Chip(TextureAtlasSprite sprite, ItemStack item, int ticks, boolean bad) {}
 
     private static List<Chip> chips(Minecraft mc) {
@@ -180,22 +226,57 @@ final class EffectHud {
         return s >= 60 ? s / 60 + ":" + String.format("%02d", s % 60) : s + "s";
     }
 
+    /** Right edge the left-hand HUD stays inside: a little short of the hotbar and the health bar above it. */
+    static int limit(GuiGraphics g) {
+        return g.guiWidth() / 2 - 91 - 4;
+    }
+
+    /** Re-flows the penalty lines (drawn at 0.75 scale) so none runs past {@code width}. */
+    private static List<String> wrap(Minecraft mc, List<String> lines, int width) {
+        List<String> out = new ArrayList<>();
+        for (String line : lines) {
+            StringBuilder cur = new StringBuilder();
+            for (String part : line.split("  ")) {
+                String next = cur.isEmpty() ? part : cur + "  " + part;
+                if (!cur.isEmpty() && mc.font.width(next) * 0.75f > width) {
+                    out.add(cur.toString());
+                    cur = new StringBuilder(part);
+                } else {
+                    cur = new StringBuilder(next);
+                }
+            }
+            if (!cur.isEmpty()) {
+                out.add(cur.toString());
+            }
+        }
+        return out;
+    }
+
+    /** Scale for an injury line so it fits left of the hotbar: 1, or smaller. */
+    private static float fit(Minecraft mc, String text, int width) {
+        int w = mc.font.width(text);
+        return w <= width ? 1f : Math.max(0.5f, width / (float) w);
+    }
+
     /** Draws upward from {@code bottom}; returns the new top. */
     static int render(GuiGraphics g, Minecraft mc, int x, int bottom) {
         int y = bottom;
+        // Leave the body figure its place beside the hotbar (RaidHud puts it there when the screen is wide enough).
+        int room = limit(g) - x - 2 - (figureBeside(g, x) ? FIG_W + 10 : 0);
         List<Wound> injuries = wounds();
-        List<String> penalties = penalties();
+        List<String> penalties = wrap(mc, penalties(), room);
         // Injuries and penalties share one HUD panel (C.5), sized to what's in it.
         if (!injuries.isEmpty() || !penalties.isEmpty()) {
             int pw = 0;
             for (Wound i : injuries) {
-                int cx = 12 + mc.font.width(i.text);
-                boolean cureFits = x + cx + mc.font.width(i.cure) * 0.75f < g.guiWidth() / 2f - 96;
+                int cx = 12 + (int) (mc.font.width(i.text) * fit(mc, i.text, room - 10));
+                boolean cureFits = x + cx + mc.font.width(i.cure) * 0.75f < limit(g);
                 pw = Math.max(pw, cx + (cureFits ? (int) (mc.font.width(i.cure) * 0.75f) : 0));
             }
             for (String p : penalties) {
                 pw = Math.max(pw, (int) (mc.font.width(p) * 0.75f));
             }
+            pw = Math.min(pw, room);
             int ph = injuries.size() * 10 + (penalties.isEmpty() ? 0 : penalties.size() * 8 + 1);
             Kit.hudPanel(g, x - 5, bottom - ph - 4, pw + 10, ph + 6);
         }
@@ -207,10 +288,15 @@ final class EffectHud {
             g.pose().scale(0.5f, 0.5f, 1);
             g.renderItem(i.icon, 0, 0);
             g.pose().popPose();
-            Kit.text(g, mc.font, i.text, x + 10, line, i.color);
+            float k = fit(mc, i.text, room - 10);
+            g.pose().pushPose();
+            g.pose().translate(x + 10, line + (1 - k) * 4, 0);
+            g.pose().scale(k, k, 1);
+            Kit.text(g, mc.font, i.text, 0, 0, i.color);
+            g.pose().popPose();
             // What fixes it, small and grey, if it fits left of the hotbar.
-            int cx = x + 12 + mc.font.width(i.text);
-            if (cx + mc.font.width(i.cure) * 0.75f < g.guiWidth() / 2f - 96) {
+            int cx = x + 12 + (int) (mc.font.width(i.text) * k);
+            if (cx + mc.font.width(i.cure) * 0.75f < limit(g)) {
                 g.pose().pushPose();
                 g.pose().translate(cx, line + 2, 0);
                 g.pose().scale(0.75f, 0.75f, 1);
@@ -242,7 +328,7 @@ final class EffectHud {
             return y;
         }
         // One row of chips, wrapping before it gets in the way.
-        int maxW = Math.min(200, g.guiWidth() / 2 - 100);
+        int maxW = Math.min(200, limit(g) - x - (figureBeside(g, x) ? FIG_W + 10 : 0));
         List<List<Chip>> rows = new ArrayList<>();
         List<Chip> row = new ArrayList<>();
         int w = 0;
