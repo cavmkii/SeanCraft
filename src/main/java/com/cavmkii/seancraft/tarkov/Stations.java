@@ -132,7 +132,7 @@ public final class Stations {
         }
         if (level.getBlockState(pos).getBlock() instanceof ModuleBlock module && pos.equals(h.modules[module.module.ordinal()])) {
             player.closeContainer();
-            Tarkov.openModule(player, h, module.module);
+            Tarkov.useModule(player, h, module.module);
             return;
         }
         String kind = kindOf(level.getBlockState(pos));

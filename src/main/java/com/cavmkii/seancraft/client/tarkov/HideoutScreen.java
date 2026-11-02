@@ -80,8 +80,13 @@ public class HideoutScreen extends Screen {
         // The station's name as a heading (Jacquard 12, C.6).
         Component heading = Kit.heading(StationTabs.label(view.station()));
         Kit.text(g, font, heading, x0, 9, Kit.GOLD_LIGHT);
-        g.drawString(font, view.summary(), x0 + font.width(heading) + 12, 10, Kit.ASH, false);
+        // Cut short of the CRAFT button when there is one.
+        int room = w - font.width(heading) - 12 - (craftModule() != null ? 56 : 0);
+        g.drawString(font, font.plainSubstrByWidth(view.summary(), Math.max(0, room)), x0 + font.width(heading) + 12, 10, Kit.ASH, false);
         StationTabs.render(g, font, x0, 24, w, view.station(), mouseX, mouseY);
+        if (craftModule() != null) {
+            Kit.button(g, font, "CRAFT", x0 + w - 50, 6, 50, 14, true, overCraft(mouseX, mouseY), false);
+        }
 
         List<TarkovNet.Entry> entries = shown();
         int top = listTop();
@@ -183,6 +188,22 @@ public class HideoutScreen extends Screen {
         }
     }
 
+    /** The module this screen is for, if it makes things (its CRAFT button opens its grid; locked recipes say the level). */
+    private com.cavmkii.seancraft.tarkov.Module craftModule() {
+        for (com.cavmkii.seancraft.tarkov.Module m : com.cavmkii.seancraft.tarkov.Module.values()) {
+            if (com.cavmkii.seancraft.tarkov.Stations.moduleKind(m).equals(view.station())
+                    && com.cavmkii.seancraft.tarkov.HideoutCraftMenu.crafts(m)) {
+                return m;
+            }
+        }
+        return null;
+    }
+
+    private boolean overCraft(double mx, double my) {
+        int bx = left() + panelWidth() - 50;
+        return mx >= bx && mx < bx + 50 && my >= 6 && my < 20;
+    }
+
     private static Item item(String id) {
         ResourceLocation key = ResourceLocation.tryParse(id);
         return key != null ? BuiltInRegistries.ITEM.get(key) : net.minecraft.world.item.Items.BARRIER;
@@ -192,6 +213,10 @@ public class HideoutScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int x0 = left();
         if (StationTabs.click(x0, 24, panelWidth(), view.station(), mouseX, mouseY)) {
+            return true;
+        }
+        if (craftModule() != null && overCraft(mouseX, mouseY)) {
+            ClientPlayNetworking.send(new TarkovNet.HideoutAction(pos, -3, craftModule().name()));
             return true;
         }
         if (mouseY >= listTop() && mouseY < listBottom()) {

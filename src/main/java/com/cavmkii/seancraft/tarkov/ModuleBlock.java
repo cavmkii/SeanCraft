@@ -67,7 +67,7 @@ public class ModuleBlock extends com.cavmkii.seancraft.FacingBlock {
             if (h == null || !pos.equals(h.modules[module.ordinal()])) {
                 serverPlayer.displayClientMessage(Component.literal("This " + module.label + " isn't part of a hideout.").withStyle(ChatFormatting.GRAY), true);
             } else {
-                Tarkov.openModule(serverPlayer, h, module);
+                Tarkov.useModule(serverPlayer, h, module);
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

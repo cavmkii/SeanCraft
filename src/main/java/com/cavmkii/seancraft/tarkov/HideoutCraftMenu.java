@@ -35,13 +35,20 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
     private final DataSlot[] levels = new DataSlot[Module.values().length];
     /** 1 while the grid matches a recipe whose module level isn't met. */
     private final DataSlot gated = DataSlot.standalone();
+    /** Whose recipes this grid makes: 0 the Hideout Bench (ungated ones), else module ordinal + 1 (that module's). */
+    private final DataSlot station = DataSlot.standalone();
 
     public HideoutCraftMenu(int id, Inventory inventory) {
         this(id, inventory, ContainerLevelAccess.NULL);
     }
 
     public HideoutCraftMenu(int id, Inventory inventory, ContainerLevelAccess access) {
+        this(id, inventory, access, null);
+    }
+
+    public HideoutCraftMenu(int id, Inventory inventory, ContainerLevelAccess access, Module stationModule) {
         super(TarkovContent.HIDEOUT_CRAFT_MENU, id);
+        station.set(stationModule == null ? 0 : stationModule.ordinal() + 1);
         this.access = access;
         this.owner = inventory.player instanceof ServerPlayer sp ? sp : null;
         for (int i = 0; i < 9; i++) {
@@ -72,6 +79,7 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
             addDataSlot(levels[m]);
         }
         addDataSlot(gated);
+        addDataSlot(station);
         access.execute((level, pos) -> {
             Hideouts.Hideout h = Hideouts.byPos((net.minecraft.server.level.ServerLevel) level, pos);
             for (Module m : Module.values()) {
@@ -83,6 +91,30 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
 
     public int level(Module m) {
         return levels[m.ordinal()].get();
+    }
+
+    /** The module whose station this is, or null for the Hideout Bench. */
+    public Module station() {
+        int s = station.get();
+        return s <= 0 || s > Module.values().length ? null : Module.values()[s - 1];
+    }
+
+    /** Recipes are made where they belong: a module's at its block, the rest at the Hideout Bench. */
+    public static boolean belongs(Pattern p, Module station) {
+        if (station == null) {
+            return p.gateModule == null;
+        }
+        return station.name().equals(p.gateModule);
+    }
+
+    /** True if any recipe is made at this module's block. */
+    public static boolean crafts(Module module) {
+        for (Pattern p : Patterns.station("hideout")) {
+            if (module.name().equals(p.gateModule)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean gated() {
@@ -113,6 +145,9 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
         matchedAt = null;
         boolean blocked = false;
         for (Pattern p : Patterns.station("hideout")) {
+            if (!belongs(p, station())) {
+                continue;
+            }
             char[] at = p.place(cells, p::accepts);
             if (at != null) {
                 if (!allowed(p)) {
@@ -186,14 +221,21 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return access.evaluate((level, pos) -> level.getBlockState(pos).is(TarkovContent.HIDEOUT_BENCH)
+        // A module's station only needs you in its hideout; the bench's own grid needs the bench.
+        return access.evaluate((level, pos) -> (station() != null || level.getBlockState(pos).is(TarkovContent.HIDEOUT_BENCH))
                 && (player.distanceToSqr(Vec3.atCenterOf(pos)) <= 64
                 || player instanceof ServerPlayer sp && Hideouts.at(sp.serverLevel(), sp.position()) instanceof Hideouts.Hideout h
                 && h.contains(Vec3.atCenterOf(pos))), true);
     }
 
     public static void open(ServerPlayer player, BlockPos pos) {
+        open(player, pos, null);
+    }
+
+    /** A crafting grid at the Hideout Bench ({@code station} null) or at a module's block; {@code pos} is the hideout's bench. */
+    public static void open(ServerPlayer player, BlockPos pos, Module station) {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, p) -> new HideoutCraftMenu(id, inv,
-                ContainerLevelAccess.create(player.level(), pos)), net.minecraft.network.chat.Component.literal("Hideout Bench")));
+                ContainerLevelAccess.create(player.level(), pos), station),
+                net.minecraft.network.chat.Component.literal(station == null ? "Hideout Bench" : station.label)));
     }
 }

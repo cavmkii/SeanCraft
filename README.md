@@ -22,14 +22,14 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 |---|---|
 | E or J | Inventory screen (GEAR tab) |
 | H | Inventory screen, STATUS tab |
-| K | Inventory screen, WEB tab (passive tree) |
+| K | Inventory screen, CHARACTER tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Creative mode keeps the vanilla inventory.
+The inventory screen has four tabs: GEAR, CRAFTING, STATUS and CHARACTER. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -52,7 +52,8 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
 - **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
 - **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
   - Hideouts have to be at least 500 blocks from each other and from spawn points. If you try too close, the message says which way to go and how much further.
-  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. Rigs, backpacks, pouches, meds, fire arrows, stations, modules and totems are all made here. Entries a module hasn't unlocked yet show a lock and say which module and level they need.
+  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. The first rig, backpack and pouch, fire arrows, stations, modules and totems are made here.
+  - **Module stations.** What a module unlocks is made at that module's own block: meds at the Medstation, the bigger rigs, backpacks and pouches at the Workshop, the Intel module at the Perimeter. Using a built module opens its crafting grid, with UPGRADE to get to building it up; before it's built you get the build screen, with CRAFT to see what it'll make. Recipes it hasn't reached the level for show a lock and the level they need.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
 - **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
@@ -304,7 +305,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   | | Divine Shield (30, 25 s) | Shield yourself or the player you're looking at (8 blocks) for 25% of max health for 6 s; no new bleeds or fractures while it holds | 30% / 8 s / knocks monsters back when it breaks |
   | | Judgment (35, 16 s) | 0.8 s cast, then a second later a pillar where you're aiming (up to 20 blocks): 2.5×power spirit in 3 blocks, double on anything under 25% health | 3× / radius 4 / kills anything but a boss under 15% |
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
-- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
+- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the CHARACTER tab.
 - **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
 - **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
 - **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.

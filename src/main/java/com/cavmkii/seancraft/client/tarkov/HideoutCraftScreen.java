@@ -1,5 +1,7 @@
 package com.cavmkii.seancraft.client.tarkov;
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
 import com.cavmkii.seancraft.client.ui.Kit;
 import com.cavmkii.seancraft.pattern.Pattern;
 import com.cavmkii.seancraft.pattern.Patterns;
@@ -35,13 +37,36 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
         inventoryLabelY = 119;
     }
 
-    private static List<Pattern> book() {
-        List<Pattern> out = new ArrayList<>(Patterns.station("hideout"));
+    /** This station's recipes: the Hideout Bench's own, or one module's. */
+    private List<Pattern> book() {
+        List<Pattern> out = new ArrayList<>();
+        for (Pattern p : Patterns.station("hideout")) {
+            if (HideoutCraftMenu.belongs(p, menu.station())) {
+                out.add(p);
+            }
+        }
         out.sort(Comparator.<Pattern>comparingInt(p -> {
             int i = ORDER.indexOf(p.category);
             return i < 0 ? 99 : i;
         }).thenComparing(p -> p.id));
         return out;
+    }
+
+    private String stationKind() {
+        return menu.station() == null ? StationTabs.HIDEOUT : com.cavmkii.seancraft.tarkov.Stations.moduleKind(menu.station());
+    }
+
+    /** On a module's station: UPGRADE goes to its build-and-upgrade screen. */
+    private boolean overUpgrade(double mx, double my) {
+        int bx = leftPos + imageWidth - 56;
+        int by = topPos + 5;
+        return menu.station() != null && mx >= bx && mx < bx + 50 && my >= by && my < by + 12;
+    }
+
+    private void upgradeButton(GuiGraphics g, int mx, int my) {
+        if (menu.station() != null) {
+            Kit.button(g, font, "UPGRADE", leftPos + imageWidth - 56, topPos + 5, 50, 12, true, overUpgrade(mx, my), false);
+        }
     }
 
     private String gateText(Pattern p) {
@@ -129,18 +154,22 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
     @Override
     protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
         Kit.text(g, font, Kit.heading(title.getString()), titleLabelX, titleLabelY - 2, Kit.GOLD_LIGHT);
-        g.pose().pushPose();
-        g.pose().translate(70, 88, 0);
-        g.pose().scale(0.625f, 0.625f, 1);
-        g.drawString(font, "Upgrades: put the empty old item", 0, 0, Kit.ASH, false);
-        g.drawString(font, "in the centre of the pattern.", 0, 10, Kit.ASH, false);
-        g.pose().popPose();
+        // Only where some recipe here is an upgrade (rigs, packs, pouches).
+        if (book().stream().anyMatch(p -> p.previous != 0)) {
+            g.pose().pushPose();
+            g.pose().translate(70, 88, 0);
+            g.pose().scale(0.625f, 0.625f, 1);
+            g.drawString(font, "Upgrades: put the empty old item", 0, 0, Kit.ASH, false);
+            g.drawString(font, "in the centre of the pattern.", 0, 10, Kit.ASH, false);
+            g.pose().popPose();
+        }
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        StationTabs.render(g, font, leftPos, topPos - 14, imageWidth, StationTabs.HIDEOUT, mouseX, mouseY);
+        StationTabs.render(g, font, leftPos, topPos - 14, imageWidth, stationKind(), mouseX, mouseY);
+        upgradeButton(g, mouseX, mouseY);
         renderTooltip(g, mouseX, mouseY);
         int r = rowAt(mouseX, mouseY);
         List<Pattern> book = book();
@@ -167,7 +196,11 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (StationTabs.click(leftPos, topPos - 14, imageWidth, StationTabs.HIDEOUT, mouseX, mouseY)) {
+        if (overUpgrade(mouseX, mouseY)) {
+            ClientPlayNetworking.send(new com.cavmkii.seancraft.tarkov.TarkovNet.HideoutAction(net.minecraft.core.BlockPos.ZERO, -2, menu.station().name()));
+            return true;
+        }
+        if (StationTabs.click(leftPos, topPos - 14, imageWidth, stationKind(), mouseX, mouseY)) {
             return true;
         }
         int r = rowAt(mouseX, mouseY);

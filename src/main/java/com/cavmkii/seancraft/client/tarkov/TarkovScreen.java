@@ -29,7 +29,7 @@ import org.lwjgl.glfw.GLFW;
 
 /**
  * The Tarkov screen. GEAR: equipment, hotbar, the Tetris grids, and any open container or stash on the right.
- * CRAFTING: recipes you can make from everything you carry. SKILLS: character level, attributes and use-skills.
+ * CRAFTING: recipes you can make from everything you carry. CHARACTER: the passive web with level, attributes and use-skills.
  * STATUS: body health and meds.
  *
  * <p>GEAR controls, mostly vanilla's: click to pick up and put down, right-click to pick up half or put down one,
@@ -39,10 +39,12 @@ import org.lwjgl.glfw.GLFW;
 public class TarkovScreen extends Screen {
     public static final int GEAR = 0;
     public static final int CRAFTING = 1;
-    public static final int SKILLS = 2;
-    public static final int STATUS = 3;
-    public static final int WEB = 4;
-    private static final String[] TABS = {"GEAR", "CRAFTING", "SKILLS", "STATUS", "WEB"};
+    public static final int STATUS = 2;
+    /** The passive web with level, attributes and use-skills beside it (SKILLS and WEB used to be two tabs). */
+    public static final int WEB = 3;
+    /** Kept for old callers: the skills now live on the CHARACTER tab. */
+    public static final int SKILLS = WEB;
+    private static final String[] TABS = {"GEAR", "CRAFTING", "STATUS", "CHARACTER"};
 
     private static final int C = 18;
     private static final int W = 426;
@@ -409,10 +411,7 @@ public class TarkovScreen extends Screen {
             ItemStack tip = switch (tab) {
                 case GEAR -> renderGear(g, mx, my);
                 case CRAFTING -> renderCrafting(g, mx, my);
-                default -> {
-                    renderSkills(g);
-                    yield ItemStack.EMPTY;
-                }
+                default -> ItemStack.EMPTY;
             };
             g.pose().popPose();
             hoverStack = tip;
@@ -1503,48 +1502,6 @@ public class TarkovScreen extends Screen {
     }
 
     // ================================================================== skills
-
-    private void renderSkills(GuiGraphics g) {
-        PlayerData data = ClientRpg.data;
-        Stats stats = ClientRpg.stats;
-        String head = "Level " + data.level + (data.level < PlayerData.MAX_LEVEL ? "  (" + data.xp + " / " + PlayerData.xpToNext(data.level) + " xp)" : "")
-                + "   Free points " + data.freePoints()
-                + (data.origin != null ? "   " + data.origin.label + (data.spec != null ? ", " + data.spec.label : "") : "   No origin yet (K)");
-        g.drawString(font, head, 0, 0, Kit.GOLD_LIGHT, false);
-        int ax = 0;
-        for (Attr attr : Attr.values()) {
-            String t = attr.label + " " + String.format("%.1f", stats.attr(attr));
-            Kit.blit(g, "icon/attribute/" + attr.name().toLowerCase(Locale.ROOT), ax, 11, 9, 9);
-            g.drawString(font, t, ax + 12, 12, Kit.BONE, false);
-            ax += font.width(t) + 26;
-        }
-        g.pose().pushPose();
-        g.pose().translate(0, 21, 0);
-        g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(font, String.format("Crit chance %.0f%%, crit damage +%.0f%%   Attack speed +%.0f%%   Move speed +%.0f%%",
-                stats.critChance(), stats.critDamage(), stats.attackSpeedPct(), stats.moveSpeedPct()), 0, 0, Kit.ASH, false);
-        g.pose().popPose();
-        Skill[] skills = Skill.values();
-        for (int i = 0; i < skills.length; i++) {
-            Skill skill = skills[i];
-            int x = (i % 2) * 214;
-            int y = 28 + (i / 2) * 32;
-            int level = data.skillLevel(skill);
-            double xp = data.skillXp.getOrDefault(skill, 0.0);
-            double from = Skill.xpForLevel(level);
-            double to = Skill.xpForLevel(Math.min(Skill.MAX_LEVEL, level + 1));
-            Kit.inset(g, x, y, 206, 29);
-            g.drawString(font, skill.label, x + 6, y + 4, Kit.BONE, false);
-            String lv = String.valueOf(level);
-            g.drawString(font, lv, x + 200 - font.width(lv), y + 4, Kit.BONE, false);
-            Kit.bar(g, "xp", x + 6, y + 13, 194, level >= Skill.MAX_LEVEL || to <= from ? 1f : (float) Math.min(1, (xp - from) / (to - from)));
-            g.pose().pushPose();
-            g.pose().translate(x + 6, y + 19, 0);
-            g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, skill.describe(level), 0, 0, Kit.ASH, false);
-            g.pose().popPose();
-        }
-    }
 
     // ================================================================== input
 
