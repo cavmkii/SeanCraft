@@ -405,6 +405,7 @@ public class TarkovScreen extends Screen {
             g.pose().scale(scale, scale, 1);
             int mx = (int) Math.floor(vx(mouseX));
             int my = (int) Math.floor(vy(mouseY));
+            hoverRecipe = null;
             ItemStack tip = switch (tab) {
                 case GEAR -> renderGear(g, mx, my);
                 case CRAFTING -> renderCrafting(g, mx, my);
@@ -415,8 +416,16 @@ public class TarkovScreen extends Screen {
             };
             g.pose().popPose();
             hoverStack = tip;
+            // Next frame's grid preview follows what's hovered now.
+            shownHover = hoverRecipe;
             if (!tip.isEmpty() && held.isEmpty()) {
-                g.renderTooltip(font, tip, mouseX, mouseY);
+                if (hoverRecipe != null) {
+                    // A recipe: its layout under the name.
+                    g.renderTooltip(font, Screen.getTooltipFromItem(minecraft, tip),
+                            java.util.Optional.of(new RecipeGridTooltip.Data(cellsFor(hoverRecipe))), mouseX, mouseY);
+                } else {
+                    g.renderTooltip(font, tip, mouseX, mouseY);
+                }
             }
         }
         renderTabs(g, mouseX, mouseY);
@@ -927,9 +936,19 @@ public class TarkovScreen extends Screen {
     private String ghostRecipe;
 
     /** The ghost's item for each of the 9 squares (null where the pattern has nothing). Tag ingredients cycle. */
+    /** Recipe under the mouse in the list or book this frame: previewed in the grid and drawn in its tooltip. */
+    private String hoverRecipe;
+    private String shownHover;
+
+    /** The ghost in the grid: the recipe you're hovering, else the one you picked. */
     private ItemStack[] ghostCells() {
+        return cellsFor(shownHover != null ? shownHover : ghostRecipe);
+    }
+
+    /** A recipe's ingredients laid out on the 3x3 grid (cycling through each ingredient's options once a second). */
+    private ItemStack[] cellsFor(String id) {
         ItemStack[] out = new ItemStack[9];
-        var key = ghostRecipe == null ? null : net.minecraft.resources.ResourceLocation.tryParse(ghostRecipe);
+        var key = id == null ? null : net.minecraft.resources.ResourceLocation.tryParse(id);
         var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
         if (holder == null || !(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe recipe)) {
             return out;
@@ -1184,6 +1203,7 @@ public class TarkovScreen extends Screen {
             g.drawString(font, can, MID + MID_W - 4 - canW, y + 6, e.times() > 0 ? Kit.ASH : e.times() < 0 ? Kit.GOLD : Kit.BLOOD_LIGHT, false);
             if (hover) {
                 tip = e.result();
+                hoverRecipe = e.id();
             }
         }
         g.disableScissor();
@@ -1353,6 +1373,7 @@ public class TarkovScreen extends Screen {
                     g.renderItem(c.result, x + 1, y + 1);
                     if (c == hovered) {
                         tip = c.result;
+                        hoverRecipe = c.holder.id().toString();
                     }
                 } else {
                     g.drawString(font, "?", x + 6, y + 5, Kit.DISABLED, false);

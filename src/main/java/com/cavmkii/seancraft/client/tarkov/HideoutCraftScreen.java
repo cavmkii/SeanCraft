@@ -96,14 +96,17 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
         if (ready) {
             ghost = null;
         }
-        char[] at = ghost == null ? null : ghost.ghost();
+        // Hovering a book entry previews its pattern; otherwise the picked one.
+        int hr = rowAt(mouseX, mouseY);
+        Pattern shown = hr >= 0 && hr < book.size() && !ready ? book.get(hr) : ghost;
+        char[] at = shown == null ? null : shown.ghost();
         for (int i = 0; i < 9; i++) {
             Slot slot = menu.slots.get(i);
             int sx = x + slot.x - 1;
             int sy = y + slot.y - 1;
             if (!slot.hasItem() && at != null && at[i] != 0) {
                 Kit.blit(g, "slot/ghost", sx, sy, 18, 18);
-                g.renderItem(ghost.example(at[i]), sx + 1, sy + 1);
+                g.renderItem(shown.example(at[i]), sx + 1, sy + 1);
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 200);
                 Kit.blit(g, "slot/ghost_overlay", sx + 1, sy + 1, 16, 16);
@@ -149,8 +152,8 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
             if (!menu.allowed(p)) {
                 lines.add(Component.literal("Needs " + gateText(p) + " in this hideout").withStyle(ChatFormatting.RED));
             }
-            lines.add(Component.literal("Click to show the pattern in the grid").withStyle(ChatFormatting.DARK_GRAY));
-            g.renderTooltip(font, lines, java.util.Optional.empty(), mouseX, mouseY);
+            lines.add(Component.literal("Click to keep the pattern in the grid").withStyle(ChatFormatting.DARK_GRAY));
+            g.renderTooltip(font, lines, java.util.Optional.of(RecipeGridTooltip.Data.of(p.ghost(), p::example)), mouseX, mouseY);
         }
         if (menu.gated() && mouseX >= leftPos + HideoutCraftMenu.RESULT_X - 5 && mouseX < leftPos + HideoutCraftMenu.RESULT_X + 21
                 && mouseY >= topPos + HideoutCraftMenu.RESULT_Y - 5 && mouseY < topPos + HideoutCraftMenu.RESULT_Y + 21) {

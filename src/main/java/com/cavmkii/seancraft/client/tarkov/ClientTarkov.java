@@ -28,6 +28,7 @@ public final class ClientTarkov {
     private ClientTarkov() {}
 
     public static void init() {
+        RecipeGridTooltip.init();
         KeyBindingHelper.registerKeyBinding(OPEN_SECURE);
         KeyBindingHelper.registerKeyBinding(OPEN_STATUS);
         ClientPlayNetworking.registerGlobalReceiver(TarkovNet.BodySync.TYPE, (payload, ctx) -> body = payload);
