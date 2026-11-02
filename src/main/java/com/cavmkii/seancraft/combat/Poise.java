@@ -27,6 +27,8 @@ public final class Poise {
     private record Meter(float value, long lastHit) {}
 
     private static final Map<LivingEntity, Meter> METERS = new WeakHashMap<>();
+    /** Scales a target's threshold (Hunter's Mark at rank 3 takes 20% off). */
+    public static java.util.function.ToDoubleFunction<LivingEntity> thresholdMultiplier = target -> 1;
 
     private Poise() {}
 
@@ -38,7 +40,8 @@ public final class Poise {
         long now = target.level().getGameTime();
         Meter m = METERS.get(target);
         float value = (m == null || now - m.lastHit > RESET_TICKS ? 0 : m.value) + poise;
-        float threshold = target instanceof ServerPlayer ? PLAYER_THRESHOLD : target.getMaxHealth() * MOB_THRESHOLD;
+        float threshold = (float) ((target instanceof ServerPlayer ? PLAYER_THRESHOLD : target.getMaxHealth() * MOB_THRESHOLD)
+                * thresholdMultiplier.applyAsDouble(target));
         if (value >= threshold) {
             METERS.remove(target);
             stagger(target);

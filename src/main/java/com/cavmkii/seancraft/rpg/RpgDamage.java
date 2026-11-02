@@ -29,9 +29,6 @@ public final class RpgDamage {
     /** Set while an ability deals its damage, so it isn't scaled again as a melee hit. */
     static boolean applyingSkill;
 
-    /** Hunter's Mark: target id to game time the mark ends. */
-    static final Map<UUID, Long> MARKED = new HashMap<>();
-
     /** A Warlock's hex: until when, and how much more damage the target takes. */
     record Hex(long until, float extra) {}
 
@@ -51,12 +48,10 @@ public final class RpgDamage {
         Rpg.Runtime rt = Rpg.runtime(player);
         long now = player.serverLevel().getGameTime();
 
-        if (source.getEntity() instanceof LivingEntity attacker && attacker != player && now < rt.parryUntil) {
+        // Riposte (6.5.5): a melee hit during the stance is parried, no shield needed, and countered.
+        if (source.getEntity() instanceof LivingEntity attacker && attacker != player && source.getDirectEntity() == attacker && now < rt.parryUntil) {
             rt.parryUntil = 0;
-            float counter = (float) (player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 2);
-            SkillEffects.damage(player, attacker, counter);
-            player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1f, 1.4f);
-            player.serverLevel().sendParticles(ParticleTypes.CRIT, attacker.getX(), attacker.getY(1), attacker.getZ(), 15, 0.3, 0.3, 0.3, 0.2);
+            SkillEffects.riposte(player, attacker, rt);
             return false;
         }
         boolean dodgeable = source.getEntity() != null && !source.is(DamageTypes.FALL);
@@ -87,13 +82,10 @@ public final class RpgDamage {
                 HEXED.remove(victim.getUUID());
             }
         }
-        Long markEnd = MARKED.get(victim.getUUID());
-        if (markEnd != null) {
-            if (markEnd > now) {
-                amount *= 1.3f;
-            } else {
-                MARKED.remove(victim.getUUID());
-            }
+        // Hunter's Mark, a frozen target, Berserk, a daunted attacker; Berserk and War Cry on the dealing side.
+        amount *= SkillEffects.takenMultiplier(victim, source);
+        if (source.getEntity() instanceof ServerPlayer dealer && dealer != victim) {
+            amount *= SkillEffects.dealtMultiplier(dealer);
         }
 
         if (source.getEntity() instanceof ServerPlayer attacker && attacker != victim && !applyingSkill) {
@@ -187,6 +179,8 @@ public final class RpgDamage {
             mult += stats.get(Stat.RIPOSTE) / 100;
             rt.riposteUntil = 0;
         }
+        // Shadow Step's backstab; Holy Smite rides on the hit.
+        mult *= SkillEffects.onMeleeHit(attacker, victim);
         if (rt.vanishStrike) {
             // Out of Vanish: the first hit counts as a backstab (x1.5, 9.4).
             rt.vanishStrike = false;
@@ -274,12 +268,9 @@ public final class RpgDamage {
                 continue;
             }
             mult = Math.min(mult, (float) (1 - Rpg.stats(ally).get(Stat.ALLY_DR) / 100));
-            if (now < rt.bulwarkUntil && ally.distanceTo(player) <= 5) {
-                Vec3 facing = ally.getLookAngle().multiply(1, 0, 1).normalize();
-                Vec3 toPlayer = player.position().subtract(ally.position()).multiply(1, 0, 1).normalize();
-                if (facing.dot(toPlayer) < 0) {
-                    mult = Math.min(mult, 0.5f);
-                }
+            if (now < rt.bulwarkUntil && ally.distanceTo(player) <= 5 && Ultimates.behind(ally, player)) {
+                // Bulwark: 50% less behind the Knight, 60% at rank 2.
+                mult = Math.min(mult, rt.ultRank >= 2 ? 0.4f : 0.5f);
             }
         }
         return mult;

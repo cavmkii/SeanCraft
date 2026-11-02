@@ -79,6 +79,8 @@ public final class Magic {
             mult *= Scaling.UNDER_REQUIREMENT_DAMAGE;
         }
         mult *= com.cavmkii.seancraft.parts.Wear.factor(held);
+        // The crystal's factor (4.4.1): spell power.
+        mult *= spellPower(player);
         float damage = (float) ((staff ? STAFF_BOLT : WAND_BOLT) * mult * (heavy ? com.cavmkii.seancraft.combat.Heavy.DAMAGE : 1));
         Damage.Type element = element(held);
         ItemStack look = new ItemStack(switch (element) {
@@ -91,6 +93,7 @@ public final class Magic {
         // A staff's heavy attack is a charged orb that bursts (9.4.1).
         float radius = staff && heavy ? 2.5f : 0;
         SkillProjectile bolt = SkillProjectile.bolt(player.level(), player, look, damage / Damage.SCALE, radius, element);
+        bolt.spell = true;
         bolt.shootFromRotation(player, player.getXRot(), player.getYRot(), 0, staff ? 1.6f : 2.2f, 0.5f);
         player.level().addFreshEntity(bolt);
         player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 0.6f, staff ? 0.9f : 1.4f);

@@ -277,6 +277,9 @@ public final class Health {
     private static void inflict(ServerPlayer player, int flag, BodyPart part, float severity) {
         TarkovData d = Tarkov.data(player);
         int i = part.ordinal();
+        if (com.cavmkii.seancraft.rpg.Rpg.injuryBlocked(player, flag == Body.FRACTURE)) {
+            return; // Divine Shield, or a fracture inside a rank-3 Consecrate
+        }
         if (flag != Body.FRACTURE && Body.destroyed(d, part)) {
             return; // a destroyed part doesn't bleed
         }
@@ -381,6 +384,15 @@ public final class Health {
     /**
      * Revives every destroyed part with this much lasting damage (the Cleric's Miracle). Returns how many came back.
      */
+    /** Clears every fracture (Miracle at rank 3). */
+    public static void clearFractures(ServerPlayer player) {
+        TarkovData d = Tarkov.data(player);
+        if (Body.hasAny(d, Body.FRACTURE)) {
+            Body.clearAll(d, Body.FRACTURE);
+            rt(player).dirty = true;
+        }
+    }
+
     public static int revive(ServerPlayer player, float scar) {
         TarkovData d = Tarkov.data(player);
         float max = player.getMaxHealth();

@@ -412,7 +412,7 @@ public final class Damage {
      * How much of a type a target takes (9.1): 2 very weak, 1.5 weak, 1 normal, 0.5 resistant, 0 immune. Spirit only
      * hurts the undead and players; chop and pickaxe only work on things made of wood and stone.
      */
-    static float resistance(LivingEntity victim, Type type) {
+    public static float resistance(LivingEntity victim, Type type) {
         float r = baseResistance(victim, type);
         // Doom (the Warlock's ultimate): weaknesses count double.
         return r > 1 && com.cavmkii.seancraft.rpg.Rpg.doomed(victim) ? r * 2 : r;

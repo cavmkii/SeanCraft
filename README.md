@@ -23,7 +23,7 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | E or J | Inventory screen (GEAR tab) |
 | H | Inventory screen, STATUS tab |
 | K | Inventory screen, WEB tab (passive tree) |
-| Z, X, C | Your three active skills |
+| Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
@@ -48,10 +48,11 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
   | Far lands | 6,000+ | +100% | +50% | +100% |
 
   Elites add on top of that, but a monster never gets past 4x health or 2.5x damage. In the Frontier and the Far lands, raids start at threat 2, and so does any raid in the Nether. Nether distances count 8x, like the travel.
-- **FOB tables.** Made at the Hideout Bench from 8 planks, 4 sticks and a campfire. While you're in the same chunk as one, the raid timer stops. Each raid only gets 15 minutes of that, shared between every table, and it fills back up when you extract. It doesn't count while a monster is within 16 blocks or for 10 seconds after you get hit. One per chunk, and not in a safe zone. It's not a safe zone itself, and it has no stash.
+- **FOB tables.** Made at the Hideout Bench: 3 planks on top, stick / campfire / stick, then a stick in each bottom corner. While you're in the same chunk as one, the raid timer stops. Each raid only gets 15 minutes of that, shared between every table, and it fills back up when you extract. It doesn't count while a monster is within 16 blocks or for 10 seconds after you get hit. One per chunk, and not in a safe zone. It's not a safe zone itself, and it has no stash.
 - **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
 - **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
   - Hideouts have to be at least 500 blocks from each other and from spawn points. If you try too close, the message says which way to go and how much further.
+  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. Rigs, backpacks, pouches, meds, fire arrows, stations, modules and totems are all made here. Entries a module hasn't unlocked yet show a lock and say which module and level they need.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
 - **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
@@ -99,8 +100,8 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Pierce ignores a quarter of armor.
   - Armor doesn't stop elemental damage. Each level of Fire, Blast or Projectile Protection gives 4 resistance points against its kind, through the same formula.
   - Monsters' armor uses the same formula.
-- **Fire arrows.** Made at the Hideout Bench: 4 arrows, a coal or charcoal and a string make 4. They hit with pierce plus some fire, and set what they hit alight. Bows with Flame add a smaller fire share.
-- **Other arrows** (Hideout Bench, 4 at a time): broadhead (4 iron nuggets and a flint) makes bleeds half again as bad but gets through 10% less armor; bodkin (an iron ingot, needs Workshop 1) ignores another 25% of armor; blunt (planks and leather) does blunt damage, so it breaks bones and staggers instead of bleeding.
+- **Fire arrows.** Made at the Hideout Bench: an arrow in each corner, coal or charcoal top middle, string in the centre. Makes 4. They hit with pierce plus some fire, and set what they hit alight. Bows with Flame add a smaller fire share.
+- **Other arrows** are at the crafting table now, 4 at a time, laid out like a vanilla arrow (tip over stick over feather): bodkin (iron nugget tip) ignores another 25% of armor; broadhead (iron ingot tip) makes bleeds half again as bad but gets through 10% less armor; blunt (leather tip) does blunt damage, so it breaks bones and staggers instead of bleeding.
 - **Potions.** One of each type every 5 minutes (long and strong versions count as the same type). Fire Resistance gives 20 fire resistance points instead of making you immune to fire and lava. Resistance adds 10 armor a level to every body part. Strength is 30% more damage a level instead of a flat bonus.
 - **The vanilla Mace.** Its smash bonus is capped at 50% and does nothing in a boss arena.
 
@@ -138,7 +139,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Rigs and backpacks** have to be empty before you can take them off. You start with a Scav vest (4x2), a Sling bag (3x3) and a 2x2 pouch. Bigger ones are made at the Hideout Bench:
   - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
   - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
-  - Or upgrade: trade in the empty one below it in the line and pay half the materials.
+  - Each one after the first in a line takes the empty one below it in the centre of its pattern, so you're trading up, not starting over.
 - **Chests and barrels** open on the GEAR tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
 - **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
 - **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
@@ -157,7 +158,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - PIN TO HUD under the result puts the selected recipe's ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
   - Your hotbar shows under MATERIALS, so you can grab from it or drop things into it without switching tabs.
-  - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have, then hit LAY OUT to put it in the grid, or PIN TO HUD to track the ingredients.
+  - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the CRAFT list does the same ghost.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
 - **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
@@ -198,13 +199,20 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
 - Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
-- **PARTS tab.** Every part is laid out by kind and material, and the ones you can make right now are green. Heads are on the first page and everything else on the second (click the arrow under the grid). Hover one to see what it costs. Click to make one, or Shift-click to make 5. It takes materials from what you carry and the stash, and the parts go into your grids.
-  - Most parts cost 2 of their material. A knife blade costs 1. Axe heads, mace heads, limbs, hafts and padding cost 3. Long blades and halberd heads cost 4. A guard needs a stick as well.
-  - Netherite parts are the diamond part plus 2 netherite scrap.
+- **PARTS tab.** A 3x3 grid with a book on the left. Parts are made by pattern: lay the material out in the part's shape and take the part from the result slot. The material you use decides the part's material, and every square with the same letter has to be the same material. Click a part in the book to see its pattern as a ghost.
+  - The letters: M is metal (copper ingot, iron ingot, gold ingot, diamond), W is wood (planks, logs, bone, blaze rod, breeze rod), H is hide (string, leather, rabbit hide, phantom membrane, armadillo scute), G is a gem (quartz, lapis, amethyst shard, prismarine shard, echo shard), C a catalyst, S a stick.
+  - Patterns, top row first: knife blade `M`; blade `M / M`; long blade `MM / MM`; axe head `MM / M.`; mace head `.M. / M.M`; spearhead `.M / M.`; halberd head `MM / M. / M.`; plate `MM`; guard `MSM`; focus `M.M`; limbs `W. / .W / W.`; handle `W / W`; haft `W / W / W`; crystal `G / C / G`; wrap `H. / .H`; padding `HHH`. They work anywhere in the grid and mirrored.
+  - **Bow limbs are wood now** (planks, log, bone, blaze rod, breeze rod), so they take the wood traits.
+  - **Netherite:** netherite scrap, a diamond part, netherite scrap in a row.
+  - **Levelling:** the part in the centre, ringed by exactly the right number of its own material: level + 1 for metal and gems, twice that for wood and hide, never more than 8. Each level adds 6% to the head's damage, up to 4. The ring squares to fill light up.
+  - **Infusions:** the wrap pattern plus one extra iron nugget (Heavy), flint (Keen) or lapis (Arcane) anywhere in the grid. Heavy moves 25% of the weapon's scaling to STR, Keen to AGI, Arcane to INT. A Keen sword scales 25% STR / 75% AGI.
+  - **Crystals:** the catalyst in the middle sets the element: blaze powder fire, packed ice frost, a lightning rod lightning, a fermented spider eye poison, a golden carrot spirit.
+  - Parts only locked weapons use show a lock in the book, and the grid won't make them.
 - **BUILD tab.**
-  1. With the left slot empty, pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
+  1. Pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
   2. Empty slots show a faded example of the part that goes there. Hover one for its name, and the plate slot shows how many plates it takes.
-  3. Drop the parts in and hit ASSEMBLE. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If ASSEMBLE is grey, hover it to see what's missing.
+  3. Drop the parts in and take the weapon from the result slot. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If the result slot stays empty, hover it to see what's missing.
+- **REPAIR tab.** Like an anvil: the item on the left, its striking part's material next to it, the repaired item on the right. 1 material per 25%.
 - The standard parts give you exactly the vanilla item. Other materials change damage, swing speed, durability, armor and weight.
 - **Weapon families.** Each one has its own moveset (from Better Combat), damage type and base numbers. At iron:
   - Dagger (knife blade, handle): 20 damage, 2 swings a second, pierce and slash. Quick strikes leave enemies open again fast, and hits from behind do 50% more.
@@ -214,8 +222,8 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Spear (spearhead, haft, wrap): 32, pierce, reach, ignores an extra 25% of armor. Pike: 40, pierce, even longer reach.
   - Materials scale damage: copper ×0.85, iron ×1, gold ×1.1, diamond ×1.2, netherite ×1.35.
 - **Material traits.** Every material also has one trait, shown in pink on the part and on the item's part list. Vanilla items come with the traits of their standard parts, so a plain iron sword already has 300 durability instead of 250.
-  - Heads (and bow limbs): copper +10% added lightning, iron +20% durability, gold +15% added spirit, diamond +5% crit chance, netherite +20% added fire and doesn't burn in lava. Iron plates get the +20% durability too.
-  - Handles and hafts: planks +5% swing speed but −15% durability, log nothing, bone +15% durability, blaze rod +5% added fire, breeze rod +10% swing speed.
+  - Heads: copper +10% added lightning, iron +20% durability, gold +15% added spirit, diamond +5% crit chance, netherite +20% added fire and doesn't burn in lava. Iron plates get the +20% durability too.
+  - Handles, hafts and bow limbs: planks +5% swing speed but −15% durability, log nothing, bone +15% durability, blaze rod +5% added fire, breeze rod +10% swing speed.
   - Wraps and padding: leather nothing, rabbit hide makes you harder for mobs to spot while sneaking (stacks per piece), phantom membrane is lighter, scute padding gives +2 armor.
   - The old "gold does more to undead, netherite sets things on fire" part bonuses are gone; the trait is the bonus now.
 - **Recipe ladders.** You can use any weapon you find, but you can only make the ones you've unlocked. Each attribute has a ladder:
@@ -227,11 +235,9 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Locked weapons are greyed out at the bench, and hovering one shows your progress. Heads that only locked weapons use can't be made. The wooden club recipe is locked the same way.
   - Shields and armor aren't on a ladder. The buckler is Blademaster only and the tower shield Knight only.
   - Throwing knife is AGI rung 2; javelin and boomerang AGI rung 3; wand INT rung 1, staff INT rung 2.
-- Put an existing item in the left slot and its parts show on its outline. You can swap them out, or level a part up to 4 with its own material using the ▲ next to it. Each level adds 6% to the head's damage.
+- Put an existing item in the left slot on BUILD and its parts show on its outline. You can swap them out; level a part on the PARTS tab.
 - **Requirements.** Rung 2 weapons want 15 in their scaling attribute and rung 3 want 30 (half of each for split weapons like the sword). Under that, they do 30% less damage and cost 30% more stamina. The tooltip shows it, red when you're short.
-- **Infusions.** On the PARTS tab's second page, pick an infusion before making wraps: Heavy (+2 iron nuggets) moves 25% of the weapon's scaling to STR, Keen (+1 flint) to AGI, Arcane (+1 lapis) to INT. A Keen sword scales 25% STR / 75% AGI.
-- **Magic parts.** The third page has crystals (quartz, lapis, amethyst, prismarine, echo) and foci. Pick the catalyst first: blaze powder for fire, packed ice for frost, a lightning rod for lightning, a fermented spider eye for poison, a golden carrot for spirit.
-- **Wear.** Part-built gear never breaks. At zero durability it works at half strength (half damage, half armor, half block) until you repair it: put it in the bench and hit REPAIR, 1 of its striking part's material per 25% (shift-click for all the way).
+- **Wear.** Part-built gear never breaks. At zero durability it works at half strength (half damage, half armor, half block) until you repair it on the REPAIR tab.
 - **Recovery.** When part-built gear is lost on a raid or boss death, its striking part (or the armor plates) comes back at level 1 in a Recovery crate in the hideout you respawn at. The crate appears beside the Hideout Bench; use it to take your parts.
 - Vanilla swords, axes, bows, crossbows and shields you pick up turn into part-built items with their standard parts.
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bucklers, tower shields, throwing knives, javelins, boomerangs, wands and staves are drawn from the parts actually in them, so a swapped blade shows.
@@ -252,20 +258,50 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), opens your ultimate (V), and opens the first of your specialization's three signature nodes at the outer edge of its region. You get one specialization.
 - **Milestones.** Mastery (level 40 and any tier 2 trophy) opens your second signature node and ranks your ultimate up; Capstone (level 60 and a tier 3 trophy) opens the third and ranks it up again. Tier 2 and 3 bosses aren't in yet, so for now only the first step is reachable.
 
-  | Specialization | Signature nodes (specialization / mastery / capstone) | Ultimate |
-  |---|---|---|
-  | Warrior | Can't be staggered while Rage is above half / +50% rage gain, +10% melee / +25% melee while Rage is above half | Rampage: 8s of free Rage skills, no staggers, +20% damage |
-  | Knight | Players within 6 blocks take 15% less / blocking pulls the attacker and nearby monsters onto you / +10 armor, +50% knockback resistance | Bulwark: 6s, players behind you take half, you 30% less |
-  | Paladin | Melee hits add 20% spirit / players within 8 blocks bleed 30% slower / another 20% spirit and a holy aura | Hallowed Ground: 8s, spirit damage to undead in it, slower bleeding |
-  | Archer | Arrows slow / +15% arrow damage, +5% crit / arrow crits pin | Deadeye: next three arrows always crit and pin |
-  | Blademaster | +50% on your first hit after a block / sword hits leave enemies open fast, like a dagger / +15% swing speed, +10% crit | Thousand Cuts: dash through up to five enemies, three cuts each |
-  | Rogue | +25% sneak speed, +25% backstab / invisible while sneaking / +50% backstab, +25% crit damage | Vanish: 5s invisible, things lose you, first hit is a backstab |
-  | Sorcerer | +30% skill area / +20% skill damage / skills cost 20% less mana | Cataclysm: 5s of lightning on monsters around you |
-  | Warlock | Skill hits hex for +15% damage taken / melee hits poison / hex +15% more, +10% skill damage | Doom: 8s of double damage from its weaknesses; it bursts into poison if it dies |
-  | Cleric | Meds apply and heal 30% better / surgical kits leave 15% lasting damage instead of 35% / you and players near you regenerate | Miracle: revives every destroyed part on players near you |
+  | Specialization | Signature nodes (specialization / mastery / capstone) | Ultimate (cost) | Mastery / capstone rank |
+  |---|---|---|---|
+  | Warrior | Can't be staggered while Rage is above half / +50% rage gain, +10% melee / +25% melee while Rage is above half | Rampage (50 Rage): 8 s of free Rage skills, no staggers, +20% damage | 10 s / each kill adds 1 s |
+  | Knight | Players within 6 blocks take 15% less / blocking pulls the attacker and nearby monsters onto you / +10 armor, +50% knockback resistance | Bulwark (40 Rage): 6 s, players behind you take 50% less, you 30% less | 60% less / players behind you can't be staggered |
+  | Paladin | Melee hits add 20% spirit / players within 8 blocks bleed 30% slower / another 20% spirit and a holy aura | Hallowed Ground (60 Rage): 8 s, 6-block circle, spirit damage to undead, 30% slower bleeding | 8-block circle / bleeds stop inside |
+  | Archer | Arrows slow / +15% arrow damage, +5% crit / arrow crits pin | Deadeye (40 stamina): next three arrows always crit and pin | four arrows / they pierce |
+  | Blademaster | +50% on your first hit after a block / sword hits leave enemies open fast, like a dagger / +15% swing speed, +10% crit | Thousand Cuts (50 stamina): dash through up to five enemies, three cuts each | seven targets / every cut bleeds |
+  | Rogue | +25% sneak speed, +25% backstab / invisible while sneaking / +50% backstab, +25% crit damage | Vanish (40 stamina): 5 s invisible, things lose you, first hit is a backstab | 7 s / monsters can't pick you back up while it lasts |
+  | Sorcerer | +30% skill area / +20% skill damage / skills cost 20% less mana | Cataclysm (70 mana): 5 s of lightning on monsters around you | 7 s / lightning and frost at once |
+  | Warlock | Skill hits hex for +15% damage taken / melee hits poison / hex +15% more, +10% skill damage | Doom (60 mana): 8 s of double damage from its weaknesses; it bursts into poison if it dies | 10 s / the burst passes Doom to the nearest enemy |
+  | Cleric | Meds apply and heal 30% better / surgical kits leave 15% lasting damage instead of 35% / you and players near you regenerate | Miracle (80 mana): revives every destroyed part on players near you, with lasting damage | lasting damage halved / also clears fractures |
 
-  Ultimates cost 40 of the specialization's resource (rage, stamina or mana) and recharge in 120 seconds, 100 at mastery and 80 at capstone; each rank also makes them last or hit 25% more.
-- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each (+15% damage and -10% cost per rank).
+  Ultimates recharge in 90 seconds, 75 at mastery and 60 at capstone.
+- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each. Each rank does one specific thing (the web tooltip says what the next one is); there's no flat bonus per rank any more.
+- **Paying for skills.** Warrior skills cost Rage, Ranger stamina, Mage mana. The in-between regions pay from either of two pools, whichever is fuller right now: Duelist Rage or stamina, Shadow stamina or mana, Templar mana or Rage. Above each slot is a little plate with the cost: one icon and the number, or for those regions both icons with the one it'll use lit.
+- **What hands you need.** Warrior and Duelist skills need a melee weapon in hand, Ranger skills a bow or crossbow, Mage skills a wand or staff. Shadow and Templar need nothing. No skill makes you invulnerable (that's the roll's job) and none heals.
+- **Skill damage** is built on the gear in your hand. W is your weapon's damage, SP is spell power (a staff bolt's 35 times your crystal's factor; 0 without a wand or staff), and Shadow and Templar use whichever is higher ("power"). On top of that, every skill gets +1% per point of its region's attributes, spell-damage nodes and Casting.
+
+  | Region | Skill (cost, cooldown) | What it does | Ranks 2 / 3 / 4 |
+  |---|---|---|---|
+  | Warrior | Leap Slam (25, 10 s) | Leap up to 8 blocks after a short crouch; landing does 150% W blunt in 3 blocks with double poise | 200% / radius 4 and a 2 s slow / 6 s cooldown, reset on a kill |
+  | | War Cry (20, 20 s) | Players within 8 deal 15% more for 6 s; monsters within 6 turn on you and deal 10% less | 9 s / you can't be staggered for 3 s / +25% |
+  | | Ground Slam (30, 12 s) | 0.6 s wind-up, then 200% W blunt in a 5-block cone; staggers anything but a boss | 7-block cone / slows 30% for 4 s / 250% |
+  | | Berserk (40, 30 s) | 8 s of +25% attack speed, +20% damage dealt, +20% damage taken, and Rage doesn't drain | 10 s / your bleeds pause / +35% attack speed |
+  | Duelist | Lunge (15, 6 s) | Dash 5 blocks into a target for 140% W pierce; interrupts a creeper's fuse, a drawn bow or an illager's spell | 170% / 7 blocks / 4 s cooldown |
+  | | Riposte (10, 8 s) | 0.6 s stance: the next melee hit on you is parried, no shield needed, and countered with a 200% W crit | 0.8 s / the counter bleeds / refunded when it lands |
+  | | Whirlwind (30, 14 s) | Spin 2 s: 60% W to everything within 2.5 blocks every 0.4 s, half speed, can't block | 2.5 s / pulls small mobs in / radius 3.5 |
+  | | Blade Flurry (20, 10 s) | 5 strikes in a second at 50% W; each can crit and bleed | 6 strikes / +5% crit chance per strike / last strike 150% |
+  | Ranger | Dash (20, 8 s) | Dash 6 blocks; your next shot within 2 s is fully drawn | 6 s cooldown / 2 charges / clears slows |
+  | | Volley (25, 10 s) | 5 arrows in a 40° fan for one arrow, each 60% of a full draw | 7 arrows / fires your arrow type / 90% |
+  | | Rain of Arrows (35, 18 s) | 1 s tell, then 8 volleys over 3 s on a 4-block circle up to 30 blocks away, 40% of a full draw each, and a slow | radius 5 / 4 s / burns if you carry fire arrows |
+  | | Hunter's Mark (10, 15 s) | 12 s: the target takes 15% more from everyone and glows through walls | +20% / no invisibility, 20% less poise / cooldown resets if it dies |
+  | Shadow | Smoke Bomb (20, 16 s) | 4-block cloud for 5 s: monsters inside lose their target, players inside count as sneaking | 6 s / slows monsters inside / radius 6 |
+  | | Shadow Step (20, 10 s) | Teleport behind a target up to 10 blocks away; your next hit within 2 s is a backstab | 14 blocks / 7 s cooldown / that hit poisons |
+  | | Poison Cloud (25, 14 s) | A 3-block cloud where you're aiming: 30% power poison a second for 6 s | 8 s / keeps poisoning 3 s after leaving / radius 4 |
+  | | Blade Fan (20, 8 s) | 5 knives in a fan, 70% power slash each, can bleed | 7 knives / heavier bleeds / 90% |
+  | Mage | Fireball (20, 4 s) | 0.5 s cast: 2.0×SP fire to what it hits and 1.0×SP in 2 blocks around; burns | 2.4× / radius 3 and burning ground 3 s / 0.3 s cast |
+  | | Frost Nova (25, 12 s) | 1.2×SP frost in 5 blocks; roots anything but a boss 2 s, slows bosses 30% for 3 s | 3 s root / radius 6 / frozen targets take 25% more from the next hit |
+  | | Blink (15, 8 s) | Teleport 8 blocks toward the crosshair, never through walls | 10 blocks / 2 charges / 5 s cooldown |
+  | | Chain Lightning (30, 10 s) | 0.6 s cast: 1.6×SP to the target, then up to 3 more within 6 blocks, 25% less each jump, with a short stun | 4 jumps / no loss on the first jump / 1.9× |
+  | Templar | Consecrate (25, 18 s) | 4-block circle for 8 s: players in it bleed 50% slower, undead take 40% power spirit a second | 10 s / fractures don't get worse in it / radius 5 |
+  | | Holy Smite (15, 6 s) | Your next melee hit or wand bolt within 10 s adds 150% power spirit and staggers undead | 200% / hits everything within 2 blocks / 4 s cooldown |
+  | | Divine Shield (30, 25 s) | Shield yourself or the player you're looking at (8 blocks) for 25% of max health for 6 s; no new bleeds or fractures while it holds | 30% / 8 s / knocks monsters back when it breaks |
+  | | Judgment (35, 16 s) | 0.8 s cast, then a second later a pillar where you're aiming (up to 20 blocks): 2.5×power spirit in 3 blocks, double on anything under 25% health | 3× / radius 4 / kills anything but a boss under 15% |
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
 - **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
 - **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
@@ -361,7 +397,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `/seancraft where` shows where Joe and Sean are.
   - `/seancraft spawnpoints respread` (op) moves the spawn points other than world spawn out to `Spawn.Distance`, for worlds made before the change. New shelters get built; the old ones stay as plain buildings and stop restocking.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
-  - `/character xp|skill|reset` is for testing the character system (op). `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
+  - `/character xp|skill|reset` is for testing the character system (op). `/character learn <player> <SKILL> <rank> <slot>` learns an active skill at a rank and puts it in slot 0-2, skipping the web. `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with

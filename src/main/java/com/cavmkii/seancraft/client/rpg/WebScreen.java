@@ -259,8 +259,13 @@ public class WebScreen extends Screen {
                 } else {
                     lines.add(Component.literal(ult.label + " (V), rank " + Math.max(1, data.milestone) + "/3").withStyle(ChatFormatting.GOLD));
                     lines.add(Component.literal(ult.description).withStyle(ChatFormatting.GRAY));
-                    lines.add(Component.literal("Costs " + com.cavmkii.seancraft.rpg.Ultimate.COST + " " + ult.resource.label.toLowerCase()
-                            + ". Ranks up at mastery and capstone.").withStyle(ChatFormatting.DARK_GRAY));
+                    int urank = Math.max(1, data.milestone);
+                    lines.add(Component.literal("Costs " + ult.cost + " " + ult.resource.label.toLowerCase() + ", "
+                            + ult.cooldownTicks(urank) / 20 + " s cooldown. Ranks up at mastery and capstone.").withStyle(ChatFormatting.DARK_GRAY));
+                    for (int r = 2; r <= 3; r++) {
+                        lines.add(Component.literal("Rank " + r + ": " + ult.ranks[r - 2])
+                                .withStyle(urank >= r ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY));
+                    }
                 }
             } else if (skill != null) {
                 lines.add(Component.literal(skill.label).withStyle(ChatFormatting.YELLOW));
@@ -314,7 +319,7 @@ public class WebScreen extends Screen {
                 int rank = data.rank(n.active);
                 lines.add(Component.literal("Rank " + rank + "/" + PlayerData.MAX_RANK + ". Click, then a slot below.").withStyle(ChatFormatting.GREEN));
                 if (data.canRankUp(n.id)) {
-                    lines.add(Component.literal("Shift-click to rank up (1 point): +15% damage, -10% cost").withStyle(ChatFormatting.GREEN));
+                    lines.add(Component.literal("Shift-click for rank " + (rank + 1) + " (1 point): " + n.active.ranks[rank - 1]).withStyle(ChatFormatting.GREEN));
                 }
             } else if (data.isAllocated(n.id)) {
                 lines.add(Component.literal(n.kind == WebNode.Kind.GATE ? "Your specialization" : "Allocated").withStyle(ChatFormatting.GREEN));

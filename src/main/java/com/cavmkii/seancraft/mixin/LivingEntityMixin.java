@@ -66,7 +66,12 @@ public abstract class LivingEntityMixin {
     private void seancraft$quiet(net.minecraft.world.entity.Entity looker, CallbackInfoReturnable<Double> cir) {
         LivingEntity self = (LivingEntity) (Object) this;
         if (self instanceof Player) {
-            cir.setReturnValue(cir.getReturnValue() * com.cavmkii.seancraft.parts.MaterialTraits.quiet(self));
+            double v = cir.getReturnValue() * com.cavmkii.seancraft.parts.MaterialTraits.quiet(self);
+            // Inside a Smoke Bomb a player counts as sneaking (6.5.5).
+            if (!self.isCrouching() && com.cavmkii.seancraft.rpg.SkillEffects.inSmoke(self)) {
+                v *= 0.8;
+            }
+            cir.setReturnValue(v);
         }
     }
 

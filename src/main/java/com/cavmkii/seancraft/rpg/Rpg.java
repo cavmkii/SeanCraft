@@ -62,12 +62,28 @@ public final class Rpg {
         long combatUntil;
         long parryUntil;
         int leapTicks;
+        // Region skills (6.5.5): the rank each was cast at, where a later hit or tick needs it.
+        int leapRank = 1;
+        int riposteRank = 1;
+        float riposteRefund;
+        Resource riposteFrom;
+        long steadyUntil;
+        long berserkUntil;
+        int berserkRank = 1;
+        long whirlUntil;
+        long fullDrawUntil;
+        long backstabUntil;
+        boolean backstabPoison;
+        long smiteUntil;
+        int smiteRank = 1;
         /** Just respawned: start with full mana and stamina and no rage. */
         boolean refill;
         // Ultimates (6.5.4) and signatures.
         long ultimateEnd;
         long rampageUntil;
         long bulwarkUntil;
+        int ultRank = 1;
+        long vanishUntil;
         Vec3 hallowedAt;
         long hallowedUntil;
         long cataclysmUntil;
@@ -95,17 +111,34 @@ public final class Rpg {
     public static boolean unstaggerable(ServerPlayer player) {
         Runtime rt = runtime(player);
         Stats stats = stats(player);
-        return player.serverLevel().getGameTime() < rt.rampageUntil
+        long now = player.serverLevel().getGameTime();
+        return now < rt.rampageUntil || now < rt.steadyUntil || Ultimates.shelteredFromStagger(player)
                 || stats.has(Stat.RAGE_STEADY) && data(player).rage >= stats.maxRage() / 2;
     }
 
-    /** How much slower a player bleeds: a Paladin's Mercy nearby, or standing in Hallowed Ground. */
+    /** How much slower a player bleeds (1 stops it): a Paladin's Mercy nearby, Hallowed Ground, Consecrate, Berserk at rank 3. */
     public static double bleedSlow(ServerPlayer player) {
+        if (Ultimates.hallowedStopsBleeds(player) || player.serverLevel().getGameTime() < runtime(player).berserkUntil
+                && SkillEffects.berserkPausesBleeds(player)) {
+            return 1;
+        }
         double slow = Ultimates.hallowed(player) ? 0.3 : 0;
+        if (SkillEffects.consecrated(player) != null) {
+            slow = Math.max(slow, 0.5);
+        }
         for (ServerPlayer p : player.serverLevel().getEntitiesOfClass(ServerPlayer.class, player.getBoundingBox().inflate(8))) {
             slow = Math.max(slow, stats(p).get(Stat.ALLY_BLEED_SLOW) / 100);
         }
         return Math.min(0.9, slow);
+    }
+
+    /** Divine Shield stops new bleeds and fractures; a rank-3 Consecrate stops fractures (6.5.5). */
+    public static boolean injuryBlocked(ServerPlayer player, boolean fracture) {
+        if (SkillEffects.shielded(player)) {
+            return true;
+        }
+        SkillEffects.Zone z = fracture ? SkillEffects.consecrated(player) : null;
+        return z != null && z.rank >= 3;
     }
 
     /** Under the Warlock's Doom. */
@@ -127,6 +160,7 @@ public final class Rpg {
         RpgContent.init();
         RpgNet.register();
         Ultimates.init();
+        SkillEffects.init();
         Ladders.init();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
@@ -272,7 +306,7 @@ public final class Rpg {
         // Resources, per tick.
         data.mana = Math.min(stats.maxMana(), data.mana + stats.manaRegen() / 20f);
         com.cavmkii.seancraft.combat.Combat.tick(player, data, stats.maxStamina() + com.cavmkii.seancraft.food.Food.stamina(player));
-        if (now > rt.combatUntil) {
+        if (now > rt.combatUntil && now >= rt.berserkUntil) {
             // Rage decays 10 a second once you've been out of combat for 5 seconds (6.5).
             data.rage = Math.max(0, data.rage - 10f / 20f);
         }
@@ -282,6 +316,7 @@ public final class Rpg {
             SkillEffects.tickLeap(player, rt);
         }
         Ultimates.tick(player, rt, now);
+        SkillEffects.tickPlayer(player, rt, now);
 
         if (now % 20 == 0) {
             double regen = stats.healthRegen();
@@ -352,9 +387,11 @@ public final class Rpg {
         for (int s = 0; s < PlayerData.SLOTS; s++) {
             ActiveSkill skill = data.slot(s);
             if (skill != null) {
-                cooldowns[s] = (int) Math.max(0, rt.cooldownEnd.getOrDefault(skill, 0L) - now);
+                int rank = data.rank(skill);
                 // stats(), not rt.stats: a level-up earlier this tick (markDirty) may have cleared the cache.
-                totals[s] = (int) Math.round(skill.cooldownTicks * stats(player).cooldownMultiplier(data.skillLevel(Skill.CASTING)));
+                totals[s] = (int) Math.round(skill.cooldownTicks(rank) * stats(player).cooldownMultiplier(data.skillLevel(Skill.CASTING)));
+                long spare = (long) totals[s] * (skill.charges(rank) - 1);
+                cooldowns[s] = (int) Math.max(0, rt.cooldownEnd.getOrDefault(skill, 0L) - now - spare);
             }
         }
         ServerPlayNetworking.send(player, new RpgNet.Resources(data.mana, data.rage, data.stamina, cooldowns, totals));
@@ -612,33 +649,46 @@ public final class Rpg {
         }
         Runtime rt = runtime(player);
         long now = player.serverLevel().getGameTime();
-        if (now < rt.cooldownEnd.getOrDefault(skill, 0L)) {
+        int rank = data.rank(skill);
+        int cd = (int) Math.round(skill.cooldownTicks(rank) * stats(player).cooldownMultiplier(data.skillLevel(Skill.CASTING)));
+        // cooldownEnd is when every charge is back; a skill with two charges can go while one is still recharging.
+        long full = rt.cooldownEnd.getOrDefault(skill, 0L);
+        if (full - now > (long) cd * (skill.charges(rank) - 1)) {
             return;
         }
-        float available = switch (skill.resource) {
+        String missing = SkillEffects.requirement(player, skill);
+        if (missing != null) {
+            player.displayClientMessage(Component.literal(missing), true);
+            return;
+        }
+        Stats st = stats(player);
+        Resource pool = skill.pool(data.mana, st.maxMana(), data.rage, st.maxRage(), data.stamina, maxStamina(player));
+        float available = switch (pool) {
             case MANA -> data.mana;
             case RAGE -> data.rage;
             case STAMINA -> data.stamina;
         };
         boolean free = player.isCreative();
-        // Ranks make a skill cheaper (6.5.2); AGI makes AGI skills' stamina cheaper (6.5.1).
-        float cost = skill.cost * (1 - 0.1f * (data.rank(skill) - 1));
-        if (skill.resource == Resource.STAMINA) {
-            cost *= (float) (1 - stats(player).staminaEfficiency() * Scaling.agiShare(skill.archetype));
-        } else if (skill.resource == Resource.MANA) {
-            cost *= (float) (1 - stats(player).get(Stat.MANA_COST) / 100);
+        // AGI makes AGI skills' stamina cheaper (6.5.1); ranks no longer discount the cost (6.5.5 gives each rank its own effect).
+        float cost = skill.cost;
+        if (pool == Resource.STAMINA) {
+            cost *= (float) (1 - st.staminaEfficiency() * Scaling.agiShare(skill.archetype));
+        } else if (pool == Resource.MANA) {
+            cost *= (float) (1 - st.get(Stat.MANA_COST) / 100);
         } else if (now < rt.rampageUntil) {
             // Rampage: Rage skills are free.
             cost = 0;
         }
         if (!free && available < cost) {
-            player.displayClientMessage(Component.literal("Not enough " + skill.resource.label.toLowerCase()), true);
+            player.displayClientMessage(Component.literal("Not enough " + pool.label.toLowerCase()), true);
             return;
         }
-        SkillEffects.rank = data.rank(skill);
+        SkillEffects.rank = rank;
+        SkillEffects.paid = free ? 0 : cost;
+        SkillEffects.paidFrom = pool;
         boolean cast;
         try {
-            cast = SkillEffects.cast(player, skill, stats(player), rt);
+            cast = SkillEffects.cast(player, skill, st, rt);
         } finally {
             SkillEffects.rank = 1;
         }
@@ -646,15 +696,32 @@ public final class Rpg {
             return;
         }
         if (!free) {
-            switch (skill.resource) {
-                case MANA -> data.mana -= cost;
-                case RAGE -> data.rage -= cost;
-                case STAMINA -> data.stamina -= cost;
-            }
+            spend(data, pool, cost);
         }
-        int casting = data.skillLevel(Skill.CASTING);
-        rt.cooldownEnd.put(skill, now + Math.round(skill.cooldownTicks * stats(player).cooldownMultiplier(casting)));
+        rt.cooldownEnd.put(skill, Math.max(full, now) + cd);
         addSkillXp(player, Skill.CASTING, skill.cost * 0.5);
+    }
+
+    static void spend(PlayerData data, Resource pool, float amount) {
+        switch (pool) {
+            case MANA -> data.mana -= amount;
+            case RAGE -> data.rage -= amount;
+            case STAMINA -> data.stamina -= amount;
+        }
+    }
+
+    /** Refunds a cast (Riposte at rank 4). */
+    static void refund(ServerPlayer player, Resource pool, float amount) {
+        spend(data(player), pool, -amount);
+    }
+
+    /** Lets a skill go again now (Leap Slam's kill reset, Hunter's Mark when its target dies). */
+    static void resetCooldown(ServerPlayer player, ActiveSkill skill) {
+        runtime(player).cooldownEnd.remove(skill);
+    }
+
+    static float maxStamina(ServerPlayer player) {
+        return stats(player).maxStamina() + com.cavmkii.seancraft.food.Food.stamina(player);
     }
 
     /** V: the specialization's ultimate, at the rank its milestones have reached (6.5.4). */
@@ -674,7 +741,7 @@ public final class Rpg {
             case STAMINA -> data.stamina;
         };
         boolean free = player.isCreative();
-        if (!free && available < Ultimate.COST) {
+        if (!free && available < ult.cost) {
             player.displayClientMessage(Component.literal("Not enough " + ult.resource.label.toLowerCase()), true);
             return;
         }
@@ -683,11 +750,7 @@ public final class Rpg {
             return;
         }
         if (!free) {
-            switch (ult.resource) {
-                case MANA -> data.mana -= Ultimate.COST;
-                case RAGE -> data.rage -= Ultimate.COST;
-                case STAMINA -> data.stamina -= Ultimate.COST;
-            }
+            spend(data, ult.resource, ult.cost);
         }
         rt.ultimateEnd = now + ult.cooldownTicks(rank);
     }
@@ -808,6 +871,29 @@ public final class Rpg {
                                             IntegerArgumentType.getInteger(ctx, "value"));
                                     return 1;
                                 })))))
+                // Testing: learn an active skill at a rank and slot it, skipping the web's path.
+                .then(Commands.literal("learn").then(Commands.argument("player", EntityArgument.player())
+                        .then(Commands.argument("skill", StringArgumentType.word())
+                                .then(Commands.argument("rank", IntegerArgumentType.integer(1, PlayerData.MAX_RANK))
+                                        .then(Commands.argument("slot", IntegerArgumentType.integer(0, PlayerData.SLOTS - 2)).executes(ctx -> {
+                                            ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                            ActiveSkill skill = ActiveSkill.byName(StringArgumentType.getString(ctx, "skill").toUpperCase(java.util.Locale.ROOT));
+                                            if (skill == null) {
+                                                ctx.getSource().sendFailure(Component.literal("Unknown skill"));
+                                                return 0;
+                                            }
+                                            PlayerData d = data(target);
+                                            for (WebNode n : PassiveWeb.NODES) {
+                                                if (n.active == skill) {
+                                                    d.nodes.add(n.id);
+                                                }
+                                            }
+                                            d.ranks.put(skill.name(), IntegerArgumentType.getInteger(ctx, "rank") - 1);
+                                            d.slots[IntegerArgumentType.getInteger(ctx, "slot")] = skill.name();
+                                            runtime(target).cooldownEnd.remove(skill);
+                                            markDirty(target);
+                                            return 1;
+                                        }))))))
                 .then(Commands.literal("reset").then(Commands.argument("player", EntityArgument.player()).executes(ctx -> {
                     ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                     target.setAttached(DATA, new PlayerData());
