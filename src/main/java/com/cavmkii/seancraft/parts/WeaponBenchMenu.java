@@ -16,10 +16,10 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Weapon Bench (design doc 4.5). Modify: put a weapon or armor piece in the left slot and its parts appear on its outline; take a part
- * out to remove it, put one in to fit it. Build: with the left slot empty, pick what to make and drop the parts into
- * its outline, then ASSEMBLE. The arrow buttons level a part up with its own material. The PARTS tab makes the parts
- * themselves from materials you carry and the stash.
+ * Weapon Bench (design doc 4.5, 4.6, 4.8). BUILD: with the left slot empty, pick what to make, drop its parts into the
+ * outline and take the weapon from the result slot. MODIFY: put a weapon or armor piece in the left slot and its parts
+ * appear on its outline; swap them. PARTS: a 3x3 grid that makes parts by pattern and levels them (part in the centre,
+ * its material around it). REPAIR: the item in one slot, its striking part's material in the other.
  */
 public class WeaponBenchMenu extends AbstractContainerMenu {
     public static final int PARTS = 4;
@@ -111,7 +111,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
 
             @Override
             public boolean isActive() {
-                return !partsTab;
+                return tab == TAB_BUILD;
             }
         });
         // One set of part slots per family, each on that family's outline; only the current family's set is live.
@@ -120,6 +120,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
                 addPartSlot(layoutFamily, i);
             }
         }
+        addStationSlots();
         firstInventorySlot = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
@@ -130,37 +131,52 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             addSlot(new Slot(inventory, col, 8 + col * 18, 188));
         }
         item.addListener(c -> loadParts());
-        parts.addListener(c -> saveParts());
+        parts.addListener(c -> {
+            saveParts();
+            refreshBuild();
+        });
+        grid.addListener(c -> refreshGrid());
+        repair.addListener(c -> refreshRepair());
         building.set(-1);
         addDataSlot(building);
-        addDataSlot(infusion);
-        addDataSlot(catalyst);
-        for (net.minecraft.world.inventory.DataSlot d : affordable) {
-            addDataSlot(d);
-        }
+        addDataSlot(gridLocked);
     }
 
-    /** Client: the screen is on its PARTS tab, so the item and part slots are hidden. */
-    public boolean partsTab;
+    public static final int TAB_BUILD = 0;
+    public static final int TAB_PARTS = 1;
+    public static final int TAB_REPAIR = 2;
+    /** Which tab is showing; set on both sides (the screen sends TAB_BUTTON + n). Slots of other tabs are inactive. */
+    public int tab;
+    public static final int TAB_BUTTON = 600;
+
+    // PARTS: the pattern grid and its result (4.8).
+    public static final int GRID_X = 61;
+    public static final int GRID_Y = 30;
+    public static final int GRID_RESULT_X = 151;
+    public static final int GRID_RESULT_Y = 48;
+    private final SimpleContainer grid = new SimpleContainer(9);
+    private final SimpleContainer gridOut = new SimpleContainer(1);
+    private PartCrafting.Result gridResult = PartCrafting.Result.NONE;
+    /** 1 while the grid matches a head that no unlocked weapon uses (4.7), so the screen can say why. */
+    private final net.minecraft.world.inventory.DataSlot gridLocked = net.minecraft.world.inventory.DataSlot.standalone();
+
+    public boolean gridLocked() {
+        return gridLocked.get() == 1;
+    }
+    // REPAIR: the item, its material, the repaired item (9.4.8).
+    public static final int REPAIR_ITEM_X = 48;
+    public static final int REPAIR_MAT_X = 84;
+    public static final int REPAIR_Y = 48;
+    public static final int REPAIR_RESULT_X = 148;
+    private final SimpleContainer repair = new SimpleContainer(2);
+    private final SimpleContainer repairOut = new SimpleContainer(1);
+    // BUILD: the finished weapon (replaces ASSEMBLE).
+    public static final int BUILD_RESULT_X = 38;
+    public static final int BUILD_RESULT_Y = 20;
+    private final SimpleContainer buildOut = new SimpleContainer(1);
 
     /** Index of the first player inventory slot (after the item slot and every family's part slots). */
     private int firstInventorySlot;
-
-    /** Which parts the PARTS tab can make right now, as bits over {@link PartDef#ALL}; 16 per data slot. */
-    private final net.minecraft.world.inventory.DataSlot[] affordable = affordableSlots();
-
-    private static net.minecraft.world.inventory.DataSlot[] affordableSlots() {
-        net.minecraft.world.inventory.DataSlot[] slots = new net.minecraft.world.inventory.DataSlot[(PartDef.ALL.size() + 15) / 16];
-        for (int i = 0; i < slots.length; i++) {
-            slots[i] = net.minecraft.world.inventory.DataSlot.standalone();
-        }
-        return slots;
-    }
-    private int affordTick;
-
-    public boolean canMake(int partIndex) {
-        return (affordable[partIndex / 16].get() >> (partIndex % 16) & 1) != 0;
-    }
 
     private void addPartSlot(Family layoutFamily, int partIndex) {
         int[] at = layout(layoutFamily, partIndex);
@@ -174,7 +190,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
 
                 @Override
                 public boolean isActive() {
-                    return !partsTab && family() == layoutFamily;
+                    return tab == TAB_BUILD && family() == layoutFamily;
                 }
 
                 @Override
@@ -205,73 +221,6 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         return null;
     }
 
-    public static final int MAKE_BUTTON = 300;
-    /** Cycles the infusion for wraps made on the PARTS tab (9.4.3). */
-    public static final int INFUSE_BUTTON = 500;
-    /** Repairs the item in the slot by 25% (9.4.8); REPAIR_ALL repeats while you can pay. */
-    public static final int REPAIR_BUTTON = 501;
-    public static final int REPAIR_ALL_BUTTON = 502;
-    public static final String[] INFUSIONS = {null, "heavy", "keen", "arcane"};
-    public static final String[] INFUSION_LABELS = {"Plain", "Heavy", "Keen", "Arcane"};
-    private final net.minecraft.world.inventory.DataSlot infusion = net.minecraft.world.inventory.DataSlot.standalone();
-    /** The element for crystals made here (9.4.5); CATALYST_BUTTON cycles it. */
-    private final net.minecraft.world.inventory.DataSlot catalyst = net.minecraft.world.inventory.DataSlot.standalone();
-    public static final int CATALYST_BUTTON = 503;
-
-    public int catalystIndex() {
-        return Math.floorMod(catalyst.get(), com.cavmkii.seancraft.rpg.Magic.ELEMENTS.length);
-    }
-
-    /** Blaze powder for fire, packed ice for frost, a lightning rod, a fermented spider eye for poison, a golden carrot for spirit. */
-    public static List<Cost> catalystCost(int index) {
-        net.minecraft.world.item.Item item = switch (index) {
-            case 1 -> net.minecraft.world.item.Items.PACKED_ICE;
-            case 2 -> net.minecraft.world.item.Items.LIGHTNING_ROD;
-            case 3 -> net.minecraft.world.item.Items.FERMENTED_SPIDER_EYE;
-            case 4 -> net.minecraft.world.item.Items.GOLDEN_CARROT;
-            default -> net.minecraft.world.item.Items.BLAZE_POWDER;
-        };
-        return List.of(Cost.of(item, 1));
-    }
-
-    public int infusionIndex() {
-        return Math.floorMod(infusion.get(), INFUSIONS.length);
-    }
-
-    /** What an infused wrap costs on top of its material: iron nuggets for Heavy, flint for Keen, lapis for Arcane. */
-    public static List<Cost> infusionCost(int index) {
-        return switch (index) {
-            case 1 -> List.of(Cost.of(net.minecraft.world.item.Items.IRON_NUGGET, 2));
-            case 2 -> List.of(Cost.of(net.minecraft.world.item.Items.FLINT, 1));
-            case 3 -> List.of(Cost.of(net.minecraft.world.item.Items.LAPIS_LAZULI, 1));
-            default -> List.of();
-        };
-    }
-
-    private List<Cost> costsFor(PartDef def) {
-        if (def.kind() == PartKind.CRYSTAL) {
-            List<Cost> all = new java.util.ArrayList<>(def.costs());
-            all.addAll(catalystCost(catalystIndex()));
-            return all;
-        }
-        if (def.kind() != PartKind.WRAP || infusionIndex() == 0) {
-            return def.costs();
-        }
-        List<Cost> all = new java.util.ArrayList<>(def.costs());
-        all.addAll(infusionCost(infusionIndex()));
-        return all;
-    }
-    public static final int MAKE_FIVE_BUTTON = 400;
-
-    /** Server: refresh which parts can be made, twice a second. */
-    @Override
-    public void broadcastChanges() {
-        if (server && access != ContainerLevelAccess.NULL && affordTick++ % 10 == 0) {
-            access.execute((level, pos) -> refreshAffordable());
-        }
-        super.broadcastChanges();
-    }
-
     private ServerPlayer owner;
     /** The player's character, for recipe ladders (4.7). The screen sets the client's copy. */
     public com.cavmkii.seancraft.rpg.PlayerData viewer;
@@ -299,56 +248,6 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             }
         }
         return true;
-    }
-
-    private void refreshAffordable() {
-        if (owner == null) {
-            return;
-        }
-        Hideouts.Hideout hideout = Hideouts.at(owner.serverLevel(), owner.position());
-        int[] bits = new int[affordable.length];
-        for (int i = 0; i < PartDef.ALL.size(); i++) {
-            if (!headLocked(PartDef.ALL.get(i)) && Stash.canAfford(owner, hideout, costsFor(PartDef.ALL.get(i)))) {
-                bits[i / 16] |= 1 << (i % 16);
-            }
-        }
-        for (int k = 0; k < affordable.length; k++) {
-            affordable[k].set(bits[k]);
-        }
-    }
-
-    /** Makes up to {@code times} of a part from what you carry and the stash; they go into your grids. */
-    private boolean makePart(ServerPlayer player, int partIndex, int times) {
-        if (partIndex < 0 || partIndex >= PartDef.ALL.size()) {
-            return false;
-        }
-        PartDef def = PartDef.ALL.get(partIndex);
-        if (headLocked(def)) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.literal("You haven't unlocked a weapon that uses a "
-                    + def.kind().label.toLowerCase() + " yet.").withStyle(net.minecraft.ChatFormatting.RED), true);
-            return false;
-        }
-        Hideouts.Hideout hideout = Hideouts.at(player.serverLevel(), player.position());
-        int made = 0;
-        List<Cost> costs = costsFor(def);
-        for (int t = 0; t < times && Stash.canAfford(player, hideout, costs); t++) {
-            Stash.consume(player, hideout, costs);
-            ItemStack made1 = new ItemStack(PartItems.get(def));
-            if (def.kind() == PartKind.WRAP && infusionIndex() > 0) {
-                made1.set(Parts.INFUSION, INFUSIONS[infusionIndex()]);
-            }
-            if (def.kind() == PartKind.CRYSTAL) {
-                made1.set(Parts.INFUSION, com.cavmkii.seancraft.rpg.Magic.ELEMENTS[catalystIndex()]);
-            }
-            com.cavmkii.seancraft.tetris.Tetris.give(player, made1);
-            made++;
-        }
-        if (made > 0) {
-            player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SMITHING_TABLE_USE,
-                    net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
-            refreshAffordable();
-        }
-        return made > 0;
     }
 
     public static int platesFor(Family family) {
@@ -490,88 +389,200 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         Parts.setInstalled(weapon(), map);
     }
 
-    /** Button i levels up the part in slot i; PICK_BUTTON + n picks what to build; ASSEMBLE_BUTTON builds it. */
+    /** PICK_BUTTON + n picks what to build; TAB_BUTTON + n switches tab. */
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if ((id == REPAIR_BUTTON || id == REPAIR_ALL_BUTTON) && player instanceof ServerPlayer sp && !weapon().isEmpty()) {
-            ItemStack w = weapon();
-            net.minecraft.world.item.Item mat = Wear.material(w);
-            if (mat == null || Wear.stepsToFull(w) == 0) {
-                return false;
-            }
-            Hideouts.Hideout hideout = Hideouts.at(sp.serverLevel(), sp.position());
-            List<Cost> cost = List.of(Cost.of(mat, 1));
-            int done = 0;
-            while (Wear.stepsToFull(w) > 0 && Stash.canAfford(sp, hideout, cost) && (done == 0 || id == REPAIR_ALL_BUTTON)) {
-                Stash.consume(sp, hideout, cost);
-                Wear.repairStep(w);
-                done++;
-            }
-            if (done > 0) {
-                item.setChanged();
-                sp.level().playSound(null, sp.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE, net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
-            }
-            return done > 0;
-        }
-        if (id == CATALYST_BUTTON) {
-            catalyst.set((catalystIndex() + 1) % com.cavmkii.seancraft.rpg.Magic.ELEMENTS.length);
-            refreshAffordable();
+        if (id >= TAB_BUTTON && id < TAB_BUTTON + 3) {
+            setTab(player, id - TAB_BUTTON);
             return true;
-        }
-        if (id == INFUSE_BUTTON) {
-            infusion.set((infusionIndex() + 1) % INFUSIONS.length);
-            refreshAffordable();
-            return true;
-        }
-        if (id >= MAKE_BUTTON && id < MAKE_BUTTON + PartDef.ALL.size() && player instanceof ServerPlayer sp) {
-            return makePart(sp, id - MAKE_BUTTON, 1);
-        }
-        if (id >= MAKE_FIVE_BUTTON && id < MAKE_FIVE_BUTTON + PartDef.ALL.size() && player instanceof ServerPlayer sp) {
-            return makePart(sp, id - MAKE_FIVE_BUTTON, 5);
         }
         if (id >= PICK_BUTTON && id < PICK_BUTTON + BUILDABLE.length && buildMode()) {
             if (building.get() != id - PICK_BUTTON) {
                 clearContainer(player, parts); // hand back parts meant for something else
                 building.set(id - PICK_BUTTON);
+                refreshBuild();
             }
             return true;
         }
-        if (id == ASSEMBLE_BUTTON) {
-            ItemStack result = assemblyResult();
-            if (result.isEmpty()) {
-                return false;
+        return false;
+    }
+
+    /** Leaving a tab hands back what was left in its slots. */
+    public void setTab(Player player, int next) {
+        if (tab == next) {
+            return;
+        }
+        if (server) {
+            if (tab == TAB_PARTS) {
+                clearContainer(player, grid);
+            } else if (tab == TAB_REPAIR) {
+                clearContainer(player, repair);
             }
-            loading = true;
-            for (int i = 0; i < PARTS; i++) {
-                parts.setItem(i, ItemStack.EMPTY);
+        }
+        tab = next;
+    }
+
+    private void addStationSlots() {
+        for (int i = 0; i < 9; i++) {
+            addSlot(new Slot(grid, i, GRID_X + (i % 3) * 18, GRID_Y + (i / 3) * 18) {
+                @Override
+                public boolean isActive() {
+                    return tab == TAB_PARTS;
+                }
+            });
+        }
+        addSlot(new ResultSlot(gridOut, GRID_RESULT_X, GRID_RESULT_Y, TAB_PARTS) {
+            @Override
+            void taken(Player player) {
+                consumeGrid(player, gridResult.use());
             }
-            loading = false;
-            item.setItem(0, result);
-            player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SMITHING_TABLE_USE,
-                    net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1f);
-            return true;
+        });
+        addSlot(new Slot(repair, 0, REPAIR_ITEM_X, REPAIR_Y) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return stack.isDamageableItem() && Wear.material(stack) != null;
+            }
+
+            @Override
+            public int getMaxStackSize() {
+                return 1;
+            }
+
+            @Override
+            public boolean isActive() {
+                return tab == TAB_REPAIR;
+            }
+        });
+        addSlot(new Slot(repair, 1, REPAIR_MAT_X, REPAIR_Y) {
+            @Override
+            public boolean isActive() {
+                return tab == TAB_REPAIR;
+            }
+        });
+        addSlot(new ResultSlot(repairOut, REPAIR_RESULT_X, REPAIR_Y, TAB_REPAIR) {
+            @Override
+            void taken(Player player) {
+                int steps = repairSteps();
+                repair.setItem(0, ItemStack.EMPTY);
+                repair.getItem(1).shrink(steps);
+                repair.setChanged();
+                player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE,
+                        net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
+            }
+        });
+        addSlot(new ResultSlot(buildOut, BUILD_RESULT_X, BUILD_RESULT_Y, TAB_BUILD) {
+            @Override
+            public boolean isActive() {
+                return tab == TAB_BUILD && buildMode() && family() != null;
+            }
+
+            @Override
+            void taken(Player player) {
+                loading = true;
+                for (int i = 0; i < PARTS; i++) {
+                    parts.setItem(i, ItemStack.EMPTY);
+                }
+                loading = false;
+                player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SMITHING_TABLE_USE,
+                        net.minecraft.sounds.SoundSource.BLOCKS, 0.8f, 1f);
+            }
+        });
+    }
+
+    /** A take-only slot; what taking costs is in {@link #taken}. */
+    abstract class ResultSlot extends Slot {
+        private final int onTab;
+
+        ResultSlot(SimpleContainer container, int x, int y, int onTab) {
+            super(container, 0, x, y);
+            this.onTab = onTab;
         }
-        if (id < 0 || id >= PARTS || !(player instanceof ServerPlayer serverPlayer)) {
+
+        abstract void taken(Player player);
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
             return false;
         }
-        ItemStack stack = parts.getItem(id);
-        if (!(stack.getItem() instanceof PartItem part)) {
-            return false;
+
+        @Override
+        public boolean isActive() {
+            return tab == onTab;
         }
-        int level = Parts.level(stack);
-        if (level >= PartDef.MAX_LEVEL) {
-            return false;
+
+        @Override
+        public void onTake(Player player, ItemStack stack) {
+            if (server) {
+                taken(player);
+            }
+            super.onTake(player, stack);
         }
-        List<Cost> cost = List.of(Cost.of(part.def.material(), part.def.upgradeCost(level)));
-        Hideouts.Hideout hideout = Hideouts.at(serverPlayer.serverLevel(), serverPlayer.position());
-        if (!Stash.canAfford(serverPlayer, hideout, cost)) {
-            return false;
+    }
+
+    private void consumeGrid(Player player, int[] use) {
+        for (int i = 0; i < 9; i++) {
+            if (use[i] > 0) {
+                ItemStack s = grid.getItem(i);
+                net.minecraft.world.item.Item remainder = s.getItem().getCraftingRemainingItem();
+                s.shrink(use[i]);
+                if (remainder != null && server) {
+                    com.cavmkii.seancraft.tetris.Tetris.give((ServerPlayer) player, new ItemStack(remainder));
+                }
+            }
         }
-        Stash.consume(serverPlayer, hideout, cost);
-        ItemStack upgraded = stack.copy();
-        upgraded.set(Parts.LEVEL, level + 1);
-        parts.setItem(id, upgraded);
-        return true;
+        grid.setChanged();
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SMITHING_TABLE_USE,
+                net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
+    }
+
+    /** The grid's result: a part (or a levelled one), unless it's a head no unlocked weapon uses (4.7). */
+    private void refreshGrid() {
+        if (!server) {
+            return;
+        }
+        ItemStack[] cells = new ItemStack[9];
+        for (int i = 0; i < 9; i++) {
+            cells[i] = grid.getItem(i);
+        }
+        gridResult = PartCrafting.match(cells);
+        ItemStack out = gridResult.output();
+        boolean locked = out.getItem() instanceof PartItem p && headLocked(p.def) && !(grid.getItem(4).getItem() instanceof PartItem);
+        gridLocked.set(locked ? 1 : 0);
+        if (locked) {
+            out = ItemStack.EMPTY;
+        }
+        gridOut.setItem(0, out.copy());
+    }
+
+    private int repairSteps() {
+        ItemStack w = repair.getItem(0);
+        ItemStack m = repair.getItem(1);
+        if (w.isEmpty() || m.isEmpty() || Wear.material(w) == null || !m.is(Wear.material(w))) {
+            return 0;
+        }
+        return Math.min(m.getCount(), Wear.stepsToFull(w));
+    }
+
+    private void refreshRepair() {
+        if (!server) {
+            return;
+        }
+        int steps = repairSteps();
+        ItemStack out = ItemStack.EMPTY;
+        if (steps > 0) {
+            out = repair.getItem(0).copy();
+            for (int i = 0; i < steps; i++) {
+                Wear.repairStep(out);
+            }
+        }
+        repairOut.setItem(0, out);
+    }
+
+    private void refreshBuild() {
+        if (!server || loading) {
+            return;
+        }
+        buildOut.setItem(0, assemblyResult());
     }
 
     @Override
@@ -582,6 +593,21 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         }
         ItemStack stack = slot.getItem();
         ItemStack copy = stack.copy();
+        if (slot instanceof ResultSlot result && player instanceof ServerPlayer sp) {
+            // Shift-click: as many as the grid allows, straight into the player's grids.
+            int made = 0;
+            while (slot.hasItem() && made < 64) {
+                ItemStack out = slot.getItem().copy();
+                slot.set(ItemStack.EMPTY);
+                result.onTake(player, out);
+                com.cavmkii.seancraft.tetris.Tetris.give(sp, out);
+                made++;
+                if (!(result.container == gridOut)) {
+                    break;
+                }
+            }
+            return ItemStack.EMPTY;
+        }
         if (index < firstInventorySlot) {
             if (!moveItemStackTo(stack, firstInventorySlot, slots.size(), true)) {
                 return ItemStack.EMPTY;
@@ -613,6 +639,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
+        clearContainer(player, grid);
+        clearContainer(player, repair);
         if (buildMode()) {
             // Loose parts for a build that wasn't assembled go back to the player.
             clearContainer(player, parts);

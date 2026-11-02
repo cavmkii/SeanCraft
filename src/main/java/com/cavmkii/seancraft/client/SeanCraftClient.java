@@ -48,6 +48,8 @@ public final class SeanCraftClient implements ClientModInitializer {
                         Component.literal("SeanCraft vanilla theme"), net.fabricmc.fabric.api.resource.ResourcePackActivationType.DEFAULT_ENABLED));
         EntityRendererRegistry.register(com.cavmkii.seancraft.parts.Throwing.THROWN, com.cavmkii.seancraft.client.parts.ThrownWeaponRenderer::new);
         ClientRpg.init();
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.pattern.Patterns.Sync.TYPE,
+                (payload, ctx) -> com.cavmkii.seancraft.pattern.Patterns.receive(payload));
         ClientTarkov.init();
         com.cavmkii.seancraft.client.food.ClientFood.init();
         com.cavmkii.seancraft.client.boss.ClientBoss.init();

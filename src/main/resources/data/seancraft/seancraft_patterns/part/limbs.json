@@ -1,0 +1,9 @@
+{
+ "station": "part",
+ "part": "limbs",
+ "pattern": [
+  "W.",
+  ".W",
+  "W."
+ ]
+}

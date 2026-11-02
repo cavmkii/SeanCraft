@@ -37,6 +37,7 @@ public final class SeanCraft implements ModInitializer {
         ModItems.init();
         ModEntities.init();
         Rpg.init();
+        com.cavmkii.seancraft.pattern.Patterns.init();
         com.cavmkii.seancraft.parts.PartItems.init();
         com.cavmkii.seancraft.tetris.Tetris.init();
         Tarkov.init();

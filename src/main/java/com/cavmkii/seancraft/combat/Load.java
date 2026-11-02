@@ -91,7 +91,7 @@ public final class Load {
             Parts.Installed head = Parts.installed(stack).get(PartSlot.HEAD);
             Parts.Installed plate = Parts.installed(stack).get(PartSlot.PLATE);
             Parts.Installed core = head != null ? head : plate;
-            if (core != null && core.part().tier() == 5) {
+            if (core != null && core.part().tier() == 5 && core.part().kind().material == com.cavmkii.seancraft.parts.PartKind.Material.METAL) {
                 f *= NETHERITE;
             }
             if (MaterialTraits.has(stack, MaterialTraits.Trait.LIGHTER)) {

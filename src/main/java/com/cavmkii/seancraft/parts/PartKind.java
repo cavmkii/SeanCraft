@@ -12,7 +12,7 @@ public enum PartKind {
     MACE_HEAD("Mace head", PartSlot.HEAD, Material.METAL),
     SPEARHEAD("Spearhead", PartSlot.HEAD, Material.METAL),
     HALBERD_HEAD("Halberd head", PartSlot.HEAD, Material.METAL),
-    LIMBS("Limbs", PartSlot.HEAD, Material.METAL),
+    LIMBS("Limbs", PartSlot.HEAD, Material.WOOD),
     GUARD("Guard", PartSlot.GUARD, Material.METAL),
     PLATE("Plates", PartSlot.PLATE, Material.METAL),
     HANDLE("Handle", PartSlot.HANDLE, Material.WOOD),
