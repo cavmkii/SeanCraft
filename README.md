@@ -20,7 +20,7 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 
 | Key | What it does |
 |---|---|
-| E or J | Inventory screen (GEAR tab) |
+| E or J | Inventory screen (INVENTORY tab) |
 | H | Inventory screen, STATUS tab |
 | K | Inventory screen, CHARACTER tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
@@ -29,7 +29,7 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has four tabs: GEAR, CRAFTING, STATUS and CHARACTER. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY is everything in one place, like vanilla's inventory: equipment, your grids and hotbar on the left, a crafting grid in the middle, and the stash (or the chest you opened) on the right. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -78,7 +78,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Stamina refills at 25 a second, but only after a second without spending any. Keep swinging and it never refills.
 - **Running dry.** A swing you start with too little stamina does half damage. At 0 you can't sprint or roll until the bar is back to 25.
 - **Rolling.** For the first 0.4 seconds of a roll, attacks (hits, arrows, explosions) can't touch you. Falls, fire, lava, bleeding and poison still can. You can't roll in the middle of a swing, and there's a 0.75 second wait between rolls. Rolls don't use hunger.
-- **Equip load.** Your held weapons, shield and worn armor have a weight (light weapons 3, medium 5, heavy 9; armor weighs its armor points; netherite is 20% heavier, phantom membrane 15% lighter). Capacity is 40 plus your Strength. It shows under the hotbar on the GEAR tab.
+- **Equip load.** Your held weapons, shield and worn armor have a weight (light weapons 3, medium 5, heavy 9; armor weighs its armor points; netherite is 20% heavier, phantom membrane 15% lighter). Capacity is 40 plus your Strength. It shows under the hotbar on the INVENTORY tab.
   - Under 30%: no penalty. 30 to 70%: walk 5% slower. 70 to 100%: walk 15% slower and the roll only protects for 0.2 seconds. Over 100%: no rolling, no sprinting.
 - **Heavy attacks.** Attack while sneaking. Twice the stamina, 75% more damage, twice the stagger. Swords and daggers lunge, maces and warhammers slam the ground and stagger everything close, axes and halberds spin, spears and pikes sweep the front. A staff fires a charged orb that bursts.
 - **Poise.** Blunt hits build up on whatever they hit. A mob staggers after blunt damage worth 30% of its health, a player after 60. It drains after 3 seconds without a blunt hit.
@@ -141,7 +141,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
   - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
   - Each one after the first in a line takes the empty one below it in the centre of its pattern, so you're trading up, not starting over.
-- **Chests and barrels** open on the GEAR tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
+- **Chests and barrels** open on the INVENTORY tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
 - **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
 - **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
 - **Naming chests.** Click a chest's name to rename it, then hit Enter. The name shows up next to a picture of the block, so you can tell a chest from a barrel at a glance.
@@ -151,13 +151,13 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
 - **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
 - **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** The CRAFTING tab is laid out like a vanilla crafting table with your inventory around it: your pockets, rig, pouch, backpack and hotbar on the left (same as on GEAR), the crafting grid and result top middle, the recipe list under the grid, and the stash (or the chest you opened) on the right. Click RECIPES above the list to fold it away. Right-clicking a crafting table opens the same tab.
+- **Crafting.** The crafting grid sits in the middle of the INVENTORY tab, so quick crafts never need another tab. It's 2x2 out in the world and 3x3 near a crafting table or in your hideout; right-clicking a crafting table opens the same tab. Above it are two books, like vanilla's recipe book button: the **crafting book** opens what you can make right now under the grid, and the **recipe book** opens every recipe, found or not (CRAFT takes you back).
   - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory, and Shift-click the result to craft as many as you can. The same drag works on the hotbar.
   - Click a category heading to fold it shut, or click it again to open it.
   - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out yourself from either side. The Hideout Bench and Weapon Bench books do the same. The count beside each recipe includes your hotbar, grids and stash.
   - PIN TO HUD under the result (while a recipe is picked) puts its ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
-  - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the CRAFT list does the same ghost.
+  - The recipe book shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the crafting book does the same ghost.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
 - **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.

@@ -28,8 +28,9 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * The Tarkov screen. GEAR: equipment, hotbar, the Tetris grids, and any open container or stash on the right.
- * CRAFTING: recipes you can make from everything you carry. CHARACTER: the passive web with level, attributes and use-skills.
+ * The Tarkov screen. INVENTORY: equipment, hotbar and the Tetris grids on the left, the crafting grid and its recipe
+ * books in the middle, any open container or the stash on the right. STATUS: body and effects. CHARACTER: the passive
+ * web with level, attributes and use-skills.
  * STATUS: body health and meds.
  *
  * <p>GEAR controls, mostly vanilla's: click to pick up and put down, right-click to pick up half or put down one,
@@ -37,14 +38,16 @@ import org.lwjgl.glfw.GLFW;
  * (Ctrl+Q the stack), Esc to let go.
  */
 public class TarkovScreen extends Screen {
-    public static final int GEAR = 0;
-    public static final int CRAFTING = 1;
-    public static final int STATUS = 2;
+    /** Equipment, grids, hotbar, the crafting grid with its recipe books, and the stash: GEAR and CRAFTING in one. */
+    public static final int INVENTORY = 0;
+    /** Old names for the INVENTORY tab, for callers that open it (E, a crafting table). */
+    public static final int GEAR = INVENTORY;
+    public static final int CRAFTING = INVENTORY;
+    public static final int STATUS = 1;
     /** The passive web with level, attributes and use-skills beside it (SKILLS and WEB used to be two tabs). */
-    public static final int WEB = 3;
-    /** Kept for old callers: the skills now live on the CHARACTER tab. */
+    public static final int WEB = 2;
     public static final int SKILLS = WEB;
-    private static final String[] TABS = {"GEAR", "CRAFTING", "STATUS", "CHARACTER"};
+    private static final String[] TABS = {"INVENTORY", "STATUS", "CHARACTER"};
 
     private static final int C = 18;
     private static final int W = 426;
@@ -54,8 +57,8 @@ public class TarkovScreen extends Screen {
     private static final int COL4_W = 9 * C;
     private static final int ROW = 22;
     /** The CRAFTING tab is wider: inventory left, grid and recipes in the middle, stash right. */
-    private static final int CW = 574;
-    private static final int MID = 230;
+    private static final int CW = 606;
+    private static final int MID = 262;
     private static final int MID_W = 168;
     private static final int CRAFT_COL4 = MID + MID_W + 6;
 
@@ -180,7 +183,6 @@ public class TarkovScreen extends Screen {
     private List<Box> boxes() {
         TetrisNet.Sync s = ClientTetris.sync;
         List<Box> out = new ArrayList<>();
-        // On CRAFTING there's no equipment column, so the grids move left.
         int ax = gridColA();
         int bx = gridColB();
         out.add(new Box(GridId.POCKETS, ax, 10, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
@@ -195,11 +197,11 @@ public class TarkovScreen extends Screen {
     }
 
     private int gridColA() {
-        return tab == CRAFTING ? 0 : 66;
+        return 66;
     }
 
     private int gridColB() {
-        return tab == CRAFTING ? 114 : 164;
+        return 164;
     }
 
     /** x, y, size of an equipment place. */
@@ -285,13 +287,13 @@ public class TarkovScreen extends Screen {
 
     /** What's under a point (virtual coords) on the GEAR tab. For grids it's the cell. */
     private Loc locAt(double x, double y) {
-        if (tab == CRAFTING) {
+        if (tab == INVENTORY && craftView == 0) {
             int cell = cellAt(x, y);
             if (cell >= 0) {
                 return Loc.craft(cell);
             }
         }
-        for (int slot = 0; slot < 7 && tab == GEAR; slot++) {
+        for (int slot = 0; slot < 7 && tab == INVENTORY; slot++) {
             int[] r = equipRect(slot);
             if (x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[2]) {
                 return Loc.equip(slot);
@@ -409,15 +411,17 @@ public class TarkovScreen extends Screen {
             int my = (int) Math.floor(vy(mouseY));
             hoverRecipe = null;
             ItemStack tip = switch (tab) {
-                case GEAR -> renderGear(g, mx, my);
-                case CRAFTING -> renderCrafting(g, mx, my);
+                case INVENTORY -> renderCrafting(g, mx, my);
                 default -> ItemStack.EMPTY;
             };
             g.pose().popPose();
             hoverStack = tip;
             // Next frame's grid preview follows what's hovered now.
             shownHover = hoverRecipe;
-            if (!tip.isEmpty() && held.isEmpty()) {
+            String book = tab == INVENTORY && craftView == 0 && held.isEmpty() ? bookTip(vx(mouseX), vy(mouseY)) : null;
+            if (book != null) {
+                g.renderTooltip(font, Component.literal(book), mouseX, mouseY);
+            } else if (!tip.isEmpty() && held.isEmpty()) {
                 if (hoverRecipe != null) {
                     // A recipe: its layout under the name.
                     g.renderTooltip(font, Screen.getTooltipFromItem(minecraft, tip),
@@ -510,11 +514,8 @@ public class TarkovScreen extends Screen {
     private int lastMx;
     private int lastMy;
 
-    private ItemStack renderGear(GuiGraphics g, int mx, int my) {
-        lastMx = mx;
-        lastMy = my;
-        Loc hover = locAt(mx, my);
-        ItemStack tip = stackAt(hover);
+    /** The left side of INVENTORY: equipment, your grids, the hotbar with its refill toggles, load, SORT... and DISCARD. */
+    private void renderGearLeft(GuiGraphics g, int mx, int my, Loc hover) {
         TetrisNet.Sync s = ClientTetris.sync;
 
         label(g, "EQUIPMENT", 0, 0);
@@ -538,7 +539,7 @@ public class TarkovScreen extends Screen {
             Kit.smallButton(g, font, (t == 0 ? "REFILL " : "FROM STASH ") + (on ? "ON" : "OFF"), r[0], 179, r[1], 9, true, over, on, 0.75f);
         }
         for (int i = 0; i < 9; i++) {
-            slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)), null);
+            slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i)), null);
         }
         // Load and roll under the hotbar, so packing shows what it does to the dodge (C.4, 9.4.7).
         com.cavmkii.seancraft.combat.Load.State load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
@@ -553,25 +554,7 @@ public class TarkovScreen extends Screen {
         g.pose().popPose();
         Kit.bar(g, "load", 9 * C - 40, 210, 40, (float) Math.min(1, load.fraction()));
 
-        for (Box b : boxes()) {
-            // Every grid is labelled with what it is and its size (C.4).
-            String title = switch (b.id) {
-                case POCKETS -> "POCKETS";
-                case RIG -> ClientTetris.sync.rig().isEmpty() ? "RIG" : ClientTetris.sync.rig().getHoverName().getString().toUpperCase(Locale.ROOT);
-                case BACKPACK -> ClientTetris.sync.backpack().isEmpty() ? "BACKPACK"
-                        : ClientTetris.sync.backpack().getHoverName().getString().toUpperCase(Locale.ROOT);
-                case POUCH -> "SECURE POUCH";
-            } + "  " + b.w + "X" + b.h;
-            // The secure pouch label is gold: gold marks what survives death.
-            Kit.label(g, font, title, b.x, b.y - 10, b.id == GridId.POUCH ? Kit.GOLD : Kit.ASH);
-            renderGrid(g, b);
-        }
-        if (s.rig().isEmpty()) {
-            g.drawString(font, "no rig", 66, 64, Kit.DISABLED, false);
-        }
-        if (s.backpack().isEmpty()) {
-            g.drawString(font, "no backpack", 164, 14, Kit.DISABLED, false);
-        }
+        renderBoxes(g);
 
         for (int i = 0; i < BTN.length; i++) {
             boolean h = mx >= BTN_X && mx < BTN_X + BTN_W && my >= BTN_Y[i] && my < BTN_Y[i] + BTN_H;
@@ -585,11 +568,6 @@ public class TarkovScreen extends Screen {
         Kit.buttonBg(g, BTN_X, DISCARD_Y, BTN_W, 19, true, overDiscard && !held.isEmpty(), false);
         g.renderOutline(BTN_X, DISCARD_Y, BTN_W, 19, overDiscard && !held.isEmpty() ? Kit.BLOOD_LIGHT : Kit.BLOOD);
         Kit.text(g, font, "DISCARD", BTN_X + (BTN_W - font.width("DISCARD")) / 2, DISCARD_Y + 6, Kit.BLOOD_LIGHT);
-
-        renderRight(g, hover);
-        renderFilter(g, mx, my);
-        renderHeld(g, mx, my, hover);
-        return tip;
     }
 
     private void renderGrid(GuiGraphics g, Box b) {
@@ -996,7 +974,48 @@ public class TarkovScreen extends Screen {
     /** The recipe list header (click to fold the list), then the list under it. */
     private static final int LIST_HEAD_Y = GRID_Y + 3 * CELL + 6;
     private static final int LIST_SEARCH_X = MID + 70;
-    private static boolean listFolded;
+    /** The crafting book (what you can make now) starts shut, like vanilla's recipe book. */
+    private static boolean listFolded = true;
+    private static final int BOOK_W = 20;
+    private static final int BOOK_H = 14;
+
+    /** Two books left of CLEAR: what you can make now (toggles the list), and every recipe (the RECIPES view). */
+    private void books(GuiGraphics g, int mx, int my) {
+        for (int b = 0; b < 2; b++) {
+            int bx = MID + b * (BOOK_W + 4);
+            boolean over = mx >= bx && mx < bx + BOOK_W && my >= 0 && my < BOOK_H;
+            boolean active = b == 0 && !listFolded;
+            Kit.button(g, font, "", bx, 0, BOOK_W, BOOK_H, true, over && !active, active);
+            if (b == 0) {
+                Kit.blit(g, over ? "button_small/recipe_book_hover" : "button_small/recipe_book_normal", bx + 4, 1, 12, 12);
+            } else {
+                g.pose().pushPose();
+                g.pose().translate(bx + 4, 1, 0);
+                g.pose().scale(0.75f, 0.75f, 1);
+                g.renderItem(new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK), 0, 0);
+                g.pose().popPose();
+            }
+        }
+    }
+
+    private int bookAt(double x, double y) {
+        for (int b = 0; b < 2; b++) {
+            int bx = MID + b * (BOOK_W + 4);
+            if (x >= bx && x < bx + BOOK_W && y >= 0 && y < BOOK_H) {
+                return b;
+            }
+        }
+        return -1;
+    }
+
+    /** Tooltip for a book button, or null. */
+    private String bookTip(double x, double y) {
+        return switch (bookAt(x, y)) {
+            case 0 -> listFolded ? "Crafting book: what you can make now" : "Close the crafting book";
+            case 1 -> "Recipe book: every recipe, found or not";
+            default -> null;
+        };
+    }
 
     private int listTop() {
         return LIST_HEAD_Y + 14 + (ClientTetris.craft.inHideout() ? 0 : 14);
@@ -1073,16 +1092,12 @@ public class TarkovScreen extends Screen {
         Loc hover = locAt(mx, my);
         ItemStack tip = stackAt(hover);
 
-        // Left: your grids and hotbar. Right: the stash, or the chest you opened.
-        renderBoxes(g);
-        label(g, "HOTBAR", 0, 180);
-        for (int i = 0; i < 9; i++) {
-            slot(g, i * C, 190, C, stackAt(Loc.hand(i)), hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i)), null);
-        }
+        // Left: equipment, grids, hotbar. Right: the stash, or the chest you opened.
+        renderGearLeft(g, mx, my, hover);
         renderRight(g, hover);
 
-        // Middle: sub-tabs and CLEAR, the grid and result.
-        subTabs(g, MID, mx, my);
+        // Middle: the recipe books and CLEAR, then the grid and result (2x2 here, 3x3 near a crafting table).
+        books(g, mx, my);
         boolean clearHover = mx >= CLEAR_X && mx < CLEAR_X + CLEAR_W && my >= 0 && my < 14;
         Kit.button(g, font, "CLEAR", CLEAR_X, 0, CLEAR_W, 14, true, clearHover, false);
         // The picked recipe's pattern as a ghost (4.1): faded icons in the empty squares, until it's complete.
@@ -1140,9 +1155,14 @@ public class TarkovScreen extends Screen {
 
         // The recipe list, under the grid; the header folds it away.
         List<CraftRow> rows = craftRows();
-        boolean overHeader = mx >= MID && mx < LIST_SEARCH_X - 2 && my >= LIST_HEAD_Y && my < LIST_HEAD_Y + 12;
-        g.drawString(font, (listFolded ? "▸ " : "▾ ") + "RECIPES", MID, LIST_HEAD_Y + 2, overHeader ? Kit.GOLD_LIGHT : Kit.ASH, false);
+        if (listFolded && !craft.inHideout()) {
+            // New players need this one even with the book shut.
+            g.fill(MID, LIST_HEAD_Y, MID + 1, LIST_HEAD_Y + 20, Kit.GOLD);
+            g.drawString(font, "No hideout here.", MID + 4, LIST_HEAD_Y + 1, Kit.GOLD_LIGHT, false);
+            g.drawString(font, "Open the book for the bench.", MID + 4, LIST_HEAD_Y + 11, Kit.ASH, false);
+        }
         if (!listFolded) {
+            g.drawString(font, "CAN MAKE", MID, LIST_HEAD_Y + 2, Kit.ASH, false);
             searchBox(g, LIST_SEARCH_X, LIST_HEAD_Y, MID + MID_W - LIST_SEARCH_X, 12);
             ItemStack listTip = renderCraftList(g, rows, mx, my);
             if (!listTip.isEmpty()) {
@@ -1564,6 +1584,14 @@ public class TarkovScreen extends Screen {
         if (filterOpen >= 0 && clickFilter(x, y)) {
             return true;
         }
+        if (clickGearButtons(x, y, button)) {
+            return true;
+        }
+        return clickInventory(x, y, button);
+    }
+
+    /** SORT, STASH ALL, ORGANIZE STASH, DROP UNSORTED and the hotbar refill toggles. */
+    private boolean clickGearButtons(double x, double y, int button) {
         for (int i = 0; i < BTN.length && button == 0; i++) {
             if (x >= BTN_X && x < BTN_X + BTN_W && y >= BTN_Y[i] && y < BTN_Y[i] + BTN_H) {
                 ClientPlayNetworking.send(new TetrisNet.Action(BTN_ACTION[i]));
@@ -1577,7 +1605,7 @@ public class TarkovScreen extends Screen {
                 return true;
             }
         }
-        return clickInventory(x, y, button);
+        return false;
     }
 
     /**
@@ -1753,11 +1781,18 @@ public class TarkovScreen extends Screen {
         if (searchFocused) {
             return true;
         }
-        int v = subTabAt(MID, x, y);
-        if (v >= 0) {
-            craftView = v;
+        int book = bookAt(x, y);
+        if (book == 0) {
+            listFolded = !listFolded;
+            return true;
+        }
+        if (book == 1) {
+            craftView = 1;
             dropHeld();
             layout();
+            return true;
+        }
+        if (clickGearButtons(x, y, button)) {
             return true;
         }
         if (x >= CLEAR_X && x < CLEAR_X + CLEAR_W && y >= 0 && y < 14) {
@@ -1773,10 +1808,6 @@ public class TarkovScreen extends Screen {
             if (!craft.result().isEmpty() && held.isEmpty()) {
                 ClientPlayNetworking.send(new TetrisNet.Craft("#grid", hasShiftDown() ? 64 : 1));
             }
-            return true;
-        }
-        if (x >= MID && x < LIST_SEARCH_X - 2 && y >= LIST_HEAD_Y && y < LIST_HEAD_Y + 12) {
-            listFolded = !listFolded;
             return true;
         }
         if (!listFolded && held.isEmpty() && x >= MID && x < MID + MID_W && y >= listTop() && y < H) {
@@ -1837,8 +1868,6 @@ public class TarkovScreen extends Screen {
             containerScroll -= scrollY * 20;
         } else if (tab == CRAFTING && vx(mouseX) >= MID) {
             craftScroll -= scrollY * 20;
-        } else if (tab == GEAR && vx(mouseX) >= col4()) {
-            containerScroll -= scrollY * 20;
         }
         return true;
     }
