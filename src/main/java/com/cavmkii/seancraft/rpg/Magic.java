@@ -23,6 +23,12 @@ public final class Magic {
     public static final float WAND_MANA = 4;
     public static final float STAFF_MANA = 8;
     static final float[] CRYSTAL_FACTOR = {0.85f, 1.0f, 1.1f, 1.2f, 1.35f};
+    /** Ticks between bolts: a wand every 0.6 s, a staff every second, the staff's charged orb 1.5 s. */
+    public static final int WAND_COOLDOWN = 12;
+    public static final int STAFF_COOLDOWN = 20;
+    public static final int ORB_COOLDOWN = 30;
+    /** Game time each player can fire again. */
+    private static final java.util.Map<java.util.UUID, Long> READY = new java.util.HashMap<>();
     public static final String[] ELEMENTS = {"fire", "frost", "lightning", "poison", "spirit"};
     public static final String[] ELEMENT_LABELS = {"Fire", "Frost", "Lightning", "Poison", "Spirit"};
 
@@ -64,6 +70,11 @@ public final class Magic {
             return false;
         }
         boolean staff = f == Family.STAFF;
+        // A swing during the cooldown fires nothing and costs nothing (it used to fire every swing, like a minigun).
+        long now = player.serverLevel().getGameTime();
+        if (now < READY.getOrDefault(player.getUUID(), 0L)) {
+            return true;
+        }
         float cost = (staff ? STAFF_MANA : WAND_MANA) * (heavy ? 2 : 1);
         PlayerData data = Rpg.data(player);
         if (!player.isCreative()) {
@@ -98,6 +109,10 @@ public final class Magic {
         player.level().addFreshEntity(bolt);
         player.level().playSound(null, player.blockPosition(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 0.6f, staff ? 0.9f : 1.4f);
         held.hurtAndBreak(1, player.serverLevel(), player, item -> { });
+        int cooldown = staff ? (heavy ? ORB_COOLDOWN : STAFF_COOLDOWN) : WAND_COOLDOWN;
+        READY.put(player.getUUID(), now + cooldown);
+        // The vanilla sweep on the hotbar shows when it's ready.
+        player.getCooldowns().addCooldown(held.getItem(), cooldown);
         return true;
     }
 }

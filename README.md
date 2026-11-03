@@ -86,7 +86,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - **Parry:** raise the shield within 0.2 seconds of a hit (0.35 with a buckler). No damage, no stamina, the attacker staggers, and the Blademaster's riposte opens.
   - **Buckler** (Blademaster only): 60%, light. **Tower shield** (Knight only): blocks everything in front including arrows, can't parry, slows you 30% while raised, heavy.
 - **Throwing.** Spears, throwing knives, javelins and boomerangs: hold use to wind up, let go to throw. Thrown at iron: knife 22, javelin 35, spear 32, boomerang 20. They stay where they land for 5 minutes, glowing. The boomerang comes back.
-- **Wands and staves.** Attacking fires a bolt: 18 damage for 4 mana from a wand, 35 for 8 from a staff, times the crystal's factor. The crystal's catalyst sets the element. Holding one also makes your INT skills stronger by the same factor. The Arcanist now starts with a quartz wand.
+- **Wands and staves.** Attacking fires a bolt: 18 damage for 4 mana from a wand, 35 for 8 from a staff, times the crystal's factor. A wand can fire every 0.6 seconds, a staff every second (its charged orb every 1.5); swings in between fire nothing and cost no mana, and the hotbar shows the cooldown sweep. The crystal's catalyst sets the element. Holding one also makes your INT skills stronger by the same factor. The Arcanist now starts with a quartz wand.
 - **Swords** made at the Weapon Bench swing three times in a combo: two side slashes and a harder third slash.
 - **Damage types.** Every hit is split into types:
   - physical: slash, pierce, blunt;

@@ -125,7 +125,8 @@ public final class Tetris {
     /** Opens the inventory screen on its CRAFTING tab, as a crafting table does. */
     public static void openCrafting(ServerPlayer player) {
         sendCraftList(player);
-        ServerPlayNetworking.send(player, new TetrisNet.Open(1));
+        // The INVENTORY tab, which has the crafting grid.
+        ServerPlayNetworking.send(player, new TetrisNet.Open(0));
         com.cavmkii.seancraft.tarkov.Stations.send(player);
     }
 
