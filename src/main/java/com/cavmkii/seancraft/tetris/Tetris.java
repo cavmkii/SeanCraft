@@ -446,7 +446,9 @@ public final class Tetris {
         // Copies: on a single-player server the payload object reaches the client as is.
         ServerPlayNetworking.send(player, new TetrisNet.Sync(d.rig.copy(), d.backpack.copy(), copy(d.pockets), copy(d.rigItems),
                 copy(d.backpackItems), copy(d.pouch), tarkov.tier.width, tarkov.tier.height,
-                d.unsorted.stream().map(ItemStack::copy).toList(), home != null, views, d.autoRefill, d.refillFromStash, List.copyOf(d.tracked)));
+                d.unsorted.stream().map(ItemStack::copy).toList(), home != null, views, d.autoRefill, d.refillFromStash, List.copyOf(d.tracked),
+                // The first container is the chest you opened, if you opened one (the rest is the stash).
+                rt.container != null && !views.isEmpty()));
     }
 
     private static List<Placed> copy(List<Placed> list) {
@@ -1385,7 +1387,18 @@ public final class Tetris {
         }
         Shown c = shown.get(index);
         ContainerGrid g = c.grid();
-        if (action == 2) {
+        if (action == 3) {
+            // Refill stacks: whatever this chest already holds, put in what you carry of it (pockets, rig, backpack).
+            InvData data = data(player);
+            for (GridId id : new GridId[] {GridId.POCKETS, GridId.RIG, GridId.BACKPACK}) {
+                for (Placed p : data.list(id)) {
+                    if (holds(c.container, p.stack)) {
+                        storeIn(c, p.stack);
+                    }
+                }
+                data.list(id).removeIf(p -> p.stack.isEmpty());
+            }
+        } else if (action == 2) {
             g.setFilter(value);
         } else if (action == 0) {
             g.sort();
@@ -1406,6 +1419,15 @@ public final class Tetris {
         g.save();
         c.container.setChanged();
         rt(player).dirty = true;
+    }
+
+    private static boolean holds(Container container, ItemStack stack) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (ItemStack.isSameItemSameComponents(container.getItem(i), stack)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ================================================================== death

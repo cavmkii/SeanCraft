@@ -73,7 +73,7 @@ public final class TetrisNet {
     /** Server to client: the whole Tetris inventory and whatever container or stash is in reach. */
     public record Sync(ItemStack rig, ItemStack backpack, List<Placed> pockets, List<Placed> rigItems, List<Placed> backpackItems,
             List<Placed> pouch, int pouchW, int pouchH, List<ItemStack> unsorted, boolean stash, List<ContainerView> containers,
-            boolean autoRefill, boolean refillFromStash, List<String> tracked) implements CustomPacketPayload {
+            boolean autoRefill, boolean refillFromStash, List<String> tracked, boolean opened) implements CustomPacketPayload {
         public static final Type<Sync> TYPE = payloadType("inv_sync");
         public static final StreamCodec<RegistryFriendlyByteBuf, Sync> CODEC = StreamCodec.of((buf, p) -> {
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.rig);
@@ -93,6 +93,7 @@ public final class TetrisNet {
             p.tracked.forEach(buf::writeUtf);
             buf.writeVarInt(p.containers.size());
             p.containers.forEach(c -> c.write(buf));
+            buf.writeBoolean(p.opened);
         }, buf -> {
             ItemStack rig = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
             ItemStack backpack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
@@ -120,7 +121,9 @@ public final class TetrisNet {
             for (int i = 0; i < c; i++) {
                 containers.add(ContainerView.read(buf));
             }
-            return new Sync(rig, backpack, pockets, rigItems, backpackItems, pouch, pw, ph, unsorted, stash, containers, refill, refillStash, tracked);
+            boolean opened = buf.readBoolean();
+            return new Sync(rig, backpack, pockets, rigItems, backpackItems, pouch, pw, ph, unsorted, stash, containers, refill, refillStash, tracked,
+                    opened);
         });
         @Override public Type<Sync> type() { return TYPE; }
     }

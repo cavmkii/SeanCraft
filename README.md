@@ -29,7 +29,12 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY is everything in one place, like vanilla's inventory: equipment, your grids and hotbar on the left, a crafting grid in the middle, and the stash (or the chest you opened) on the right. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY is everything in one place, Tarkov-style (UI v2):
+  - **Left:** your equipment in boxes around a body, and the secure pouch (its grid is kept on death).
+  - **Middle:** your rig, pockets and backpack, each with its own item beside its grid. The column scrolls when it's taller than the screen. The sort icon on the first label sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
+  - **Right:** crafting on top, then the stash (in a hideout) and the chest you opened. The stash has STASH ALL and organize at its top, and each chest in it has its own filter, sort and take-all icons; click a chest's name to rename it. The open chest has RENAME, sort, take all and refill stacks (puts in what you carry of anything it already holds).
+  - **Bottom:** the quick-use bar (your hotbar) with number badges, the auto-refill toggles after it, and load, health, stamina, and Rage or mana if your skills use them.
+  - Click anywhere off the panels with something held to drop it, like vanilla. Every small icon has a tooltip. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 

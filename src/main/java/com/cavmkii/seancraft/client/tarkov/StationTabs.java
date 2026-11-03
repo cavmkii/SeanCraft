@@ -40,6 +40,11 @@ public final class StationTabs {
         };
     }
 
+    /** True while the station tabs are on screen (screens leave room for them). */
+    public static boolean visible() {
+        return shown();
+    }
+
     /** Only in a hideout, and only worth showing with somewhere else to go. */
     private static boolean shown() {
         return ClientTarkov.raid.state() == 1 && stations.kinds().size() > 1;
