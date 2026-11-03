@@ -85,7 +85,24 @@ public enum Family {
         };
     }
 
+    /**
+     * A slot's name on this family, with the part that fills it when the names differ ("String (wrap)", "Grip (handle)"),
+     * so it's clear which book entry to make.
+     */
     public String slotName(PartSlot slot) {
+        String flavor = slotFlavor(slot);
+        PartKind part = switch (slot) {
+            case HEAD -> head;
+            case HANDLE -> grip;
+            case GUARD -> magic() ? PartKind.FOCUS : PartKind.GUARD;
+            case PLATE -> PartKind.PLATE;
+            case PADDING -> PartKind.PADDING;
+            case WRAP -> PartKind.WRAP;
+        };
+        return part == null || flavor.equalsIgnoreCase(part.label) ? flavor : flavor + " (" + part.label.toLowerCase(java.util.Locale.ROOT) + ")";
+    }
+
+    private String slotFlavor(PartSlot slot) {
         return switch (slot) {
             case HEAD -> head == null ? "Head" : head.label;
             case HANDLE -> grip == PartKind.HAFT ? (this == GREATSWORD ? "Long grip" : "Haft")

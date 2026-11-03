@@ -246,7 +246,16 @@ public class WebScreen extends Screen {
         renderPanel(g, data);
         int hoveredSlot = renderSlots(g, data, mouseX, mouseY);
 
-        if (hovered != null && mouseX > PANEL) {
+        Skill overSkill = skillAt(mouseX, mouseY);
+        if (overSkill != null) {
+            // What the skill does at your level, and what trains it (6.4).
+            int lv = data.skillLevel(overSkill);
+            List<Component> lines = new ArrayList<>();
+            lines.add(Component.literal(overSkill.label + "  " + lv + "/" + Skill.MAX_LEVEL).withStyle(ChatFormatting.YELLOW));
+            lines.add(Component.literal(overSkill.describe(lv)).withStyle(ChatFormatting.GRAY));
+            lines.add(Component.literal(overSkill.attr != null ? "Feeds " + overSkill.attr.label : "Feeds no attribute").withStyle(ChatFormatting.DARK_GRAY));
+            g.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
+        } else if (hovered != null && mouseX > PANEL) {
             g.renderTooltip(font, tooltip(hovered, data), Optional.empty(), mouseX, mouseY);
         } else if (hoveredSlot >= 0) {
             ActiveSkill skill = data.slot(hoveredSlot);
@@ -376,7 +385,8 @@ public class WebScreen extends Screen {
         }
         g.drawString(font, String.format("Crit %.0f%% for +%.0f%%", stats.critChance(), stats.critDamage()), x, y, Kit.ASH);
         y += lh;
-        g.drawString(font, String.format("+%.0f health, +%.0f%% swing speed", stats.bonusHealth(), stats.attackSpeedPct()), x, y, Kit.ASH);
+        g.drawString(font, String.format("+%.0f health, +%.0f%% swing, +%.0f%% move", stats.bonusHealth(), stats.attackSpeedPct(),
+                stats.moveSpeedPct()), x, y, Kit.ASH);
         y += lh;
         g.drawString(font, String.format("AGI stamina -%.0f%%, prep +%.0f%%", stats.staminaEfficiency() * 100, (stats.preparation() - 1) * 100), x, y,
                 Kit.ASH);
@@ -385,8 +395,9 @@ public class WebScreen extends Screen {
                 Kit.ASH);
         y += lh + 4;
 
-        g.drawString(font, "Skills", x, y, Kit.GOLD_LIGHT);
+        g.drawString(font, "Skills (hover for what they do)", x, y, Kit.GOLD_LIGHT);
         y += lh;
+        skillTop = y;
         for (Skill skill : Skill.values()) {
             int level = data.skillLevel(skill);
             double xp = data.skillXp.getOrDefault(skill, 0.0);
@@ -588,6 +599,18 @@ public class WebScreen extends Screen {
 
     /** Where the attribute lines start in the panel (in its 0.75 scale), for the [+] buttons. */
     private int attrTop;
+    /** Top of the use-skill list in the side panel (unscaled 0.75 space), for hover tooltips. */
+    private int skillTop;
+
+    /** The use-skill under the mouse in the side panel, or null. */
+    private Skill skillAt(double mx, double my) {
+        float s = 0.75f;
+        if (mx < 0 || mx >= PANEL) {
+            return null;
+        }
+        int i = (int) Math.floor((my / s - skillTop) / 10);
+        return my / s >= skillTop && i >= 0 && i < Skill.values().length ? Skill.values()[i] : null;
+    }
 
     private static final String[] ORIGIN_BLURB = {
             "Strength. Starts in the Warrior region with a wooden club. Becomes a Warrior, Knight or Paladin.",

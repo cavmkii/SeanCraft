@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 /** Client side of the Tetris inventory: the last sync, and E opening the Tarkov screen. */
 public final class ClientTetris {
     public static TetrisNet.Sync sync = new TetrisNet.Sync(ItemStack.EMPTY, ItemStack.EMPTY, List.of(), List.of(), List.of(), List.of(),
-            2, 2, List.of(), false, List.of(), true, false, List.of());
+            2, 2, List.of(), false, List.of(), true, false, List.of(), false);
     public static TetrisNet.CraftList craft = new TetrisNet.CraftList(List.of(), java.util.Collections.nCopies(9, ItemStack.EMPTY),
             ItemStack.EMPTY, false, List.of(), true, false, "");
 

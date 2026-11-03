@@ -20,16 +20,23 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 
 | Key | What it does |
 |---|---|
-| E or J | Inventory screen (GEAR tab) |
+| E or J | Inventory screen (INVENTORY tab) |
 | H | Inventory screen, STATUS tab |
-| K | Inventory screen, WEB tab (passive tree) |
+| K | Inventory screen, SKILLS tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Creative mode keeps the vanilla inventory.
+The inventory screen has three tabs: INVENTORY, STATUS and SKILLS. INVENTORY is split into three zones: what you have on, what you carry, and what's stored.
+  - **Left (equipped):** your equipment in boxes around a body, the secure pouch (its grid is kept on death), and your load, health, stamina, and Rage or mana if your skills use them.
+  - **Middle (carried):** your rig, pockets and backpack, each with its own item beside its grid. It scrolls when it's taller than the screen. The sort icon on the first label sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
+  - **Right (stored):** the hideout's storage, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and filter, sort, STASH ALL and TAKE ALL icons. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
+  - **Bottom:** the quick-use bar (your hotbar) with number badges, then the auto-refill toggles.
+  - **CRAFT** (the button after the tabs) swaps the equipment zone for crafting and squeezes storage to 5 columns, so you can drag stuff in from your bags or storage. Right-clicking a crafting table opens it with CRAFT already on.
+  - **Station row** (top right, in a hideout only): one button per station in that hideout. Click one to open it; the open one shows its name.
+  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip, and item tooltips add size, stack size, durability and weight. SKILLS is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -52,7 +59,8 @@ The inventory screen has five tabs: GEAR, CRAFTING, SKILLS, STATUS and WEB. Crea
 - **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
 - **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
   - Hideouts have to be at least 500 blocks from each other and from spawn points. If you try too close, the message says which way to go and how much further.
-  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. Rigs, backpacks, pouches, meds, fire arrows, stations, modules and totems are all made here. Entries a module hasn't unlocked yet show a lock and say which module and level they need.
+  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. The first rig, backpack and pouch, fire arrows, stations, modules and totems are made here.
+  - **Module stations.** What a module unlocks is made at that module's own block: meds at the Medstation, the bigger rigs, backpacks and pouches at the Workshop, the Intel module at the Perimeter. Using a built module opens its crafting grid, with UPGRADE to get to building it up; before it's built you get the build screen, with CRAFT to see what it'll make. Recipes it hasn't reached the level for show a lock and the level they need.
   - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
   - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
 - **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
@@ -77,7 +85,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Stamina refills at 25 a second, but only after a second without spending any. Keep swinging and it never refills.
 - **Running dry.** A swing you start with too little stamina does half damage. At 0 you can't sprint or roll until the bar is back to 25.
 - **Rolling.** For the first 0.4 seconds of a roll, attacks (hits, arrows, explosions) can't touch you. Falls, fire, lava, bleeding and poison still can. You can't roll in the middle of a swing, and there's a 0.75 second wait between rolls. Rolls don't use hunger.
-- **Equip load.** Your held weapons, shield and worn armor have a weight (light weapons 3, medium 5, heavy 9; armor weighs its armor points; netherite is 20% heavier, phantom membrane 15% lighter). Capacity is 40 plus your Strength. It shows under the hotbar on the GEAR tab.
+- **Equip load.** Your held weapons, shield and worn armor have a weight (light weapons 3, medium 5, heavy 9; armor weighs its armor points; netherite is 20% heavier, phantom membrane 15% lighter). Capacity is 40 plus your Strength. It shows under the hotbar on the INVENTORY tab.
   - Under 30%: no penalty. 30 to 70%: walk 5% slower. 70 to 100%: walk 15% slower and the roll only protects for 0.2 seconds. Over 100%: no rolling, no sprinting.
 - **Heavy attacks.** Attack while sneaking. Twice the stamina, 75% more damage, twice the stagger. Swords and daggers lunge, maces and warhammers slam the ground and stagger everything close, axes and halberds spin, spears and pikes sweep the front. A staff fires a charged orb that bursts.
 - **Poise.** Blunt hits build up on whatever they hit. A mob staggers after blunt damage worth 30% of its health, a player after 60. It drains after 3 seconds without a blunt hit.
@@ -85,7 +93,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - **Parry:** raise the shield within 0.2 seconds of a hit (0.35 with a buckler). No damage, no stamina, the attacker staggers, and the Blademaster's riposte opens.
   - **Buckler** (Blademaster only): 60%, light. **Tower shield** (Knight only): blocks everything in front including arrows, can't parry, slows you 30% while raised, heavy.
 - **Throwing.** Spears, throwing knives, javelins and boomerangs: hold use to wind up, let go to throw. Thrown at iron: knife 22, javelin 35, spear 32, boomerang 20. They stay where they land for 5 minutes, glowing. The boomerang comes back.
-- **Wands and staves.** Attacking fires a bolt: 18 damage for 4 mana from a wand, 35 for 8 from a staff, times the crystal's factor. The crystal's catalyst sets the element. Holding one also makes your INT skills stronger by the same factor. The Arcanist now starts with a quartz wand.
+- **Wands and staves.** Attacking fires a bolt: 18 damage for 4 mana from a wand, 35 for 8 from a staff, times the crystal's factor. A wand can fire every 0.6 seconds, a staff every second (its charged orb every 1.5); swings in between fire nothing and cost no mana, and the hotbar shows the cooldown sweep. The crystal's catalyst sets the element. Holding one also makes your INT skills stronger by the same factor. The Arcanist now starts with a quartz wand.
 - **Swords** made at the Weapon Bench swing three times in a combo: two side slashes and a harder third slash.
 - **Damage types.** Every hit is split into types:
   - physical: slash, pierce, blunt;
@@ -140,7 +148,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
   - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
   - Each one after the first in a line takes the empty one below it in the centre of its pattern, so you're trading up, not starting over.
-- **Chests and barrels** open on the GEAR tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
+- **Chests and barrels** open on the INVENTORY tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
 - **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
 - **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
 - **Naming chests.** Click a chest's name to rename it, then hit Enter. The name shows up next to a picture of the block, so you can tell a chest from a barrel at a glance.
@@ -150,13 +158,13 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
 - **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
 - **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** The CRAFTING tab is laid out like a vanilla crafting table with your inventory around it: your pockets, rig, pouch, backpack and hotbar on the left (same as on GEAR), the crafting grid and result top middle, the recipe list under the grid, and the stash (or the chest you opened) on the right. Click RECIPES above the list to fold it away. Right-clicking a crafting table opens the same tab.
+- **Crafting.** Turn on CRAFT on the INVENTORY tab (or right-click a crafting table). The grid is 2x2 out in the world and 3x3 at a crafting table or in your hideout. On the left is the recipe book: search, a CAN MAKE NOW box, categories, and every recipe, with ?????? for ones you haven't found. Pick one and its pattern shows as faded icons in the grid, with an ingredient list under it: how many you have, how many you need, and where they are (quick use, pockets, storage...). There's no craft button and nothing fills the grid for you; you lay it out yourself and click the result.
   - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory, and Shift-click the result to craft as many as you can. The same drag works on the hotbar.
   - Click a category heading to fold it shut, or click it again to open it.
-  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out yourself from either side. The Hideout Bench and Weapon Bench books do the same. The count beside each recipe includes your hotbar, grids and stash.
+  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out. The Hideout Bench and Weapon Bench books do the same. Have/need counts include your hotbar, grids and stash. PIN TO HUD puts the ingredients on your gather list.
   - PIN TO HUD under the result (while a recipe is picked) puts its ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
-  - The RECIPES sub-tab shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the CRAFT list does the same ghost.
+  - The recipe book shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the crafting book does the same ghost.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
 - **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
@@ -178,10 +186,10 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A **surgery case** (2x2, Medstation level 3, rare in chests) brings a part back to new, lasting damage and all.
 - **Locked health.** A destroyed part locks away its share of your health, and lasting damage locks part of a part's share. Food, regen and potions can't fill it. It shows as a dark, striped end on the health bar.
 - **On screen.**
-  - A small body shows each part's health at a glance: green, then orange, then red, dark when destroyed. A bleeding part flashes and a fracture gets a white mark. It sits in the top left with your food slots beside it, and the gather list under them, so the top right stays free for a minimap like JourneyMap.
-  - Bottom left lists your injuries with their severity and what fixes them. Long lines wrap or shrink so they never run under the health bar.
-  - Above that, a small line shows what they're doing to you right now, like `Walk -24%  Sprint -38%  Jump -6%`. It turns cyan while painkillers are taking the edge off.
-  - Above that, every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.
+  - Top left, a small body shows each part's health: green, then orange, then red, dark when destroyed. Problems show as tiny icons on the part itself: a blood drop for a bleed (the part also flashes), a bone for a fracture, a barrier for a destroyed part. The exact severities are on the STATUS tab.
+  - Next to it, under your food slots, small lines say what the injuries are costing you right now, like `Walk -18%`, `Sprint -29%`, `Jump -4%`. They turn cyan while painkillers are taking the edge off.
+  - A biome hazard gets its own line in the bottom left.
+  - Every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.
   - The edges of the screen glow while you're hurt: pulsing red while you bleed, white for a fracture, grey for a destroyed part. They get stronger the worse it is.
   - The STATUS tab shows every part's severities and lasting damage.
 - **Meds:** bandage (light bleeds), tourniquet (any bleed), splint (fractures), painkillers, field kit, surgical kit and surgery case.
@@ -198,6 +206,8 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
 - Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
+- **Stash and hotbar on station screens.** On the Weapon Bench, the Hideout Bench, a crafting table, anvil or any other screen that would show the vanilla inventory, the box where it used to be is your hideout **STASH** (when you're in a hideout): click an item to take a stack onto your cursor, right-click for one, or drop whatever you're holding on the box to put it away (it goes where the chest filters say). The `>` cell flips pages when there's more than fits. The hotbar row under it works like normal.
+- **Names.** The BUILD slots say which part they take when the names differ, like "String (wrap)", "Grip (handle)", "Stock (handle)" or "Rim (guard)", and the parts book lists them that way too ("Handle / grip", "Wrap / string").
 - **PARTS tab.** A 3x3 grid with a book on the left. Parts are made by pattern: lay the material out in the part's shape and take the part from the result slot. The material you use decides the part's material, and every square with the same letter has to be the same material. Click a part in the book to see its pattern as a ghost.
   - The letters: M is metal (copper ingot, iron ingot, gold ingot, diamond), W is wood (planks, logs, bone, blaze rod, breeze rod), H is hide (string, leather, rabbit hide, phantom membrane, armadillo scute), G is a gem (quartz, lapis, amethyst shard, prismarine shard, echo shard), C a catalyst, S a stick.
   - Patterns, top row first: knife blade `M`; blade `M / M`; long blade `MM / MM`; axe head `MM / M.`; mace head `.M. / M.M`; spearhead `.M / M.`; halberd head `MM / M. / M.`; plate `MM`; guard `MSM`; focus `M.M`; limbs `W. / .W / W.`; handle `W / W`; haft `W / W / W`; crystal `G / C / G`; wrap `H. / .H`; padding `HHH`. They work anywhere in the grid and mirrored.
@@ -409,6 +419,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons are layered from the pack's part textures, so they change look when you swap parts. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
 
 A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.

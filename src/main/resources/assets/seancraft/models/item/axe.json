@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "seancraft:item/weapon/axe/handle_planks",
+    "layer1": "seancraft:item/weapon/axe/wrap_leather",
+    "layer2": "seancraft:item/weapon/axe/axe_head_iron"
+  }
+}

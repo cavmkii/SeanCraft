@@ -157,17 +157,33 @@ final class EffectHud {
     }
 
     private static final String[] PART_SPRITES = {"head", "thorax", "stomach", "arm_left", "arm_right", "leg_left", "leg_right"};
-    static final int FIG_W = 21;
+    static final int FIG_W = 28;
 
-    /** Height the top-left block (body figure, food) takes; the gather list goes under it. */
-    static final int TOP_H = 36 + 10;
+    /** Bottom of the top-left block (body figure, food, penalty lines), for the gather list to go under. */
+    static int topBottom = 48 + 16;
 
-    /** Top left: limb status, with the food slots beside it (the top right is left free for minimaps). */
+    /**
+     * Top left: limb status with the food slots beside it, and under the food, small lines for what the injuries cost
+     * (cyan while painkillers take the edge off). The top right is left free for minimaps.
+     */
     static void topLeft(GuiGraphics g, Minecraft mc) {
         body(g, mc, 9, 9);
-        meals(g, mc, 9 + FIG_W + 10, 9 + ICON + 5);
+        int tx = 9 + FIG_W + 10;
+        int y = mc.player.isCreative() ? 9 : meals(g, mc, tx, 9 + ICON + 5) + ICON + 7;
+        boolean pain = ClientTarkov.body.painkillerTicks() > 0;
+        int bottom = 9 + FIG_H + 3;
+        for (String line : wrap(mc, penalties(), limit(g) - tx)) {
+            g.pose().pushPose();
+            g.pose().translate(tx, y, 0);
+            g.pose().scale(0.625f, 0.625f, 1);
+            Kit.text(g, mc.font, line, 0, 0, pain ? Kit.CYAN : Kit.BONE);
+            g.pose().popPose();
+            y += 7;
+            bottom = Math.max(bottom, y);
+        }
+        topBottom = bottom + 4;
     }
-    static final int FIG_H = 36;
+    static final int FIG_H = 48;
 
     /**
      * Limb status (5.1): the STATUS tab's body at three-quarter size, each part tinted by its health (moss, ember, blood,
@@ -181,7 +197,6 @@ final class EffectHud {
         Kit.hudPanel(g, x - 3, y - 3, FIG_W + 6, FIG_H + 6);
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
-        g.pose().scale(0.75f, 0.75f, 1);
         Kit.blit(g, "status/body_base", 0, 0, 28, 48);
         boolean flash = mc.player.tickCount / 8 % 2 == 0;
         for (int i = 0; i < PART_SPRITES.length && i < body.body().length; i++) {
@@ -194,17 +209,36 @@ final class EffectHud {
         }
         g.setColor(1, 1, 1, 1);
         g.pose().popPose();
-        // A fracture shows as a small white bar across the part's side of the figure.
-        for (int i = 0; i < body.body().length && i < PART_SPRITES.length; i++) {
-            if ((body.conditions()[i] & com.cavmkii.seancraft.tarkov.Body.FRACTURE) != 0) {
-                int[] at = FRACTURE_MARK[i];
-                g.fill(x + at[0], y + at[1], x + at[0] + 3, y + at[1] + 1, Kit.BONE);
+        // What's wrong with each part, as small icons on it: destroyed, bleeding, broken.
+        for (int i = 0; i < body.body().length && i < PART_CENTRE.length; i++) {
+            List<ItemStack> marks = new ArrayList<>();
+            int c = body.conditions()[i];
+            if (body.body()[i] <= 0.0001f) {
+                marks.add(new ItemStack(Items.BARRIER));
+            } else {
+                if ((c & (com.cavmkii.seancraft.tarkov.Body.HEAVY_BLEED | com.cavmkii.seancraft.tarkov.Body.LIGHT_BLEED)) != 0) {
+                    marks.add(new ItemStack(Items.RED_DYE));
+                }
+                if ((c & com.cavmkii.seancraft.tarkov.Body.FRACTURE) != 0) {
+                    marks.add(new ItemStack(Items.BONE));
+                }
+            }
+            for (int m = 0; m < marks.size(); m++) {
+                // Two marks on a limb stack up and down; on the head and body they sit side by side.
+                boolean limb = i >= 3;
+                float ox = marks.size() < 2 || limb ? 0 : (m == 0 ? -4 : 4);
+                float oy = marks.size() < 2 || !limb ? 0 : (m == 0 ? -5 : 5);
+                g.pose().pushPose();
+                g.pose().translate(x + PART_CENTRE[i][0] + ox - 3.5f, y + PART_CENTRE[i][1] + oy - 3.5f, 150);
+                g.pose().scale(0.4375f, 0.4375f, 1);
+                g.renderItem(marks.get(m), 0, 0);
+                g.pose().popPose();
             }
         }
     }
 
-    /** Where to draw a fracture mark on the 21x36 figure, per part. */
-    private static final int[][] FRACTURE_MARK = {{9, 3}, {9, 11}, {9, 17}, {2, 13}, {16, 13}, {6, 28}, {12, 28}};
+    /** Centre of each part on the 28x48 figure (head, thorax, stomach, left arm, right arm, left leg, right leg). */
+    private static final int[][] PART_CENTRE = {{14, 5}, {14, 15}, {14, 24}, {5, 19}, {22, 19}, {11, 37}, {17, 37}};
 
     private record Chip(TextureAtlasSprite sprite, ItemStack item, int ticks, boolean bad) {}
 
@@ -267,8 +301,10 @@ final class EffectHud {
         int y = bottom;
         // Leave the body figure its place beside the hotbar (RaidHud puts it there when the screen is wide enough).
         int room = limit(g) - x - 2;
-        List<Wound> injuries = wounds();
-        List<String> penalties = wrap(mc, penalties(), room);
+        // Injuries show on the body figure in the top left now; only the biome hazard keeps a line here.
+        List<Wound> injuries = new ArrayList<>();
+        hazard(injuries);
+        List<String> penalties = List.of();
         // Injuries and penalties share one HUD panel (C.5), sized to what's in it.
         if (!injuries.isEmpty() || !penalties.isEmpty()) {
             int pw = 0;

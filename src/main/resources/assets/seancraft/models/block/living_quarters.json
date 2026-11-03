@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "seancraft:block/living_quarters_top",
+    "bottom": "seancraft:block/living_quarters_bottom",
+    "side": "seancraft:block/living_quarters_side",
+    "front": "seancraft:block/living_quarters_front"
+  }
+}

@@ -125,7 +125,8 @@ public final class Tetris {
     /** Opens the inventory screen on its CRAFTING tab, as a crafting table does. */
     public static void openCrafting(ServerPlayer player) {
         sendCraftList(player);
-        ServerPlayNetworking.send(player, new TetrisNet.Open(1));
+        // The INVENTORY tab with crafting mode on (TarkovScreen.CRAFT_MODE).
+        ServerPlayNetworking.send(player, new TetrisNet.Open(3));
         com.cavmkii.seancraft.tarkov.Stations.send(player);
     }
 
@@ -138,6 +139,7 @@ public final class Tetris {
         TetrisNet.register();
         ContainerGrid.init();
         FurnaceFeed.init();
+        StashFeed.init();
         ServerTickEvents.END_SERVER_TICK.register(Tetris::tick);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> rt(handler.player).dirty = true);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
@@ -191,6 +193,10 @@ public final class Tetris {
         });
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Action.TYPE, (p, ctx) -> {
             action(ctx.player(), p.action());
+            if (p.action() == 4) {
+                // The inventory opened: the station row needs this hideout's stations.
+                com.cavmkii.seancraft.tarkov.Stations.send(ctx.player());
+            }
             sync(ctx.player());
         });
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Track.TYPE, (p, ctx) -> {
@@ -444,7 +450,9 @@ public final class Tetris {
         // Copies: on a single-player server the payload object reaches the client as is.
         ServerPlayNetworking.send(player, new TetrisNet.Sync(d.rig.copy(), d.backpack.copy(), copy(d.pockets), copy(d.rigItems),
                 copy(d.backpackItems), copy(d.pouch), tarkov.tier.width, tarkov.tier.height,
-                d.unsorted.stream().map(ItemStack::copy).toList(), home != null, views, d.autoRefill, d.refillFromStash, List.copyOf(d.tracked)));
+                d.unsorted.stream().map(ItemStack::copy).toList(), home != null, views, d.autoRefill, d.refillFromStash, List.copyOf(d.tracked),
+                // The first container is the chest you opened, if you opened one (the rest is the stash).
+                rt.container != null && !views.isEmpty()));
     }
 
     private static List<Placed> copy(List<Placed> list) {
@@ -769,6 +777,16 @@ public final class Tetris {
         return out;
     }
 
+    /** Puts a stack away into the stash the way STASH ALL would (filters first). Leaves what didn't fit in the stack. */
+    static void storeInStash(ServerPlayer player, ItemStack stack) {
+        for (Shown c : routeFor(containers(player), stack)) {
+            storeIn(c, stack);
+            if (stack.isEmpty()) {
+                return;
+            }
+        }
+    }
+
     /** Puts a stack into a container's grid: top up first, then wherever it fits. Leaves the rest in the stack. */
     private static void storeIn(Shown c, ItemStack stack) {
         ContainerGrid g = c.grid();
@@ -970,6 +988,15 @@ public final class Tetris {
             }
             case Loc.CONTAINER -> {
                 List<Shown> shown = containers(player);
+                if (to.b() == -2) {
+                    // Dropped on the storage list: into that chest, or (index -1) wherever the filters route it.
+                    if (to.a() == -1) {
+                        storeInStash(player, stack);
+                    } else if (to.a() >= 0 && to.a() < shown.size()) {
+                        storeIn(shown.get(to.a()), stack);
+                    }
+                    return stack;
+                }
                 if (to.a() < 0 || to.a() >= shown.size() || to.b() < 0) {
                     return stack;
                 }
@@ -1046,6 +1073,10 @@ public final class Tetris {
         String why = locked(player, data, from, source);
         if (why != null) {
             player.displayClientMessage(Component.literal(why).withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        if (from.kind() == Loc.CONTAINER && to.kind() == Loc.CONTAINER && to.b() == -2) {
+            // Storage back onto storage: it's already put away.
             return;
         }
         int n = count <= 0 ? source.getCount() : Math.min(count, source.getCount());
@@ -1373,7 +1404,18 @@ public final class Tetris {
         }
         Shown c = shown.get(index);
         ContainerGrid g = c.grid();
-        if (action == 2) {
+        if (action == 3) {
+            // Refill stacks: whatever this chest already holds, put in what you carry of it (pockets, rig, backpack).
+            InvData data = data(player);
+            for (GridId id : new GridId[] {GridId.POCKETS, GridId.RIG, GridId.BACKPACK}) {
+                for (Placed p : data.list(id)) {
+                    if (holds(c.container, p.stack)) {
+                        storeIn(c, p.stack);
+                    }
+                }
+                data.list(id).removeIf(p -> p.stack.isEmpty());
+            }
+        } else if (action == 2) {
             g.setFilter(value);
         } else if (action == 0) {
             g.sort();
@@ -1394,6 +1436,15 @@ public final class Tetris {
         g.save();
         c.container.setChanged();
         rt(player).dirty = true;
+    }
+
+    private static boolean holds(Container container, ItemStack stack) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (ItemStack.isSameItemSameComponents(container.getItem(i), stack)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ================================================================== death

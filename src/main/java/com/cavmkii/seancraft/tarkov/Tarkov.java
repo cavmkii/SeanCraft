@@ -129,6 +129,25 @@ public final class Tarkov {
         });
 
         ServerPlayNetworking.registerGlobalReceiver(TarkovNet.HideoutAction.TYPE, (payload, ctx) -> {
+            if (payload.kind() == -2 || payload.kind() == -3) {
+                // A module station's UPGRADE (-2) or CRAFT (-3) button.
+                Hideouts.Hideout h = Hideouts.at(ctx.player().serverLevel(), ctx.player().position());
+                Module module;
+                try {
+                    module = Module.valueOf(payload.id());
+                } catch (IllegalArgumentException e) {
+                    return;
+                }
+                if (h != null && h.modules[module.ordinal()] != null) {
+                    ctx.player().closeContainer();
+                    if (payload.kind() == -2) {
+                        openModule(ctx.player(), h, module);
+                    } else {
+                        HideoutCraftMenu.open(ctx.player(), h.pos, module);
+                    }
+                }
+                return;
+            }
             if (payload.kind() >= 0) {
                 hideoutAction(ctx.player(), payload.pos(), payload.kind(), payload.id());
             }
@@ -523,6 +542,19 @@ public final class Tarkov {
     public static void openModule(ServerPlayer player, Hideouts.Hideout h, Module module) {
         FOCUS.put(player.getUUID(), module);
         openHideout(player, h.pos);
+    }
+
+    /**
+     * Using a module block: once it's built and has recipes, its crafting grid; otherwise its build-and-upgrade screen.
+     * Each screen has a button over to the other.
+     */
+    public static void useModule(ServerPlayer player, Hideouts.Hideout h, Module module) {
+        if (h.level(module) >= 1 && HideoutCraftMenu.crafts(module)) {
+            FOCUS.remove(player.getUUID());
+            HideoutCraftMenu.open(player, h.pos, module);
+        } else {
+            openModule(player, h, module);
+        }
     }
 
     public static void openHideout(ServerPlayer player, BlockPos pos) {
