@@ -9,6 +9,7 @@
     "GameRendererInjuryMixin",
     "GuiEffectsMixin",
     "GuiHealthMixin",
+    "GuiHideMixin",
     "HumanoidModelCarryMixin",
     "ItemInHandCarryMixin",
     "ItemInHandLayerCarryMixin",

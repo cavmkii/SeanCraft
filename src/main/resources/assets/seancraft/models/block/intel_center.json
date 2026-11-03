@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "seancraft:block/intel_center_top",
+    "bottom": "seancraft:block/intel_center_bottom",
+    "side": "seancraft:block/intel_center_side",
+    "front": "seancraft:block/intel_center_front"
+  }
+}

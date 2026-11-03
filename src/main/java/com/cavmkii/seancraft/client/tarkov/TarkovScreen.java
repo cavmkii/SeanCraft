@@ -47,7 +47,9 @@ public class TarkovScreen extends Screen {
     /** The passive web with level, attributes and use-skills beside it (SKILLS and WEB used to be two tabs). */
     public static final int WEB = 2;
     public static final int SKILLS = WEB;
-    private static final String[] TABS = {"INVENTORY", "STATUS", "CHARACTER"};
+    /** Open INVENTORY with crafting mode on (a crafting table). */
+    public static final int CRAFT_MODE = 3;
+    private static final String[] TABS = {"INVENTORY", "STATUS", "SKILLS"};
 
     private static final int C = 18;
     private static final int W = 426;
@@ -84,10 +86,19 @@ public class TarkovScreen extends Screen {
 
     public TarkovScreen(int tab) {
         super(Component.literal("Inventory"));
-        this.tab = tab;
+        this.tab = tab == CRAFT_MODE ? INVENTORY : tab;
+        if (tab == CRAFT_MODE) {
+            craftMode = true;
+            openStation = StationTabs.CRAFTING_TABLE;
+        }
     }
 
     void setTab(int tab) {
+        if (tab == CRAFT_MODE) {
+            craftMode = true;
+            openStation = StationTabs.CRAFTING_TABLE;
+            tab = INVENTORY;
+        }
         this.tab = tab;
         layout();
         if (tab == CRAFTING) {
@@ -119,7 +130,7 @@ public class TarkovScreen extends Screen {
     private void layout() {
         if (tab == INVENTORY && craftView == 0) {
             // GEAR-V2: a 480 x 270 canvas whose content starts under the tab bar at y 18, scaled down only if it must be.
-            int bottom = StationTabs.visible() ? 16 : 2;
+            int bottom = 2;
             scale = Math.min(1f, Math.min((width - 4) / (float) VW, (height - 18 - bottom) / (float) (VH - 18)));
             ox = (width - VW * scale) / 2f;
             oy = 18 - 18 * scale;
@@ -179,15 +190,17 @@ public class TarkovScreen extends Screen {
     private List<Box> boxes() {
         TetrisNet.Sync s = ClientTetris.sync;
         List<Box> out = new ArrayList<>();
-        out.add(new Box(GridId.POUCH, POUCH_GRID_X, POUCH_Y, s.pouchW(), s.pouchH(), s.pouch()));
+        if (!craftMode) {
+            out.add(new Box(GridId.POUCH, POUCH_GRID_X, POUCH_Y, s.pouchW(), s.pouchH(), s.pouch()));
+        }
         for (ColSec sec : colSections()) {
             int gy = sec.y() + 11 - (int) colScroll;
             if (sec.kind() == 1 && s.rig().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.RIG, SEC_GRID_X, gy, g.spec.gridWidth, g.spec.gridHeight, s.rigItems()));
+                out.add(new Box(GridId.RIG, secGridX(), gy, g.spec.gridWidth, g.spec.gridHeight, s.rigItems()));
             } else if (sec.kind() == 2) {
-                out.add(new Box(GridId.POCKETS, SEC_GRID_X, gy, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
+                out.add(new Box(GridId.POCKETS, secGridX(), gy, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
             } else if (sec.kind() == 3 && s.backpack().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.BACKPACK, SEC_GRID_X, gy, g.spec.gridWidth, g.spec.gridHeight, s.backpackItems()));
+                out.add(new Box(GridId.BACKPACK, secGridX(), gy, g.spec.gridWidth, g.spec.gridHeight, s.backpackItems()));
             }
         }
         return out;
@@ -198,11 +211,11 @@ public class TarkovScreen extends Screen {
     /** x, y, size of an equipment slot: in its box, or (rig, backpack) beside its grid; null if scrolled away. */
     private int[] equipRect(int slot) {
         if (EQUIP_BOX[slot] != null) {
-            return new int[] {EQUIP_BOX[slot][0] + 11, EQUIP_BOX[slot][1] + 11, C};
+            return craftMode ? null : new int[] {EQUIP_BOX[slot][0] + 11, EQUIP_BOX[slot][1] + 11, C};
         }
         for (ColSec sec : colSections()) {
             if (slot == 4 && sec.kind() == 1 || slot == 5 && sec.kind() == 3) {
-                return new int[] {SEC_X, sec.y() + 11 - (int) colScroll, C};
+                return new int[] {secX(), sec.y() + 11 - (int) colScroll, C};
             }
         }
         return null;
@@ -228,14 +241,6 @@ public class TarkovScreen extends Screen {
             Box b = box(GridId.values()[loc.a()]);
             return b == null ? null : new GridRef(b.x, b.y, b.w, b.h, b.items);
         }
-        if (loc.kind() == Loc.CONTAINER && loc.b() >= 0 && loc.a() < ClientTetris.sync.containers().size() && !bookOpen()) {
-            TetrisNet.ContainerView c = ClientTetris.sync.containers().get(loc.a());
-            for (CPlace p : containerPlaces()) {
-                if (p.index() == loc.a()) {
-                    return new GridRef(p.x(), p.y(), c.width(), c.height(), c.items());
-                }
-            }
-        }
         return null;
     }
 
@@ -246,7 +251,7 @@ public class TarkovScreen extends Screen {
 
     /** What's under a point (virtual coords) on the INVENTORY tab. For grids it's the cell. */
     private Loc locAt(double x, double y) {
-        if (tab == INVENTORY && craftView == 0) {
+        if (tab == INVENTORY && craftMode) {
             int cell = cellAt(x, y);
             if (cell >= 0) {
                 return Loc.craft(cell);
@@ -262,7 +267,7 @@ public class TarkovScreen extends Screen {
             }
         }
         for (int i = 0; i < 9; i++) {
-            if (in(x, y, QU_X + i * QU_STEP, QU_Y, C, C)) {
+            if (in(x, y, quX() + i * QU_STEP, QU_Y, C, C)) {
                 return Loc.hand(i);
             }
         }
@@ -281,28 +286,10 @@ public class TarkovScreen extends Screen {
                 }
                 int top = sec.y() + 11 - (int) colScroll;
                 int n = ClientTetris.sync.unsorted().size();
-                if (x >= SEC_X && x < SEC_X + 8 * C && y >= top) {
-                    int i = (int) ((y - top) / C) * 8 + (int) ((x - SEC_X) / C);
+                if (x >= secX() && x < secX() + 8 * C && y >= top) {
+                    int i = (int) ((y - top) / C) * 8 + (int) ((x - secX()) / C);
                     if (i >= 0 && i < n && y < top + ((n + 7) / 8) * C) {
                         return Loc.unsorted(i);
-                    }
-                }
-            }
-        }
-        if (!bookOpen()) {
-            for (CPlace p : containerPlaces()) {
-                if (y < p.clipTop() || y >= p.clipBottom()) {
-                    continue;
-                }
-                TetrisNet.ContainerView c = ClientTetris.sync.containers().get(p.index());
-                if (x >= p.x() && x < p.x() + c.width() * C && y >= p.y() && y < p.y() + c.height() * C) {
-                    return Loc.container(p.index(), (int) ((x - p.x()) / C), (int) ((y - p.y()) / C));
-                }
-                int otop = p.y() + c.height() * C + 10;
-                if (!c.overflow().isEmpty() && x >= p.x() && x < p.x() + 9 * C && y >= otop && y < otop + rows(c.overflow().size()) * C) {
-                    int i = (int) ((y - otop) / C) * 9 + (int) ((x - p.x()) / C);
-                    if (i >= 0 && i < c.overflow().size()) {
-                        return Loc.containerOverflow(p.index(), c.overflowSlots().get(i));
                     }
                 }
             }
@@ -320,6 +307,14 @@ public class TarkovScreen extends Screen {
     }
 
     private Placed placedAt(Loc loc) {
+        if (loc != null && loc.kind() == Loc.CONTAINER && loc.b() >= 0) {
+            List<TetrisNet.ContainerView> cs = ClientTetris.sync.containers();
+            if (loc.a() >= cs.size()) {
+                return null;
+            }
+            TetrisNet.ContainerView c = cs.get(loc.a());
+            return new Grid(c.width(), c.height(), c.items()).at(loc.b(), loc.c());
+        }
         GridRef r = gridFor(loc);
         return r == null ? null : new Grid(r.w, r.h, r.items).at(loc.b(), loc.c());
     }
@@ -406,9 +401,6 @@ public class TarkovScreen extends Screen {
             }
         }
         renderTabs(g, mouseX, mouseY);
-        if (tab == CRAFTING) {
-            StationTabs.render(g, font, 0, height - 15, width, StationTabs.CRAFTING_TABLE, mouseX, mouseY);
-        }
     }
 
     /** Top of the panel; the tab row sits on its edge (Appendix C, spacing rules). */
@@ -442,7 +434,7 @@ public class TarkovScreen extends Screen {
         return mouseX >= x && mouseX < x + tabW(t) && mouseY >= 1 && mouseY < 16;
     }
 
-    private static final String[] TAB_ICONS = {"gear", "status", "web"};
+    private static final String[] TAB_ICONS = {"gear", "status", "skills"};
 
     /** The tab bar (GEAR-V2): each tab with its icon, a gold line under them, and where you are at the right. */
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
@@ -461,21 +453,57 @@ public class TarkovScreen extends Screen {
             Kit.text(g, font, TABS[t], x + 18, active ? 5 : 6, active ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
         }
         int tabsEnd = tabX(TABS.length - 1) + tabW(TABS.length - 1) + 8;
+        if (tab == INVENTORY) {
+            // CRAFT toggle: crafting mode swaps the equipment zone for the crafting workspace.
+            int[] cr = craftToggle();
+            boolean over = in(mouseX, mouseY, cr[0], cr[1], cr[2], cr[3]);
+            Kit.blit(g, craftMode ? "button/pressed" : over ? "button/hover" : "button/normal", cr[0], cr[1], cr[2], cr[3]);
+            Kit.blit(g, "icon/tab/crafting", cr[0] + 4, cr[1] + 2, 9, 9);
+            Kit.text(g, font, "CRAFT", cr[0] + 16, cr[1] + 3, craftMode ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
+            tabsEnd = cr[0] + cr[2] + 8;
+        }
+        // Station row (inside a hideout), right-aligned; the open one is widened with its name.
+        int right = width - 4;
+        List<Object[]> stations = stationButtons();
+        for (Object[] st : stations) {
+            String kind = (String) st[0];
+            int x = (int) st[1];
+            int w = (int) st[2];
+            boolean open = kind.equals(openStation);
+            boolean over = in(mouseX, mouseY, x, 2, w, 13);
+            Kit.buttonBg(g, x, 2, w, 13, true, over, open);
+            Kit.blit(g, stationIcon(kind), x + 2, 4, 9, 9);
+            if (open) {
+                Kit.text(g, font, StationTabs.label(kind), x + 15, 5, Kit.GOLD_LIGHT);
+            }
+            if (over && !open) {
+                g.renderTooltip(font, Component.literal(StationTabs.label(kind)), mouseX, mouseY + 12);
+            }
+            right = Math.min(right, x - 6);
+        }
         if (ClientTarkov.raid.state() == 1) {
             String t = "HIDEOUT";
-            int rx = width - 4 - font.width(t);
-            Kit.blit(g, "icon/tab/hideout", rx - 11, 4, 9, 9);
-            Kit.text(g, font, t, rx, 5, Kit.MOSS);
+            int rx = right - font.width(t);
+            if (rx - 11 >= tabsEnd) {
+                Kit.blit(g, "icon/tab/hideout", rx - 11, 4, 9, 9);
+                Kit.text(g, font, t, rx, 5, Kit.MOSS);
+            }
             return;
         }
         // The raid state, always in view (C.4); shorter forms when the bar leaves too little room.
         for (String raid : RaidHud.stateLines()) {
-            int rx = width - 4 - font.width(raid);
+            int rx = right - font.width(raid);
             if (rx >= tabsEnd) {
                 Kit.text(g, font, raid, rx, 5, RaidHud.stateColor());
                 break;
             }
         }
+    }
+
+    /** The CRAFT toggle's rectangle in screen coordinates. */
+    private int[] craftToggle() {
+        int x = tabX(TABS.length - 1) + tabW(TABS.length - 1) + 6;
+        return new int[] {x, 2, font.width("CRAFT") + 20, 14};
     }
 
     private void slot(GuiGraphics g, int x, int y, int size, ItemStack stack, boolean hover, String empty) {
@@ -612,7 +640,7 @@ public class TarkovScreen extends Screen {
         int mask = ClientTetris.sync.containers().get(filterOpen).filter();
         var cats = com.cavmkii.seancraft.tetris.StorageCategory.values();
         int x = filterX;
-        int y = Math.min(filterY, R_BOTTOM - (cats.length + 2) * FILTER_ROW - 6);
+        int y = Math.min(filterY, ZONE_Y + ZONE_H - (cats.length + 2) * FILTER_ROW - 6);
         g.pose().pushPose();
         g.pose().translate(0, 0, 400);
         Kit.hudPanel(g, x - 1, y - 1, FILTER_W + 2, (cats.length + 2) * FILTER_ROW + 6);
@@ -641,7 +669,7 @@ public class TarkovScreen extends Screen {
         int mask = ClientTetris.sync.containers().get(filterOpen).filter();
         var cats = com.cavmkii.seancraft.tetris.StorageCategory.values();
         int x = filterX;
-        int y = Math.min(filterY, R_BOTTOM - (cats.length + 2) * FILTER_ROW - 6);
+        int y = Math.min(filterY, ZONE_Y + ZONE_H - (cats.length + 2) * FILTER_ROW - 6);
         if (mx < x || mx >= x + FILTER_W || my < y || my >= y + (cats.length + 2) * FILTER_ROW + 4) {
             filterOpen = -1;
             return false;
@@ -709,65 +737,117 @@ public class TarkovScreen extends Screen {
         g.pose().popPose();
     }
 
-    // ================================================================== INVENTORY layout (GEAR-V2.md: 480 x 270 GUI pixels)
+    // ================================================================== INVENTORY layout (UI-SPEC Part 2, v3: 480 x 270 GUI pixels)
 
     private static final int VW = 480;
     private static final int VH = 270;
     /** Equipment boxes (40 x 30) for head, chest, legs, feet and off-hand; the rig and backpack sit by their grids. */
-    private static final int[][] EQUIP_BOX = {{10, 24}, {10, 58}, {10, 92}, {10, 126}, null, null, {72, 126}};
+    private static final int[][] EQUIP_BOX = {{10, 23}, {10, 55}, {10, 87}, {10, 119}, null, null, {72, 119}};
     private static final String[] EQUIP_LABEL = {"HEAD", "CHEST", "LEGS", "FEET", "RIG", "BACKPACK", "OFF-HAND"};
-    private static final int POUCH_Y = 176;
-    private static final int POUCH_GRID_X = 34;
-    private static final int COL_X = 122;
-    private static final int COL_Y = 18;
-    private static final int COL_W = 158;
-    private static final int COL_H = 221;
+    private static final int POUCH_Y = 165;
+    private static final int POUCH_GRID_X = 32;
+    private static final int ZONE_Y = 18;
+    private static final int ZONE_H = 221;
     private static final int COL_TOP = 21;
     private static final int COL_BOTTOM = 237;
-    private static final int SEC_X = 126;
-    private static final int SEC_W = 150;
-    private static final int SEC_GRID_X = 148;
-    private static final int CP_X = 284;
-    private static final int CP_Y = 18;
-    private static final int CP_W = 192;
-    private static final int CP_H = 66;
-    private static final int GC = 18;
-    private static final int GX = 294;
-    private static final int GRID_Y = 33;
-    private static final int RESULT_X = 382;
-    private static final int RESULT_Y = 47;
-    private static final int R_X = 284;
-    private static final int R_Y = 88;
-    private static final int R_W = 192;
-    private static final int R_BOTTOM = 239;
-    private static final int QU_X = 160;
     private static final int QU_Y = 245;
     private static final int QU_STEP = 19;
-    private static final int CLEAR_X = 412;
-    private static final int CLEAR_Y = 70;
-    private static final int CLEAR_W = 26;
-    private static final int PIN_X = 442;
-    private static final int PIN_W = 32;
-    /** The crafting book's list covers the stash and chest panels while it's open. */
-    private static final int LIST_X = R_X + 4;
-    private static final int LIST_W2 = R_W - 10;
-    private static final int LIST_HEAD_Y = R_Y + 4;
+    // Crafting mode: the crafting zone replaces the equipment zone.
+    private static final int BOOK_X = 8;
+    private static final int BOOK_W = 84;
+    private static final int GX = 100;
+    private static final int GRID_Y = 56;
+    private static final int GC = 18;
+    private static final int RESULT_X = 166;
+    private static final int RESULT_Y = 70;
+    private static final int BOOK_ROW = 17;
+    private static final int BOOK_HEAD = 11;
+    private static final int BOOK_TOP = 49;
 
+    /** CRAFT toggle: crafting mode replaces the equipment zone with the crafting workspace. */
+    private boolean craftMode;
+    /** The station this screen was opened from (crafting table), shown widened in the station row; null for none. */
+    private String openStation;
+    private static boolean canMakeOnly;
     private double colScroll;
-    private double stashScroll;
-    private double chestScroll;
+    private double storageScroll;
+    private double bookScroll;
+    /** Storage tab: -1 for ALL, else a container index. */
+    private int storageTab = -1;
+    private String storageSearch = "";
+    private boolean storageSearchFocused;
     /** Tooltip for whatever small control is under the mouse this frame. */
     private String uiTip;
+
+    // Zone geometry, which moves when crafting mode widens the left zone.
+    private int cx() {
+        return craftMode ? 208 : 122;
+    }
+
+    private int secX() {
+        return cx() + 4;
+    }
+
+    private int secGridX() {
+        return cx() + 26;
+    }
+
+    private int sx() {
+        return craftMode ? 370 : 284;
+    }
+
+    private int sw() {
+        return craftMode ? 106 : 192;
+    }
+
+    private int scols() {
+        return craftMode ? 5 : 10;
+    }
+
+    private int quX() {
+        return craftMode ? 248 : 200;
+    }
+
+    private static final int SW_ROWS = 8;
 
     private static boolean in(double x, double y, int rx, int ry, int w, int h) {
         return x >= rx && x < rx + w && y >= ry && y < ry + h;
     }
 
-    private boolean bookOpen() {
-        return !listFolded;
+    private static boolean inCol(double y) {
+        return y >= COL_TOP && y < COL_BOTTOM;
     }
 
-    /** One of the containers column's sections: 0 unsorted, 1 rig, 2 pockets, 3 backpack. y is before scrolling. */
+    /** A zone background (UI-SPEC: tiled column texture, 1 px Iron dark border, Iron top inner line). */
+    private void zone(GuiGraphics g, int x, int y, int w, int h) {
+        Kit.blit(g, "panel/column_texture", x + 1, y + 1, w - 2, h - 2);
+        g.fill(x, y, x + w, y + 1, Kit.IRON_DARK);
+        g.fill(x, y + h - 1, x + w, y + h, Kit.IRON_DARK);
+        g.fill(x, y, x + 1, y + h, Kit.IRON_DARK);
+        g.fill(x + w - 1, y, x + w, y + h, Kit.IRON_DARK);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, Kit.IRON);
+    }
+
+    private void small(GuiGraphics g, String text, float x, float y, int color, float k) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(k, k, 1);
+        g.drawString(font, text, 0, 0, color, false);
+        g.pose().popPose();
+    }
+
+    /** An icon-only button (button_small/name_*); hovering it sets the tooltip. */
+    private void iconButton(GuiGraphics g, String name, int x, int y, int size, boolean enabled, int mx, int my, String tip) {
+        boolean over = in(mx, my, x, y, size, size);
+        Kit.blit(g, "button_small/" + name + (!enabled ? "_disabled" : over ? "_hover" : "_normal"), x, y, size, size);
+        if (over && tip != null) {
+            uiTip = tip;
+        }
+    }
+
+    // ------------------------------------------------------------------ carried zone
+
+    /** One of the carried zone's sections: 0 unsorted, 1 rig, 2 pockets, 3 backpack. y is before scrolling. */
     private record ColSec(int kind, String title, int y, int h) {}
 
     private List<ColSec> colSections() {
@@ -799,95 +879,200 @@ public class TarkovScreen extends Screen {
         return last.y + last.h - COL_TOP;
     }
 
-    private static boolean inCol(double y) {
-        return y >= COL_TOP && y < COL_BOTTOM;
-    }
+    // ------------------------------------------------------------------ storage zone
 
-    private boolean opened() {
-        return ClientTetris.sync.opened() && !ClientTetris.sync.containers().isEmpty();
-    }
-
-    /** The open chest's panel: x, y, w, h; null if no chest is open. */
-    private int[] chestArea() {
-        if (!opened()) {
-            return null;
+    /** A storage cell: a stack in one of the shown containers (b, c its grid origin; slot for an overflow stack). */
+    private record SCell(int index, Placed placed, ItemStack overflow, int slot) {
+        ItemStack stack() {
+            return placed != null ? placed.stack : overflow;
         }
-        return ClientTetris.sync.stash() ? new int[] {R_X, 168, R_W, 71} : new int[] {R_X, R_Y, R_W, R_BOTTOM - R_Y};
-    }
 
-    /** The stash panel (inside a hideout): x, y, w, h; null outside one. */
-    private int[] stashArea() {
-        if (!ClientTetris.sync.stash()) {
-            return null;
+        Loc loc() {
+            return placed != null ? Loc.container(index, placed.x, placed.y) : Loc.containerOverflow(index, slot);
         }
-        return opened() ? new int[] {R_X, R_Y, R_W, 76} : new int[] {R_X, R_Y, R_W, R_BOTTOM - R_Y};
     }
 
-    /** Where a shown container's grid sits, the clip of its panel, and its header row in the stash (-1 in the chest panel). */
-    private record CPlace(int index, int x, int y, int clipTop, int clipBottom, int headerY) {}
-
-    private static int overflowH(TetrisNet.ContainerView c) {
-        return c.overflow().isEmpty() ? 0 : 10 + rows(c.overflow().size()) * C;
+    private boolean anyStorage() {
+        return !ClientTetris.sync.containers().isEmpty() || ClientTetris.sync.stash();
     }
 
-    private List<CPlace> containerPlaces() {
-        List<CPlace> out = new ArrayList<>();
+    /** The tab's stacks in reading order, filtered by the search field. */
+    private List<SCell> storageCells() {
+        List<SCell> out = new ArrayList<>();
         List<TetrisNet.ContainerView> cs = ClientTetris.sync.containers();
-        int start = 0;
-        int[] ch = chestArea();
-        if (ch != null) {
-            int top = ch[1] + 18;
-            out.add(new CPlace(0, ch[0] + 6, top - (int) chestScroll, top, ch[1] + ch[3] - 3, -1));
-            start = 1;
+        if (storageTab >= cs.size()) {
+            storageTab = -1;
         }
-        int[] st = stashArea();
-        if (st != null) {
-            int top = st[1] + 18;
-            int y = top - (int) stashScroll;
-            for (int i = start; i < cs.size(); i++) {
-                TetrisNet.ContainerView c = cs.get(i);
-                out.add(new CPlace(i, st[0] + 6, y + 11, top, st[1] + st[3] - 3, y));
-                y += 11 + c.height() * C + overflowH(c) + 3;
+        String q = storageSearch.toLowerCase(Locale.ROOT);
+        for (int i = 0; i < cs.size(); i++) {
+            if (storageTab >= 0 && i != storageTab) {
+                continue;
+            }
+            TetrisNet.ContainerView c = cs.get(i);
+            List<Placed> items = new ArrayList<>(c.items());
+            items.sort((a, b) -> a.y != b.y ? Integer.compare(a.y, b.y) : Integer.compare(a.x, b.x));
+            for (Placed p : items) {
+                if (q.isEmpty() || p.stack.getHoverName().getString().toLowerCase(Locale.ROOT).contains(q)) {
+                    out.add(new SCell(i, p, null, -1));
+                }
+            }
+            for (int k = 0; k < c.overflow().size(); k++) {
+                ItemStack st = c.overflow().get(k);
+                if (q.isEmpty() || st.getHoverName().getString().toLowerCase(Locale.ROOT).contains(q)) {
+                    out.add(new SCell(i, null, st, c.overflowSlots().get(k)));
+                }
             }
         }
         return out;
     }
 
-    private int stashContent() {
-        int h = 0;
+    private int storageGridY() {
+        return ZONE_Y + 47;
+    }
+
+    private SCell storageAt(double x, double y) {
+        int gx = sx() + 5;
+        int gy = storageGridY();
+        if (x < gx || x >= gx + scols() * C || y < gy || y >= gy + SW_ROWS * C) {
+            return null;
+        }
+        int i = ((int) ((y - gy + storageScroll) / C)) * scols() + (int) ((x - gx) / C);
+        List<SCell> cells = storageCells();
+        return i >= 0 && i < cells.size() ? cells.get(i) : null;
+    }
+
+    /** True if a point is in the storage grid area (dropping there puts things away). */
+    private boolean overStorageGrid(double x, double y) {
+        return anyStorage() && in(x, y, sx() + 5, storageGridY(), scols() * C, SW_ROWS * C);
+    }
+
+    /** Storage tab rectangles: x, width for ALL (index -1) and each container. */
+    private List<int[]> storageTabs() {
+        List<int[]> out = new ArrayList<>();
         List<TetrisNet.ContainerView> cs = ClientTetris.sync.containers();
-        for (int i = opened() ? 1 : 0; i < cs.size(); i++) {
-            h += 11 + cs.get(i).height() * C + overflowH(cs.get(i)) + 3;
+        if (!ClientTetris.sync.stash()) {
+            return out;
         }
-        return h;
-    }
-
-    private int chestContent() {
-        return opened() ? ClientTetris.sync.containers().get(0).height() * C + overflowH(ClientTetris.sync.containers().get(0)) : 0;
-    }
-
-    /** True if a point is on one of the screen's panels (a click anywhere else with something held drops it, like vanilla). */
-    private boolean onPanel(double x, double y) {
-        return in(x, y, 4, 18, 114, 221) || in(x, y, COL_X, COL_Y, COL_W, COL_H) || in(x, y, CP_X, CP_Y, CP_W, CP_H)
-                || in(x, y, R_X, R_Y, R_W, R_BOTTOM - R_Y) || in(x, y, 0, 240, VW, 30) || y < 18;
-    }
-
-    private void small(GuiGraphics g, String text, float x, float y, int color, float k) {
-        g.pose().pushPose();
-        g.pose().translate(x, y, 0);
-        g.pose().scale(k, k, 1);
-        g.drawString(font, text, 0, 0, color, false);
-        g.pose().popPose();
-    }
-
-    /** An icon-only button (button_small/name_*); hovering it sets the tooltip. */
-    private void iconButton(GuiGraphics g, String name, int x, int y, int size, boolean enabled, int mx, int my, String tip) {
-        boolean over = in(mx, my, x, y, size, size);
-        Kit.blit(g, "button_small/" + name + (!enabled ? "_disabled" : over ? "_hover" : "_normal"), x, y, size, size);
-        if (over && tip != null) {
-            uiTip = tip;
+        int avail = sw() - 10;
+        int n = cs.size() + 1;
+        int full = font.width("ALL") + 10;
+        for (TetrisNet.ContainerView c : cs) {
+            full += font.width(c.name().toUpperCase(Locale.ROOT)) + 11;
         }
+        float k = full <= avail ? 1f : avail / (float) full;
+        int x = sx() + 5;
+        for (int i = -1; i < cs.size(); i++) {
+            String label = i < 0 ? "ALL" : cs.get(i).name().toUpperCase(Locale.ROOT);
+            int w = Math.max(14, (int) ((font.width(label) + 10) * k));
+            out.add(new int[] {i, x, w});
+            x += w + 1;
+        }
+        return out;
     }
+
+    private void renderStorage(GuiGraphics g, int mx, int my) {
+        TetrisNet.Sync s = ClientTetris.sync;
+        int x0 = sx();
+        int w = sw();
+        zone(g, x0, ZONE_Y, w, ZONE_H);
+        List<TetrisNet.ContainerView> cs = s.containers();
+        if (!anyStorage()) {
+            g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. Inside a hideout, the storage shows here."),
+                    x0 + 6, ZONE_Y + 8, w - 12, Kit.ASH);
+            return;
+        }
+        // Header: icon and title; buttons right to left: filter, sort, STASH ALL, TAKE ALL (crafting mode: filter, sort).
+        boolean hideout = s.stash();
+        Kit.blit(g, "icon/tab/stash", x0 + 5, ZONE_Y + 4, 9, 9);
+        String title = craftMode ? "STORAGE" : hideout ? "HIDEOUT STORAGE" : cs.get(0).name().toUpperCase(Locale.ROOT);
+        Kit.text(g, font, font.plainSubstrByWidth(title, w - (craftMode ? 50 : 80)), x0 + 17, ZONE_Y + 5, Kit.BONE);
+        int bx = x0 + w - 16;
+        boolean chestTab = storageTab >= 0 || !hideout;
+        iconButton(g, "filter", bx, ZONE_Y + 3, 12, chestTab, mx, my, chestTab ? "Filter: what this chest takes" : "Pick a chest's tab to set its filter");
+        int fi = storageTab >= 0 ? storageTab : 0;
+        if (chestTab && fi < cs.size() && cs.get(fi).filter() != com.cavmkii.seancraft.tetris.StorageCategory.ALL) {
+            g.renderOutline(bx - 1, ZONE_Y + 2, 14, 14, Kit.GOLD);
+        }
+        iconButton(g, "sort", bx - 14, ZONE_Y + 3, 12, true, mx, my, chestTab ? "Sort this chest" : "Organize: merge and sort across the storage");
+        if (!craftMode) {
+            iconButton(g, "stash_all", bx - 28, ZONE_Y + 3, 12, hideout, mx, my, hideout ? "Stash all: your pockets, rig and backpack" : "Stash all: inside a hideout only");
+            iconButton(g, "take_all", bx - 42, ZONE_Y + 3, 12, !cs.isEmpty(), mx, my, chestTab ? "Take all from this chest" : "Take all from every chest");
+        }
+        // Search field.
+        int fy = ZONE_Y + 18;
+        Kit.blit(g, storageSearchFocused ? "text_field/focused" : "text_field/normal", x0 + 5, fy, w - 10, 12);
+        Kit.blit(g, "icon/hud/search", x0 + 7, fy + 2, 9, 9);
+        String shown = storageSearch.isEmpty() && !storageSearchFocused ? "SEARCH" : storageSearch + (storageSearchFocused && ticks / 6 % 2 == 0 ? "_" : "");
+        small(g, font.plainSubstrByWidth(shown, (int) ((w - 30) / 0.75f), true), x0 + 19, fy + 3, storageSearch.isEmpty() && !storageSearchFocused ? Kit.ASH : Kit.BONE, 0.75f);
+        // Tabs: ALL, then one per chest or barrel.
+        int ty = ZONE_Y + 33;
+        for (int[] t : storageTabs()) {
+            boolean active = t[0] == storageTab;
+            boolean over = !active && in(mx, my, t[1], ty, t[2], 13);
+            if (active) {
+                Kit.blit(g, "tab/active", t[1], ty, t[2], 14);
+            } else {
+                Kit.blit(g, over ? "tab/inactive_hover" : "tab/inactive", t[1], ty + 2, t[2], 12);
+            }
+            String label = t[0] < 0 ? "ALL" : cs.get(t[0]).name().toUpperCase(Locale.ROOT);
+            if (renameIndex == t[0] && t[0] >= 0) {
+                label = renameText + (ticks / 6 % 2 == 0 ? "_" : "");
+            }
+            float k = Math.min(0.75f, (t[2] - 6) / (float) Math.max(1, font.width(label)));
+            small(g, label, t[1] + 5, ty + 5, active ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH, k);
+            if (over && t[0] >= 0) {
+                uiTip = "Right-click to rename";
+            }
+        }
+        // The grid: stacks in reading order, scrolling.
+        List<SCell> cells = storageCells();
+        int gx = x0 + 5;
+        int gy = storageGridY();
+        int rows = Math.max(SW_ROWS, (cells.size() + scols() - 1) / scols());
+        double max = Math.max(0, (rows - SW_ROWS) * C);
+        storageScroll = Math.max(0, Math.min(max, storageScroll));
+        g.enableScissor((int) (ox + gx * scale), (int) (oy + gy * scale), (int) (ox + (gx + scols() * C) * scale), (int) (oy + (gy + SW_ROWS * C) * scale));
+        boolean dropHere = !held.isEmpty() && overStorageGrid(mx, my);
+        for (int i = 0; i < rows * scols(); i++) {
+            int cxx = gx + (i % scols()) * C;
+            int cyy = gy + (i / scols()) * C - (int) storageScroll;
+            if (cyy + C < gy || cyy > gy + SW_ROWS * C) {
+                continue;
+            }
+            boolean over = in(mx, my, cxx, cyy, C, C) && in(mx, my, gx, gy, scols() * C, SW_ROWS * C);
+            Kit.slot(g, cxx, cyy, C, over && !dropHere ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
+            if (i < cells.size()) {
+                SCell c = cells.get(i);
+                boolean lifted = heldFrom != null && heldCount == 0 && heldFrom.equals(c.loc());
+                if (!lifted) {
+                    g.renderItem(c.stack(), cxx + 1, cyy + 1);
+                    g.renderItemDecorations(font, c.stack(), cxx + 1, cyy + 1);
+                }
+            }
+        }
+        g.disableScissor();
+        if (dropHere) {
+            g.renderOutline(gx - 1, gy - 1, scols() * C + 2, SW_ROWS * C + 2, Kit.GOLD_LIGHT);
+        }
+        if (max > 0) {
+            int span = SW_ROWS * C;
+            int barH = Math.max(10, (int) (span * (double) span / (span + max)));
+            Kit.blit(g, "scroll/handle", gx + scols() * C + 1, gy + (int) ((span - barH) * storageScroll / max), 3, barH);
+        }
+        // Slot count.
+        int used = 0;
+        int total = 0;
+        for (int i = 0; i < cs.size(); i++) {
+            if (storageTab >= 0 && i != storageTab) {
+                continue;
+            }
+            used += cs.get(i).items().size() + cs.get(i).overflow().size();
+            total += cs.get(i).width() * cs.get(i).height();
+        }
+        small(g, used + " / " + total + " SLOTS", gx, gy + SW_ROWS * C + 3, Kit.ASH, 0.75f);
+    }
+
+    // ------------------------------------------------------------------ equipment zone
 
     /** The secure pouch's own item, from its size. */
     private static ItemStack pouchItem() {
@@ -900,16 +1085,10 @@ public class TarkovScreen extends Screen {
         return ItemStack.EMPTY;
     }
 
-    private ItemStack renderInventory(GuiGraphics g, int mx, int my) {
-        lastMx = mx;
-        lastMy = my;
-        TetrisNet.Sync s = ClientTetris.sync;
-        Loc hover = locAt(mx, my);
-        ItemStack tip = stackAt(hover);
-
-        // Equipment column: the body, the worn slots around it, and the secure pouch.
-        Kit.blit(g, "panel/column", 4, 18, 114, 221);
-        Kit.blit(g, "gear/silhouette", 54, 30, 56, 118);
+    private ItemStack renderEquipment(GuiGraphics g, int mx, int my, Loc hover) {
+        ItemStack tip = ItemStack.EMPTY;
+        zone(g, 4, ZONE_Y, 114, ZONE_H);
+        Kit.blit(g, "gear/silhouette", 54, 28, 56, 118);
         for (int slot = 0; slot < 7; slot++) {
             if (EQUIP_BOX[slot] == null) {
                 continue;
@@ -921,176 +1100,34 @@ public class TarkovScreen extends Screen {
             small(g, EQUIP_LABEL[slot], bx + 3, by + 3, Kit.ASH, k);
             equipSlot(g, slot, hover);
         }
-        Kit.blit(g, "panel/label", 10, 164, 104, 9);
-        String tier = pouchItem().isEmpty() ? "SECURE POUCH" : pouchItem().getHoverName().getString().toUpperCase(Locale.ROOT);
-        small(g, tier, 13, 165.5f, Kit.GOLD, Math.min(0.75f, 96f / font.width(tier)));
+        ItemStack pi = pouchItem();
+        Kit.blit(g, "panel/label", 10, 154, 102, 9);
+        String tier = (pi.isEmpty() ? "SECURE POUCH" : pi.getHoverName().getString().toUpperCase(Locale.ROOT)) + "  KEPT";
+        small(g, tier, 13, 155.5f, Kit.GOLD, Math.min(0.75f, 94f / font.width(tier)));
         Kit.slot(g, 10, POUCH_Y, C, Kit.SlotState.NORMAL);
-        if (!pouchItem().isEmpty()) {
-            g.renderItem(pouchItem(), 11, POUCH_Y + 1);
+        if (!pi.isEmpty()) {
+            g.renderItem(pi, 11, POUCH_Y + 1);
             if (in(mx, my, 10, POUCH_Y, C, C)) {
-                tip = pouchItem();
+                tip = pi;
             }
         }
         Box pouch = box(GridId.POUCH);
         if (pouch != null) {
             renderGrid(g, pouch);
-            int kx = POUCH_GRID_X + pouch.w() * C + 4;
-            // Gold marks what survives death.
-            if (kx + 30 < 116) {
-                small(g, "KEPT", kx, POUCH_Y + 2, Kit.GOLD, 0.75f);
-                small(g, "ON DEATH", kx, POUCH_Y + 10, Kit.GOLD, 0.75f);
-            } else {
-                small(g, "KEPT ON DEATH", POUCH_GRID_X, POUCH_Y + pouch.h() * C + 2, Kit.GOLD, 0.625f);
-            }
         }
-
-        // Containers column: rig, pockets, backpack, each with its own item beside its grid.
-        Kit.blit(g, "panel/column", COL_X, COL_Y, COL_W, COL_H);
-        colScroll = Math.max(0, Math.min(Math.max(0, colContent() - (COL_BOTTOM - COL_TOP)), colScroll));
-        g.enableScissor((int) (ox + COL_X * scale), (int) (oy + COL_TOP * scale), (int) (ox + (COL_X + COL_W) * scale),
-                (int) (oy + COL_BOTTOM * scale));
-        boolean sortShown = false;
-        for (ColSec sec : colSections()) {
-            int y = sec.y - (int) colScroll;
-            Kit.blit(g, "panel/label", SEC_X, y, SEC_W, 9);
-            small(g, sec.title, SEC_X + 3, y + 1.5f, sec.kind == 0 ? Kit.BLOOD_LIGHT : Kit.ASH, 0.75f);
-            switch (sec.kind) {
-                case 0 -> {
-                    boolean over = in(mx, my, SEC_X + SEC_W - 28, y, 28, 9) && inCol(my);
-                    Kit.smallButton(g, font, "DROP", SEC_X + SEC_W - 28, y, 28, 9, true, over, false, 0.625f);
-                    if (over) {
-                        uiTip = "Drop everything that has no room";
-                    }
-                    List<ItemStack> list = s.unsorted();
-                    for (int i = 0; i < list.size(); i++) {
-                        Loc loc = Loc.unsorted(i);
-                        slot(g, SEC_X + (i % 8) * C, y + 11 + (i / 8) * C, C, list.get(i), hover != null && hover.equals(loc), null);
-                    }
-                }
-                case 1, 3 -> {
-                    equipSlot(g, sec.kind == 1 ? 4 : 5, hover);
-                    boolean none = sec.kind == 1 ? s.rig().isEmpty() : s.backpack().isEmpty();
-                    if (none) {
-                        small(g, sec.kind == 1 ? "no rig" : "no backpack", SEC_GRID_X, y + 16, Kit.DISABLED, 0.75f);
-                    }
-                }
-                default -> { }
-            }
-            if (sec.kind != 0 && !sortShown) {
-                sortShown = true;
-                if (inCol(my)) {
-                    iconButton(g, "sort", SEC_X + SEC_W - 10, y, 9, true, mx, my, "Sort your grids");
-                } else {
-                    iconButton(g, "sort", SEC_X + SEC_W - 10, y, 9, true, -1, -1, null);
-                }
-            }
-        }
-        for (Box b : boxes()) {
-            if (b.id() != GridId.POUCH) {
-                renderGrid(g, b);
-            }
-        }
-        g.disableScissor();
-        scrollBar(g, COL_X + COL_W - 4, COL_TOP, COL_BOTTOM - COL_TOP, colContent(), colScroll);
-
-        // Crafting, then the stash and the open chest (or the crafting book's list over them).
-        ItemStack craftTip = renderCraftPanel(g, mx, my);
-        if (!craftTip.isEmpty()) {
-            tip = craftTip;
-        }
-        if (bookOpen()) {
-            Kit.blit(g, "panel/column", R_X, R_Y, R_W, R_BOTTOM - R_Y);
-            small(g, "CAN MAKE", LIST_X, LIST_HEAD_Y + 3, Kit.ASH, 0.75f);
-            searchBox(g, LIST_X + 50, LIST_HEAD_Y, LIST_W2 - 50, 11);
-            ItemStack listTip = renderCraftList(g, craftRows(), mx, my);
-            if (!listTip.isEmpty()) {
-                tip = listTip;
-            }
-        } else {
-            renderStashPanel(g, mx, my, hover);
-            renderChestPanel(g, mx, my, hover);
-            if (stashArea() == null && chestArea() == null) {
-                Kit.blit(g, "panel/column", R_X, R_Y, R_W, R_BOTTOM - R_Y);
-                g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. Inside your hideout, the stash shows here."),
-                        R_X + 8, R_Y + 8, R_W - 16, Kit.ASH);
-                if (!ClientTetris.craft.inHideout()) {
-                    g.drawWordWrap(font, Component.literal("No hideout here: open the crafting book for the Hideout Bench."),
-                            R_X + 8, R_Y + 40, R_W - 16, Kit.GOLD_LIGHT);
-                }
-            }
-        }
-
-        // Quick-use bar, with the auto-refill toggles after it.
-        small(g, "QUICK USE", 120, 250, Kit.ASH, 0.75f);
-        int selected = minecraft.player.getInventory().selected;
-        for (int i = 0; i < 9; i++) {
-            int x = QU_X + i * QU_STEP;
-            boolean over = hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i));
-            slot(g, x, QU_Y, C, stackAt(Loc.hand(i)), over || i == selected, null);
-            Kit.blit(g, "slot/key_badge", x, QU_Y, 6, 7);
-            small(g, String.valueOf(i + 1), x + 1.5f, QU_Y + 1.5f, i == selected ? Kit.GOLD_LIGHT : Kit.BONE, 0.5f);
-        }
-        int tx = QU_X + 9 * QU_STEP + 4;
-        iconButton(g, "refill", tx, QU_Y + 3, 12, true, mx, my, "Auto-refill the quick-use bar: " + (s.autoRefill() ? "ON" : "OFF"));
-        if (s.autoRefill()) {
-            g.renderOutline(tx - 1, QU_Y + 2, 14, 14, Kit.GOLD);
-        }
-        boolean overStash = in(mx, my, tx + 16, QU_Y + 3, 12, 12);
-        Kit.buttonBg(g, tx + 16, QU_Y + 3, 12, 12, true, overStash, s.refillFromStash());
-        Kit.blit(g, "icon/tab/stash", tx + 17, QU_Y + 4, 9, 9);
-        if (overStash) {
-            uiTip = "Refill from the stash too: " + (s.refillFromStash() ? "ON" : "OFF");
-        }
-
-        renderStats(g);
-        renderFilter(g, mx, my);
-        renderHeld(g, mx, my, hover);
-        return tip;
-    }
-
-    private void equipSlot(GuiGraphics g, int slot, Loc hover) {
-        int[] r = equipRect(slot);
-        if (r == null) {
-            return;
-        }
-        slot(g, r[0], r[1], r[2], stackAt(Loc.equip(slot)), hover != null && hover.equals(Loc.equip(slot)), null);
-        if (stackAt(Loc.equip(slot)).isEmpty()) {
-            Kit.blit(g, "ghost/" + EQUIP_GHOSTS[slot], r[0] + (r[2] - 16) / 2, r[1] + (r[2] - 16) / 2, 16, 16);
-        }
-        if (!held.isEmpty() && equipAccepts(slot, held)) {
-            // Where the held item can be worn.
-            int c = hover != null && hover.equals(Loc.equip(slot)) ? Kit.GOLD_LIGHT : Kit.GOLD;
-            g.renderOutline(r[0] - 1, r[1] - 1, r[2] + 2, r[2] + 2, c);
-        }
-    }
-
-    private void scrollBar(GuiGraphics g, int x, int top, int span, int content, double scroll) {
-        double max = content - span;
-        if (max <= 0) {
-            return;
-        }
-        int barH = Math.max(10, (int) (span * (double) span / content));
-        int barY = top + (int) ((span - barH) * scroll / max);
-        Kit.blit(g, "scroll/handle", x, barY, 3, barH);
-    }
-
-    /** Bottom left: load, then health, stamina, and Rage or mana if your skills use them. */
-    private void renderStats(GuiGraphics g) {
+        // Load and roll, then health, stamina, and Rage or mana if the build uses them.
         com.cavmkii.seancraft.combat.Load.State load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
-        com.cavmkii.seancraft.combat.Load.Tier tier = load.tier();
-        Kit.blit(g, "icon/tab/load", 6, 244, 9, 9);
-        int lc = tier == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT
-                : tier == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.BONE;
-        String loadText = "LOAD " + Math.round(load.fraction() * 100) + "%  " + tier.label;
-        small(g, loadText, 18, 245.5f, lc, Math.min(1f, 98f / font.width(loadText)));
-        float x = 6;
-        Kit.blit(g, "hud/heart_full", 6, 256, 9, 9);
-        x += 11;
+        com.cavmkii.seancraft.combat.Load.Tier lt = load.tier();
+        Kit.blit(g, "icon/tab/load", 10, 206, 9, 9);
+        int lc = lt == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT : lt == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.BONE;
+        small(g, "LOAD " + Math.round(load.fraction() * 100) + "%  " + lt.label, 22, 207.5f, lc, 0.75f);
+        String pen = (lt.walk != 0 ? "WALK " + Math.round(lt.walk * 100) + "%  " : "") + (lt.rollTicks == 0 ? "NO ROLL" : String.format("ROLL %.1f S", lt.rollTicks / 20f));
+        small(g, pen, 22, 216.5f, Kit.ASH, 0.75f);
+        Kit.blit(g, "icon/filter/meds", 10, 227, 9, 9);
         String hp = Math.round(minecraft.player.getHealth()) + "/" + Math.round(minecraft.player.getMaxHealth());
-        small(g, hp, x, 257.5f, Kit.BLOOD_LIGHT, 0.75f);
-        x += font.width(hp) * 0.75f + 5;
+        small(g, hp, 21, 228.5f, Kit.BLOOD_LIGHT, 0.75f);
         com.cavmkii.seancraft.rpg.Stats st = com.cavmkii.seancraft.client.rpg.ClientRpg.stats;
-        x = stat(g, x, "stamina", com.cavmkii.seancraft.client.rpg.ClientRpg.stamina,
+        float x = stat(g, 52, "stamina", com.cavmkii.seancraft.client.rpg.ClientRpg.stamina,
                 st.maxStamina() + com.cavmkii.seancraft.client.food.ClientFood.stamina(), Kit.MOSS);
         java.util.Set<com.cavmkii.seancraft.rpg.Resource> used = java.util.EnumSet.noneOf(com.cavmkii.seancraft.rpg.Resource.class);
         com.cavmkii.seancraft.rpg.PlayerData data = com.cavmkii.seancraft.client.rpg.ClientRpg.data;
@@ -1103,33 +1140,158 @@ public class TarkovScreen extends Screen {
                 }
             }
         }
-        if (used.contains(com.cavmkii.seancraft.rpg.Resource.RAGE) && x < 108) {
-            x = stat(g, x, "rage", com.cavmkii.seancraft.client.rpg.ClientRpg.rage, st.maxRage(), Kit.EMBER);
-        }
-        if (used.contains(com.cavmkii.seancraft.rpg.Resource.MANA) && x < 108) {
+        if (used.contains(com.cavmkii.seancraft.rpg.Resource.MANA) && x < 100) {
             stat(g, x, "mana", com.cavmkii.seancraft.client.rpg.ClientRpg.mana, st.maxMana(), Kit.ARCANE);
+        } else if (used.contains(com.cavmkii.seancraft.rpg.Resource.RAGE) && x < 100) {
+            stat(g, x, "rage", com.cavmkii.seancraft.client.rpg.ClientRpg.rage, st.maxRage(), Kit.EMBER);
         }
+        return tip;
     }
 
     private float stat(GuiGraphics g, float x, String icon, float value, float max, int color) {
         g.pose().pushPose();
-        g.pose().translate(x, 256, 0);
+        g.pose().translate(x, 227, 0);
         Kit.blit(g, "icon/resource/" + icon, 0, 0, 9, 9);
         g.pose().popPose();
         String t = Math.round(value) + "/" + Math.round(max);
-        small(g, t, x + 10, 257.5f, color, 0.75f);
-        return x + 10 + font.width(t) * 0.75f + 5;
+        small(g, t, x + 10, 228.5f, color, 0.75f);
+        return x + 10 + font.width(t) * 0.75f + 4;
     }
 
-    /** Crafting panel: label and the two books, the grid (2x2, 3x3 near a crafting table or in the hideout), arrow, result. */
-    private ItemStack renderCraftPanel(GuiGraphics g, int mx, int my) {
+    private void equipSlot(GuiGraphics g, int slot, Loc hover) {
+        int[] r = equipRect(slot);
+        if (r == null) {
+            return;
+        }
+        slot(g, r[0], r[1], r[2], stackAt(Loc.equip(slot)), hover != null && hover.equals(Loc.equip(slot)), null);
+        if (stackAt(Loc.equip(slot)).isEmpty()) {
+            Kit.blit(g, "ghost/" + EQUIP_GHOSTS[slot], r[0] + (r[2] - 16) / 2, r[1] + (r[2] - 16) / 2, 16, 16);
+        }
+        if (!held.isEmpty() && equipAccepts(slot, held)) {
+            int c = hover != null && hover.equals(Loc.equip(slot)) ? Kit.GOLD_LIGHT : Kit.GOLD;
+            g.renderOutline(r[0] - 1, r[1] - 1, r[2] + 2, r[2] + 2, c);
+        }
+    }
+
+    // ------------------------------------------------------------------ crafting zone
+
+    /** A recipe-book row: a category header, or a recipe (known or not). */
+    private record BookRow(com.cavmkii.seancraft.tetris.StorageCategory header, RecipeCell cell, int y, int h) {}
+
+    /** Times you can make a recipe now (from the server's list); 0 if missing ingredients, -1 if it needs a crafting table. */
+    private int makeable(String id) {
+        for (TetrisNet.CraftEntry e : ClientTetris.craft.entries()) {
+            if (e.id().equals(id)) {
+                return e.times();
+            }
+        }
+        return 0;
+    }
+
+    private List<BookRow> bookRows() {
+        List<BookRow> out = new ArrayList<>();
+        int y = 0;
+        String q = search.toLowerCase(Locale.ROOT);
+        for (RecipeSection sec : recipeSections()) {
+            List<RecipeCell> cells = new ArrayList<>();
+            for (RecipeCell c : sec.cells()) {
+                if (canMakeOnly && (!c.known() || makeable(c.holder().id().toString()) <= 0)) {
+                    continue;
+                }
+                if (!q.isEmpty() && (!c.known() || !c.result().getHoverName().getString().toLowerCase(Locale.ROOT).contains(q))) {
+                    continue;
+                }
+                cells.add(c);
+            }
+            if (cells.isEmpty()) {
+                continue;
+            }
+            out.add(new BookRow(sec.category(), null, y, BOOK_HEAD));
+            y += BOOK_HEAD;
+            if (COLLAPSED.contains(sec.category()) && q.isEmpty()) {
+                continue;
+            }
+            for (RecipeCell c : cells) {
+                out.add(new BookRow(null, c, y, BOOK_ROW));
+                y += BOOK_ROW;
+            }
+        }
+        return out;
+    }
+
+    private ItemStack renderCraftZone(GuiGraphics g, int mx, int my) {
         TetrisNet.CraftList craft = ClientTetris.craft;
         ItemStack tip = ItemStack.EMPTY;
-        Kit.blit(g, "panel/column", CP_X, CP_Y, CP_W, CP_H);
-        Kit.blit(g, "panel/label", CP_X + 4, CP_Y + 3, CP_W - 40, 9);
-        small(g, "CRAFTING", CP_X + 7, CP_Y + 4.5f, Kit.ASH, 0.75f);
-        books(g, mx, my);
-        // The picked (or hovered) recipe's pattern as a ghost (4.1): faded icons in the empty squares.
+        zone(g, 4, ZONE_Y, 200, ZONE_H);
+        // Recipe book: search, CAN MAKE NOW, categories and rows.
+        Kit.blit(g, searchFocused ? "text_field/focused" : "text_field/normal", BOOK_X, 22, BOOK_W, 12);
+        Kit.blit(g, "icon/hud/search", BOOK_X + 2, 24, 9, 9);
+        String shown = search.isEmpty() && !searchFocused ? "SEARCH" : search + (searchFocused && ticks / 6 % 2 == 0 ? "_" : "");
+        small(g, font.plainSubstrByWidth(shown, (int) ((BOOK_W - 16) / 0.75f), true), BOOK_X + 13, 25, search.isEmpty() && !searchFocused ? Kit.ASH : Kit.BONE, 0.75f);
+        Kit.blit(g, canMakeOnly ? "checkbox/on" : "checkbox/off", BOOK_X, 37, 10, 10);
+        small(g, "CAN MAKE NOW", BOOK_X + 13, 39, in(mx, my, BOOK_X, 37, BOOK_W, 10) ? Kit.GOLD_LIGHT : Kit.BONE, 0.75f);
+        List<BookRow> rows = bookRows();
+        int bottom = ZONE_Y + ZONE_H - 3;
+        int total = rows.isEmpty() ? 0 : rows.get(rows.size() - 1).y + rows.get(rows.size() - 1).h;
+        double max = Math.max(0, total - (bottom - BOOK_TOP));
+        bookScroll = Math.max(0, Math.min(max, bookScroll));
+        g.enableScissor((int) (ox + BOOK_X * scale), (int) (oy + BOOK_TOP * scale), (int) (ox + (BOOK_X + BOOK_W) * scale), (int) (oy + bottom * scale));
+        for (BookRow r : rows) {
+            int y = BOOK_TOP + r.y - (int) bookScroll;
+            if (y + r.h < BOOK_TOP || y > bottom) {
+                continue;
+            }
+            boolean over = in(mx, my, BOOK_X, y, BOOK_W, r.h - 1) && my >= BOOK_TOP && my < bottom;
+            if (r.header != null) {
+                boolean open = !COLLAPSED.contains(r.header) || !search.isEmpty();
+                Kit.blit(g, open ? "list/category_open" : "list/category_closed", BOOK_X + 1, y + 2, 7, 7);
+                small(g, r.header.label.toUpperCase(Locale.ROOT), BOOK_X + 11, y + 2.5f, open ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH, 0.75f);
+                continue;
+            }
+            RecipeCell c = r.cell;
+            String id = c.holder().id().toString();
+            boolean selected = id.equals(ghostRecipe);
+            if (!c.known()) {
+                Kit.blit(g, "list/row_locked", BOOK_X, y, BOOK_W, 16);
+                small(g, "??????", BOOK_X + 20, y + 5, Kit.DISABLED, 0.75f);
+                continue;
+            }
+            int can = makeable(id);
+            Kit.blit(g, selected ? "list/row_selected" : over ? "list/row_hover" : "list/row", BOOK_X, y, BOOK_W, 16);
+            g.renderItem(c.result(), BOOK_X + 1, y);
+            String name = font.plainSubstrByWidth(c.result().getHoverName().getString(), (int) ((BOOK_W - 32) / 0.75f));
+            small(g, name, BOOK_X + 19, y + 5, can > 0 ? (over || selected ? Kit.GOLD_LIGHT : Kit.BONE) : Kit.ASH, 0.75f);
+            if (can > 0) {
+                Kit.blit(g, "icon/hud/gather_check", BOOK_X + BOOK_W - 11, y + 3, 9, 9);
+            }
+            if (over) {
+                tip = c.result();
+                hoverRecipe = id;
+            }
+        }
+        g.disableScissor();
+        if (max > 0) {
+            int span = bottom - BOOK_TOP;
+            int barH = Math.max(10, (int) (span * (double) span / (span + max)));
+            Kit.blit(g, "scroll/handle", BOOK_X + BOOK_W + 1, BOOK_TOP + (int) ((span - barH) * bookScroll / max), 3, barH);
+        }
+
+        // Selected recipe: name, what it is and its gate; then the grid, arrow and result.
+        String sel = shownHover != null ? shownHover : ghostRecipe;
+        var recipe = recipeFor(sel);
+        Kit.blit(g, "panel/label", 98, 22, 100, 9);
+        if (recipe != null) {
+            ItemStack out = recipe.getResultItem(minecraft.level.registryAccess());
+            small(g, out.getHoverName().getString().toUpperCase(Locale.ROOT), 101, 23.5f, Kit.GOLD_LIGHT, Math.min(0.75f, 94f / font.width(out.getHoverName().getString())));
+            boolean big = recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe sh && (sh.getWidth() > 2 || sh.getHeight() > 2)
+                    || !(recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe) && recipe.getIngredients().size() > 4;
+            small(g, out.getCount() > 1 ? "Makes " + out.getCount() : "Makes 1", 98, 34, Kit.ASH, 0.75f);
+            small(g, big ? "3x3: crafting table or hideout" : "2x2: anywhere", 98, 42, Kit.ASH, 0.75f);
+        } else {
+            small(g, "PICK A RECIPE", 101, 23.5f, Kit.ASH, 0.75f);
+            small(g, "Its pattern shows in the grid;", 98, 34, Kit.ASH, 0.75f);
+            small(g, "place the items by hand.", 98, 42, Kit.ASH, 0.75f);
+        }
         if (!craft.result().isEmpty()) {
             ghostRecipe = null;
         }
@@ -1159,9 +1321,12 @@ public class TarkovScreen extends Screen {
                 g.renderItemDecorations(font, in, x + 1, y + 1);
             }
         }
-        Kit.blit(g, craft.result().isEmpty() ? "progress/arrow_empty" : "progress/arrow_full", 354, 53, 22, 15);
+        Kit.blit(g, craft.result().isEmpty() ? "progress/arrow_empty" : "progress/arrow_full", 156 - 2, 76, 10, 15);
         boolean resultHover = overResult(mx, my);
-        Kit.slot(g, RESULT_X, RESULT_Y, 26, resultHover && !craft.result().isEmpty() ? Kit.SlotState.HOVER : Kit.SlotState.RESULT);
+        Kit.blit(g, craft.result().isEmpty() ? "slot/result" : "slot/result_ready", RESULT_X, RESULT_Y, 26, 26);
+        if (resultHover && !craft.result().isEmpty()) {
+            g.renderOutline(RESULT_X, RESULT_Y, 26, 26, Kit.GOLD_LIGHT);
+        }
         if (!craft.result().isEmpty()) {
             g.renderItem(craft.result(), RESULT_X + 5, RESULT_Y + 5);
             g.renderItemDecorations(font, craft.result(), RESULT_X + 5, RESULT_Y + 5);
@@ -1169,185 +1334,257 @@ public class TarkovScreen extends Screen {
                 tip = craft.result();
             }
         }
-        String help = craft.needsTable() ? "NEEDS A TABLE" : !craft.result().isEmpty() ? "SHIFT: ALL" : ghostRecipe != null ? "GHOST: PLACE" : !craft.table() ? "2X2 HERE" : "";
-        String help2 = ghostRecipe != null && craft.result().isEmpty() ? "ITEMS BY HAND" : !craft.table() && craft.result().isEmpty() ? "3X3 AT A TABLE" : "";
-        small(g, help, 412, 49, craft.needsTable() ? Kit.BLOOD_LIGHT : Kit.ASH, 0.625f);
-        small(g, help2, 412, 56, Kit.ASH, 0.625f);
-        boolean clearHover = in(mx, my, CLEAR_X, CLEAR_Y, CLEAR_W, 10);
-        Kit.smallButton(g, font, "CLEAR", CLEAR_X, CLEAR_Y, CLEAR_W, 10, true, clearHover, false, 0.625f);
+        boolean clearHover = in(mx, my, RESULT_X, RESULT_Y + 29, 26, 10);
+        Kit.smallButton(g, font, "CLEAR", RESULT_X, RESULT_Y + 29, 26, 10, true, clearHover, false, 0.625f);
+        if (clearHover) {
+            uiTip = "Put everything in the grid back";
+        }
+
+        // Ingredients: have / need and where each one is.
+        Kit.blit(g, "panel/label", 98, 116, 100, 9);
+        small(g, "INGREDIENTS", 101, 117.5f, Kit.ASH, 0.75f);
+        if (recipe != null) {
+            int y = 128;
+            for (IngredientLine line : ingredientsOf(recipe)) {
+                if (y > 166) {
+                    break;
+                }
+                Kit.slot(g, 98, y, C, Kit.SlotState.NORMAL);
+                g.renderItem(line.display(), 99, y + 1);
+                int have = haveFor(line.ingredient());
+                boolean enough = have >= line.need();
+                small(g, font.plainSubstrByWidth(line.display().getHoverName().getString().toUpperCase(Locale.ROOT), 90), 119, y + 2, Kit.BONE, 0.75f);
+                small(g, where(line.ingredient()), 119, y + 10, Kit.ASH, 0.625f);
+                String hn = have + " / " + line.need();
+                int hw = (int) (font.width(hn) * 0.75f);
+                if (!enough) {
+                    Kit.blit(g, "icon/hud/missing", 196 - hw - 11, y + 2, 9, 9);
+                }
+                small(g, hn, 196 - hw, y + 3, enough ? Kit.MOSS : Kit.BLOOD_LIGHT, 0.75f);
+                y += 18;
+            }
+        }
+        small(g, "CLICK RESULT: 1   SHIFT: ALL", 98, 184, Kit.ASH, 0.625f);
+        boolean table = craft.table();
+        Kit.blit(g, table ? "icon/hud/gather_check" : "icon/hud/missing", 98, 194, 9, 9);
+        small(g, table ? (craft.inHideout() ? "HIDEOUT: 3X3" : "CRAFTING TABLE: 3X3") : "2X2 HERE: 3X3 AT A TABLE", 109, 195.5f, table ? Kit.MOSS : Kit.ASH, 0.625f);
         if (ghostRecipe != null) {
-            boolean pinHover = in(mx, my, PIN_X, CLEAR_Y, PIN_W, 10);
-            Kit.smallButton(g, font, "PIN HUD", PIN_X, CLEAR_Y, PIN_W, 10, true, pinHover, false, 0.625f);
+            boolean pinHover = in(mx, my, 98, 206, 58, 10);
+            Kit.smallButton(g, font, "PIN TO HUD", 98, 206, 58, 10, true, pinHover, false, 0.625f);
             if (pinHover) {
                 uiTip = "Put this recipe's ingredients on your gather list";
             }
         }
+        if (!craft.inHideout()) {
+            small(g, "No hideout here: the Hideout Bench", 98, 222, Kit.GOLD_LIGHT, 0.625f);
+            small(g, "is in the book under its category.", 98, 229, Kit.GOLD_LIGHT, 0.625f);
+        }
         return tip;
     }
 
-    /** Two books at the crafting panel's top right: what you can make now (its list covers the stash), and every recipe. */
-    private void books(GuiGraphics g, int mx, int my) {
-        int bx = CP_X + CP_W - 32;
-        boolean over0 = in(mx, my, bx, CP_Y + 2, 12, 12);
-        Kit.blit(g, over0 || bookOpen() ? "button_small/recipe_book_hover" : "button_small/recipe_book_normal", bx, CP_Y + 2, 12, 12);
-        if (bookOpen()) {
-            g.renderOutline(bx - 1, CP_Y + 1, 14, 14, Kit.GOLD);
-        }
-        if (over0) {
-            uiTip = bookOpen() ? "Close the crafting book" : "Crafting book: what you can make now";
-        }
-        boolean over1 = in(mx, my, bx + 15, CP_Y + 2, 12, 12);
-        Kit.buttonBg(g, bx + 15, CP_Y + 2, 12, 12, true, over1, false);
-        g.pose().pushPose();
-        g.pose().translate(bx + 16, CP_Y + 3, 0);
-        g.pose().scale(0.625f, 0.625f, 1);
-        g.renderItem(new ItemStack(net.minecraft.world.item.Items.KNOWLEDGE_BOOK), 0, 0);
-        g.pose().popPose();
-        if (over1) {
-            uiTip = "Recipe book: every recipe, found or not";
-        }
+    private net.minecraft.world.item.crafting.CraftingRecipe recipeFor(String id) {
+        var key = id == null ? null : net.minecraft.resources.ResourceLocation.tryParse(id);
+        var holder = key == null ? null : minecraft.level.getRecipeManager().byKey(key).orElse(null);
+        return holder != null && holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe r ? r : null;
     }
 
-    private int bookAt(double x, double y) {
-        int bx = CP_X + CP_W - 32;
-        return in(x, y, bx, CP_Y + 2, 12, 12) ? 0 : in(x, y, bx + 15, CP_Y + 2, 12, 12) ? 1 : -1;
+    /** Where an ingredient is: the first place you have it. */
+    private String where(net.minecraft.world.item.crafting.Ingredient ing) {
+        TetrisNet.Sync s = ClientTetris.sync;
+        for (int i = 0; i < 9; i++) {
+            if (ing.test(minecraft.player.getInventory().items.get(i))) {
+                return "IN QUICK USE";
+            }
+        }
+        String[] names = {"IN POCKETS", "IN RIG", "IN BACKPACK", "IN POUCH"};
+        List<List<Placed>> lists = List.of(s.pockets(), s.rigItems(), s.backpackItems(), s.pouch());
+        for (int k = 0; k < lists.size(); k++) {
+            for (Placed p : lists.get(k)) {
+                if (ing.test(p.stack)) {
+                    return names[k];
+                }
+            }
+        }
+        for (TetrisNet.ContainerView c : s.containers()) {
+            for (Placed p : c.items()) {
+                if (ing.test(p.stack)) {
+                    return "IN STORAGE";
+                }
+            }
+        }
+        return "NOT CARRIED";
     }
 
-    /** The name of a container, or the rename field while it's being renamed. */
-    private void containerName(GuiGraphics g, int index, int x, int y, int w, int color) {
-        TetrisNet.ContainerView c = ClientTetris.sync.containers().get(index);
-        boolean editing = renameIndex == index;
-        if (editing) {
-            Kit.blit(g, "text_field/focused", x - 2, y - 2, w + 2, 10);
-        }
-        String text = editing ? renameText + (ticks / 6 % 2 == 0 ? "_" : "") : c.name().toUpperCase(Locale.ROOT);
-        float k = 0.75f;
-        String fit = editing ? font.plainSubstrByWidth(text, (int) (w / k), true) : font.plainSubstrByWidth(text, (int) (w / k));
-        small(g, fit, x, y, editing ? Kit.BONE : color, k);
-    }
+    // ------------------------------------------------------------------ the whole tab
 
-    private void renderStashPanel(GuiGraphics g, int mx, int my, Loc hover) {
-        int[] a = stashArea();
-        if (a == null) {
-            return;
+    private ItemStack renderInventory(GuiGraphics g, int mx, int my) {
+        lastMx = mx;
+        lastMy = my;
+        TetrisNet.Sync s = ClientTetris.sync;
+        Loc hover = locAt(mx, my);
+        ItemStack tip = stackAt(hover);
+        if (hover == null) {
+            SCell sc = storageAt(mx, my);
+            if (sc != null) {
+                tip = sc.stack();
+            }
         }
-        Kit.blit(g, "panel/column", a[0], a[1], a[2], a[3]);
-        Kit.blit(g, "icon/tab/stash", a[0] + 6, a[1] + 4, 9, 9);
-        Kit.text(g, font, "STASH", a[0] + 18, a[1] + 5, Kit.BONE);
-        iconButton(g, "stash_all", a[0] + a[2] - 32, a[1] + 3, 12, !ClientTetris.sync.containers().isEmpty(), mx, my,
-                "Stash all: your pockets, rig and backpack into the stash");
-        iconButton(g, "sort", a[0] + a[2] - 18, a[1] + 3, 12, true, mx, my, "Organize the stash: merge and sort across its chests");
-        int top = a[1] + 18;
-        int bottom = a[1] + a[3] - 3;
-        stashScroll = Math.max(0, Math.min(Math.max(0, stashContent() - (bottom - top)), stashScroll));
-        List<CPlace> places = containerPlaces();
-        boolean any = false;
-        g.enableScissor((int) (ox + a[0] * scale), (int) (oy + top * scale), (int) (ox + (a[0] + a[2]) * scale), (int) (oy + bottom * scale));
-        for (CPlace p : places) {
-            if (p.headerY() < 0) {
-                continue;
+
+        ItemStack left = craftMode ? renderCraftZone(g, mx, my) : renderEquipment(g, mx, my, hover);
+        if (!left.isEmpty()) {
+            tip = left;
+        }
+
+        // Carried zone: rig, pockets, backpack, each with its own item beside its grid.
+        int cxx = cx();
+        zone(g, cxx, ZONE_Y, 158, ZONE_H);
+        colScroll = Math.max(0, Math.min(Math.max(0, colContent() - (COL_BOTTOM - COL_TOP)), colScroll));
+        g.enableScissor((int) (ox + cxx * scale), (int) (oy + COL_TOP * scale), (int) (ox + (cxx + 158) * scale), (int) (oy + COL_BOTTOM * scale));
+        boolean sortShown = false;
+        for (ColSec sec : colSections()) {
+            int y = sec.y - (int) colScroll;
+            Kit.blit(g, "panel/label", secX(), y, 150, 9);
+            small(g, sec.title, secX() + 3, y + 1.5f, sec.kind == 0 ? Kit.BLOOD_LIGHT : Kit.ASH, 0.75f);
+            switch (sec.kind) {
+                case 0 -> {
+                    boolean over = in(mx, my, secX() + 150 - 28, y, 28, 9) && inCol(my);
+                    Kit.smallButton(g, font, "DROP", secX() + 150 - 28, y, 28, 9, true, over, false, 0.625f);
+                    if (over) {
+                        uiTip = "Drop everything that has no room";
+                    }
+                    List<ItemStack> list = s.unsorted();
+                    for (int i = 0; i < list.size(); i++) {
+                        Loc loc = Loc.unsorted(i);
+                        slot(g, secX() + (i % 8) * C, y + 11 + (i / 8) * C, C, list.get(i), hover != null && hover.equals(loc), null);
+                    }
+                }
+                case 1, 3 -> {
+                    equipSlot(g, sec.kind == 1 ? 4 : 5, hover);
+                    boolean none = sec.kind == 1 ? s.rig().isEmpty() : s.backpack().isEmpty();
+                    if (none) {
+                        small(g, sec.kind == 1 ? "no rig" : "no backpack", secGridX(), y + 16, Kit.DISABLED, 0.75f);
+                    }
+                }
+                default -> { }
             }
-            any = true;
-            TetrisNet.ContainerView c = ClientTetris.sync.containers().get(p.index());
-            int hy = p.headerY();
-            boolean live = hy >= top && hy + 10 <= bottom && in(mx, my, a[0], top, a[2], bottom - top);
-            g.pose().pushPose();
-            g.pose().translate(p.x(), hy, 0);
-            g.pose().scale(0.5f, 0.5f, 1);
-            g.renderItem(c.icon(), 0, 0);
-            g.pose().popPose();
-            boolean overName = live && in(mx, my, p.x() + 10, hy, a[2] - 62, 9);
-            containerName(g, p.index(), p.x() + 10, hy + 1, a[2] - 62, overName ? Kit.GOLD_LIGHT : Kit.ASH);
-            if (overName) {
-                uiTip = "Click to rename";
+            if (sec.kind != 0 && !sortShown) {
+                sortShown = true;
+                iconButton(g, "sort", secX() + 150 - 10, y, 9, true, inCol(my) ? mx : -1, my, "Sort your grids");
             }
-            int bx = a[0] + a[2] - 40;
-            iconButton(g, "filter", bx, hy, 10, true, live ? mx : -1, my, "Filter: what this chest takes");
-            if (c.filter() != com.cavmkii.seancraft.tetris.StorageCategory.ALL) {
-                g.renderOutline(bx - 1, hy - 1, 12, 12, Kit.GOLD);
+        }
+        for (Box b : boxes()) {
+            if (b.id() != GridId.POUCH) {
+                renderGrid(g, b);
             }
-            iconButton(g, "sort", bx + 12, hy, 10, true, live ? mx : -1, my, "Sort this chest");
-            iconButton(g, "take_all", bx + 24, hy, 10, true, live ? mx : -1, my, "Take all from this chest");
-            renderGrid(g, new GridRef(p.x(), p.y(), c.width(), c.height(), c.items()));
-            renderOverflow(g, p, c, hover);
         }
         g.disableScissor();
-        if (!any) {
-            small(g, "Your stash is empty: place chests or barrels in the hideout.", a[0] + 6, top + 2, Kit.ASH, 0.75f);
+        double cmax = colContent() - (COL_BOTTOM - COL_TOP);
+        if (cmax > 0) {
+            int span = COL_BOTTOM - COL_TOP;
+            int barH = Math.max(10, (int) (span * (double) span / colContent()));
+            Kit.blit(g, "scroll/handle", cxx + 158 - 4, COL_TOP + (int) ((span - barH) * colScroll / cmax), 3, barH);
         }
-        scrollBar(g, a[0] + a[2] - 4, top, bottom - top, stashContent(), stashScroll);
+
+        renderStorage(g, mx, my);
+
+        // Quick-use bar, with the auto-refill toggles after it.
+        small(g, "QUICK USE", quX() - 40, 250, Kit.ASH, 0.75f);
+        int selected = minecraft.player.getInventory().selected;
+        for (int i = 0; i < 9; i++) {
+            int x = quX() + i * QU_STEP;
+            boolean over = hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i));
+            slot(g, x, QU_Y, C, stackAt(Loc.hand(i)), over || i == selected, null);
+            Kit.blit(g, "slot/key_badge", x, QU_Y, 6, 7);
+            small(g, String.valueOf(i + 1), x + 1.5f, QU_Y + 1.5f, i == selected ? Kit.GOLD_LIGHT : Kit.BONE, 0.5f);
+        }
+        int tx = quX() + 9 * QU_STEP + 4;
+        iconButton(g, "refill", tx, QU_Y + 3, 12, true, mx, my, "Auto-refill the quick-use bar: " + (s.autoRefill() ? "ON" : "OFF"));
+        if (s.autoRefill()) {
+            g.renderOutline(tx - 1, QU_Y + 2, 14, 14, Kit.GOLD);
+        }
+        boolean overStash = in(mx, my, tx + 16, QU_Y + 3, 12, 12);
+        Kit.buttonBg(g, tx + 16, QU_Y + 3, 12, 12, true, overStash, s.refillFromStash());
+        Kit.blit(g, "icon/tab/stash", tx + 17, QU_Y + 4, 9, 9);
+        if (overStash) {
+            uiTip = "Refill from the stash too: " + (s.refillFromStash() ? "ON" : "OFF");
+        }
+
+        renderFilter(g, mx, my);
+        renderHeld(g, mx, my, hover);
+        return tip;
     }
 
-    private void renderChestPanel(GuiGraphics g, int mx, int my, Loc hover) {
-        int[] a = chestArea();
-        if (a == null) {
-            return;
-        }
-        TetrisNet.ContainerView c = ClientTetris.sync.containers().get(0);
-        Kit.blit(g, "panel/column", a[0], a[1], a[2], a[3]);
-        Kit.blit(g, "icon/tab/chest", a[0] + 6, a[1] + 4, 9, 9);
-        int nameW = Math.min(a[2] - 110, (int) (font.width(c.name()) * 0.75f) + 2);
-        containerName(g, 0, a[0] + 18, a[1] + 5, renameIndex == 0 ? a[2] - 80 : nameW, Kit.BONE);
-        if (renameIndex != 0) {
-            boolean overRename = in(mx, my, a[0] + 22 + nameW, a[1] + 4, 32, 9);
-            small(g, "RENAME", a[0] + 22 + nameW, a[1] + 5.5f, overRename ? Kit.GOLD_LIGHT : Kit.GOLD, 0.75f);
-        }
-        iconButton(g, "sort", a[0] + a[2] - 46, a[1] + 3, 12, true, mx, my, "Sort this chest");
-        iconButton(g, "take_all", a[0] + a[2] - 32, a[1] + 3, 12, true, mx, my, "Take all");
-        iconButton(g, "refill", a[0] + a[2] - 18, a[1] + 3, 12, true, mx, my, "Refill stacks: put in what you carry of what's already here");
-        int top = a[1] + 18;
-        int bottom = a[1] + a[3] - 3;
-        chestScroll = Math.max(0, Math.min(Math.max(0, chestContent() - (bottom - top)), chestScroll));
-        for (CPlace p : containerPlaces()) {
-            if (p.index() == 0 && p.headerY() < 0) {
-                g.enableScissor((int) (ox + a[0] * scale), (int) (oy + top * scale), (int) (ox + (a[0] + a[2]) * scale), (int) (oy + bottom * scale));
-                renderGrid(g, new GridRef(p.x(), p.y(), c.width(), c.height(), c.items()));
-                renderOverflow(g, p, c, hover);
-                g.disableScissor();
+    /** True if a point is on one of the zones or the quick-use bar (a click anywhere else with something held drops it). */
+    private boolean onPanel(double x, double y) {
+        return in(x, y, 4, ZONE_Y, craftMode ? 200 : 114, ZONE_H) || in(x, y, cx(), ZONE_Y, 158, ZONE_H) || in(x, y, sx(), ZONE_Y, sw(), ZONE_H)
+                || in(x, y, 0, 240, VW, 30) || y < 18;
+    }
+
+    /** Clicks on the small controls: book, CAN MAKE NOW, CLEAR, PIN, storage header, tabs, search, toggles. */
+    private boolean clickControls(double x, double y, int button) {
+        TetrisNet.Sync s = ClientTetris.sync;
+        List<TetrisNet.ContainerView> cs = s.containers();
+        // Storage tabs (right-click renames).
+        for (int[] t : storageTabs()) {
+            if (in(x, y, t[1], ZONE_Y + 33, t[2], 14)) {
+                if (button == 1 && t[0] >= 0) {
+                    renameIndex = t[0];
+                    renameText = cs.get(t[0]).name();
+                } else if (button == 0) {
+                    storageTab = t[0];
+                    storageScroll = 0;
+                }
+                return true;
             }
         }
-        scrollBar(g, a[0] + a[2] - 4, top, bottom - top, chestContent(), chestScroll);
-    }
-
-    private void renderOverflow(GuiGraphics g, CPlace p, TetrisNet.ContainerView c, Loc hover) {
-        if (c.overflow().isEmpty()) {
-            return;
-        }
-        int oy0 = p.y() + c.height() * C;
-        small(g, "NO ROOM IN GRID", p.x(), oy0 + 2, Kit.BLOOD_LIGHT, 0.75f);
-        for (int i = 0; i < c.overflow().size(); i++) {
-            Loc loc = Loc.containerOverflow(p.index(), c.overflowSlots().get(i));
-            slot(g, p.x() + (i % 9) * C, oy0 + 10 + (i / 9) * C, C, c.overflow().get(i), hover != null && hover.equals(loc), null);
-        }
-    }
-
-    /** Clicks on the small controls: books, CLEAR, PIN, panel buttons, renames, toggles. True if one was hit. */
-    private boolean clickControls(double x, double y, int button) {
         if (button != 0) {
             return false;
         }
-        TetrisNet.Sync s = ClientTetris.sync;
-        int book = bookAt(x, y);
-        if (book == 0) {
-            listFolded = !listFolded;
+        storageSearchFocused = anyStorage() && in(x, y, sx() + 5, ZONE_Y + 18, sw() - 10, 12);
+        if (storageSearchFocused) {
+            searchFocused = false;
             return true;
         }
-        if (book == 1) {
-            craftView = 1;
-            dropHeld();
-            layout();
-            return true;
+        if (craftMode) {
+            searchFocused = in(x, y, BOOK_X, 22, BOOK_W, 12);
+            if (searchFocused) {
+                return true;
+            }
+            if (in(x, y, BOOK_X, 37, BOOK_W, 10)) {
+                canMakeOnly = !canMakeOnly;
+                bookScroll = 0;
+                return true;
+            }
+            if (in(x, y, RESULT_X, RESULT_Y + 29, 26, 10)) {
+                dropHeld();
+                ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
+                return true;
+            }
+            if (ghostRecipe != null && in(x, y, 98, 206, 58, 10)) {
+                pinRecipe(ghostRecipe);
+                return true;
+            }
+            int bottom = ZONE_Y + ZONE_H - 3;
+            if (held.isEmpty() && in(x, y, BOOK_X, BOOK_TOP, BOOK_W, bottom - BOOK_TOP)) {
+                double at = y - BOOK_TOP + bookScroll;
+                for (BookRow r : bookRows()) {
+                    if (at >= r.y && at < r.y + r.h) {
+                        if (r.header != null) {
+                            if (!COLLAPSED.remove(r.header)) {
+                                COLLAPSED.add(r.header);
+                            }
+                        } else if (r.cell.known()) {
+                            String id = r.cell.holder().id().toString();
+                            // Shows the pattern; nothing places items for the player (4.1).
+                            ghostRecipe = id.equals(ghostRecipe) ? null : id;
+                        }
+                        return true;
+                    }
+                }
+                return true;
+            }
         }
-        if (in(x, y, CLEAR_X, CLEAR_Y, CLEAR_W, 10)) {
-            dropHeld();
-            ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
-            return true;
-        }
-        if (ghostRecipe != null && in(x, y, PIN_X, CLEAR_Y, PIN_W, 10)) {
-            pinRecipe(ghostRecipe);
-            return true;
-        }
-        int tx = QU_X + 9 * QU_STEP + 4;
+        int tx = quX() + 9 * QU_STEP + 4;
         if (in(x, y, tx, QU_Y + 3, 12, 12)) {
             ClientPlayNetworking.send(new TetrisNet.Action(6));
             return true;
@@ -1360,80 +1597,117 @@ public class TarkovScreen extends Screen {
             boolean sortDone = false;
             for (ColSec sec : colSections()) {
                 int sy = sec.y - (int) colScroll;
-                if (sec.kind == 0 && in(x, y, SEC_X + SEC_W - 28, sy, 28, 9)) {
+                if (sec.kind == 0 && in(x, y, secX() + 150 - 28, sy, 28, 9)) {
                     ClientPlayNetworking.send(new TetrisNet.Action(2));
                     return true;
                 }
                 if (sec.kind != 0 && !sortDone) {
                     sortDone = true;
-                    if (in(x, y, SEC_X + SEC_W - 10, sy, 9, 9)) {
+                    if (in(x, y, secX() + 150 - 10, sy, 9, 9)) {
                         ClientPlayNetworking.send(new TetrisNet.Action(0));
                         return true;
                     }
                 }
             }
         }
-        if (bookOpen()) {
-            return false;
-        }
-        int[] st = stashArea();
-        if (st != null) {
-            if (in(x, y, st[0] + st[2] - 32, st[1] + 3, 12, 12)) {
-                ClientPlayNetworking.send(new TetrisNet.Action(1));
+        if (anyStorage()) {
+            boolean hideout = s.stash();
+            boolean chestTab = storageTab >= 0 || !hideout;
+            int chest = storageTab >= 0 ? storageTab : 0;
+            int bx = sx() + sw() - 16;
+            if (in(x, y, bx, ZONE_Y + 3, 12, 12)) {
+                if (chestTab && chest < cs.size()) {
+                    filterOpen = filterOpen == chest ? -1 : chest;
+                    filterX = sx() + sw() - FILTER_W - 4;
+                    filterY = ZONE_Y + 17;
+                }
                 return true;
             }
-            if (in(x, y, st[0] + st[2] - 18, st[1] + 3, 12, 12)) {
-                ClientPlayNetworking.send(new TetrisNet.Action(8));
+            if (in(x, y, bx - 14, ZONE_Y + 3, 12, 12)) {
+                if (chestTab && chest < cs.size()) {
+                    ClientPlayNetworking.send(new TetrisNet.ContainerAction(chest, 0, 0));
+                } else {
+                    ClientPlayNetworking.send(new TetrisNet.Action(8));
+                }
                 return true;
             }
-            int top = st[1] + 18;
-            int bottom = st[1] + st[3] - 3;
-            for (CPlace p : containerPlaces()) {
-                int hy = p.headerY();
-                if (hy < top || hy + 10 > bottom) {
-                    continue;
+            if (!craftMode && in(x, y, bx - 28, ZONE_Y + 3, 12, 12)) {
+                if (hideout) {
+                    ClientPlayNetworking.send(new TetrisNet.Action(1));
                 }
-                int bx = st[0] + st[2] - 40;
-                if (in(x, y, bx, hy, 10, 10)) {
-                    int was = filterOpen;
-                    filterOpen = was == p.index() ? -1 : p.index();
-                    filterX = st[0] + st[2] - FILTER_W - 2;
-                    filterY = hy + 11;
-                    return true;
-                }
-                if (in(x, y, bx + 12, hy, 10, 10)) {
-                    ClientPlayNetworking.send(new TetrisNet.ContainerAction(p.index(), 0, 0));
-                    return true;
-                }
-                if (in(x, y, bx + 24, hy, 10, 10)) {
-                    ClientPlayNetworking.send(new TetrisNet.ContainerAction(p.index(), 1, 0));
-                    return true;
-                }
-                if (held.isEmpty() && in(x, y, p.x() + 10, hy, st[2] - 62, 9)) {
-                    renameIndex = p.index();
-                    renameText = s.containers().get(p.index()).name();
-                    return true;
-                }
-            }
-        }
-        int[] ch = chestArea();
-        if (ch != null) {
-            TetrisNet.ContainerView c = s.containers().get(0);
-            int nameW = Math.min(ch[2] - 110, (int) (font.width(c.name()) * 0.75f) + 2);
-            if (held.isEmpty() && (in(x, y, ch[0] + 22 + nameW, ch[1] + 4, 32, 9) || in(x, y, ch[0] + 18, ch[1] + 4, nameW, 9))) {
-                renameIndex = 0;
-                renameText = c.name();
                 return true;
             }
-            for (int b = 0; b < 3; b++) {
-                if (in(x, y, ch[0] + ch[2] - 46 + b * 14, ch[1] + 3, 12, 12)) {
-                    // Sort (0), take all (1), refill stacks (3).
-                    ClientPlayNetworking.send(new TetrisNet.ContainerAction(0, b == 2 ? 3 : b, 0));
-                    return true;
+            if (!craftMode && in(x, y, bx - 42, ZONE_Y + 3, 12, 12)) {
+                if (chestTab && chest < cs.size()) {
+                    ClientPlayNetworking.send(new TetrisNet.ContainerAction(chest, 1, 0));
+                } else {
+                    for (int i = 0; i < cs.size(); i++) {
+                        ClientPlayNetworking.send(new TetrisNet.ContainerAction(i, 1, 0));
+                    }
                 }
+                return true;
             }
         }
         return false;
+    }
+
+    /** A click on the storage grid: pick a stack up, or put what you hold away (into the tab's chest, or by filters on ALL). */
+    private boolean clickStorage(double x, double y, int button) {
+        if (!overStorageGrid(x, y)) {
+            return false;
+        }
+        if (!held.isEmpty()) {
+            int target = storageTab >= 0 ? storageTab : ClientTetris.sync.stash() ? -1 : 0;
+            ClientPlayNetworking.send(new TetrisNet.Move(heldFrom, Loc.container(target, -2, 0), false, button == 1 ? 1 : heldCount));
+            if (button == 1 && carrying() > 1) {
+                heldCount = carrying() - 1;
+            } else {
+                dropHeld();
+            }
+            return true;
+        }
+        SCell c = storageAt(x, y);
+        if (c == null) {
+            return true;
+        }
+        if (button == 0 && (hasShiftDown() || hasControlDown())) {
+            ClientPlayNetworking.send(new TetrisNet.QuickMove(c.loc()));
+            return true;
+        }
+        heldFrom = c.loc();
+        held = c.stack();
+        heldRot = c.placed() != null && c.placed().rotated;
+        heldCount = button == 1 && held.getCount() > 1 ? (held.getCount() + 1) / 2 : 0;
+        return true;
+    }
+
+    /** The station row (top right, inside a hideout): kind, x, width. */
+    private List<Object[]> stationButtons() {
+        List<Object[]> out = new ArrayList<>();
+        if (ClientTarkov.raid.state() != 1) {
+            return out;
+        }
+        List<String> kinds = StationTabs.stations.kinds();
+        int x = width - 4;
+        for (int i = kinds.size() - 1; i >= 0; i--) {
+            String kind = kinds.get(i);
+            boolean open = kind.equals(openStation);
+            int w = open ? 13 + 4 + font.width(StationTabs.label(kind)) + 4 : 13;
+            x -= w;
+            out.add(0, new Object[] {kind, x, w, i});
+            x -= 2;
+        }
+        return out;
+    }
+
+    private static String stationIcon(String kind) {
+        return switch (kind) {
+            case "hideout" -> "icon/tab/hideout";
+            case "crafting_table" -> "icon/tab/crafting";
+            case "weapon_bench" -> "icon/station/weapon_bench";
+            case "module_intel" -> "icon/station/intel_center";
+            default -> kind.startsWith("module_") ? "icon/station/" + kind.substring(7) : "icon/tab/hideout";
+        };
     }
 
     // ================================================================== crafting
@@ -1544,10 +1818,6 @@ public class TarkovScreen extends Screen {
     /** The crafting book (what you can make now) starts shut, like vanilla's recipe book. */
     private static boolean listFolded = true;
 
-    private int listTop() {
-        return LIST_HEAD_Y + 14 + (ClientTetris.craft.inHideout() ? 0 : 12);
-    }
-
     private int cellAt(double x, double y) {
         if (x < GX || x >= GX + 3 * GC || y < GRID_Y || y >= GRID_Y + 3 * GC) {
             return -1;
@@ -1592,66 +1862,6 @@ public class TarkovScreen extends Screen {
             return renderRecipes(g, mx, my);
         }
         return renderInventory(g, mx, my);
-    }
-
-    private ItemStack renderCraftList(GuiGraphics g, List<CraftRow> rows, int mx, int my) {
-        TetrisNet.CraftList craft = ClientTetris.craft;
-        ItemStack tip = ItemStack.EMPTY;
-        if (!craft.inHideout()) {
-            // The Hideout Bench is pinned first in the list; its ghost shows the pattern.
-            int y0 = LIST_HEAD_Y + 14;
-            g.fill(LIST_X, y0, LIST_X + 1, y0 + 10, Kit.GOLD);
-            small(g, "No hideout here: make a bench (first below)", LIST_X + 4, y0 + 2, Kit.GOLD_LIGHT, 0.75f);
-        }
-        int top = listTop();
-        int height = rows.isEmpty() ? 0 : rows.get(rows.size() - 1).y + rows.get(rows.size() - 1).h;
-        double max = Math.max(0, height - (R_BOTTOM - 3 - top));
-        craftScroll = Math.max(0, Math.min(max, craftScroll));
-        if (rows.isEmpty()) {
-            g.drawString(font, craft.entries().isEmpty() ? "Nothing to make yet." : "No matches.", LIST_X, top + 4, Kit.ASH, false);
-        }
-        g.enableScissor((int) (ox + LIST_X * scale), (int) (oy + top * scale), (int) (ox + (LIST_X + LIST_W2) * scale), (int) (oy + (R_BOTTOM - 3) * scale));
-        for (CraftRow row : rows) {
-            int y = top + row.y - (int) craftScroll;
-            if (y + row.h < top || y > R_BOTTOM) {
-                continue;
-            }
-            if (row.entry == null) {
-                boolean folded = COLLAPSED.contains(row.header) && search.isEmpty();
-                boolean overHead = mx >= LIST_X && mx < LIST_X + LIST_W2 && my >= y && my < y + HEAD && my >= top;
-                if (overHead) {
-                    Kit.blit(g, "list/row_hover", LIST_X, y, LIST_W2, HEAD - 1);
-                }
-                g.drawString(font, (folded ? "▸ " : "▾ ") + row.header.label.toUpperCase(Locale.ROOT), LIST_X + 1, y + 3,
-                        overHead ? Kit.GOLD_LIGHT : Kit.ASH, false);
-                String n = String.valueOf(row.count);
-                g.drawString(font, n, LIST_X + LIST_W2 - 2 - font.width(n), y + 3, Kit.ASH, false);
-                continue;
-            }
-            TetrisNet.CraftEntry e = row.entry;
-            boolean hover = mx >= LIST_X && mx < LIST_X + LIST_W2 && my >= y && my < y + ROW - 2 && my >= top;
-            boolean selected = e.id().equals(ghostRecipe);
-            Kit.blit(g, selected ? "list/row_selected" : hover ? "list/row_hover" : "list/row", LIST_X, y, LIST_W2, ROW - 2);
-            g.renderItem(e.result(), LIST_X + 3, y + 2);
-            g.renderItemDecorations(font, e.result(), LIST_X + 3, y + 2);
-            String can = e.times() > 0 ? "x" + e.times() : e.times() < 0 ? "table" : "missing";
-            int canW = font.width(can);
-            g.drawString(font, font.plainSubstrByWidth(e.result().getHoverName().getString(), LIST_W2 - 32 - canW), LIST_X + 23, y + 6,
-                    hover ? Kit.GOLD_LIGHT : Kit.BONE, false);
-            g.drawString(font, can, LIST_X + LIST_W2 - 4 - canW, y + 6, e.times() > 0 ? Kit.ASH : e.times() < 0 ? Kit.GOLD : Kit.BLOOD_LIGHT, false);
-            if (hover) {
-                tip = e.result();
-                hoverRecipe = e.id();
-            }
-        }
-        g.disableScissor();
-        if (max > 0) {
-            int span = R_BOTTOM - 3 - top;
-            int barH = Math.max(10, (int) (span * span / (span + max)));
-            int barY = top + (int) ((span - barH) * craftScroll / max);
-            Kit.blit(g, "scroll/handle", LIST_X + LIST_W2 + 1, barY, 4, barH);
-        }
-        return tip;
     }
 
     // ================================================================== recipe book
@@ -1970,8 +2180,25 @@ public class TarkovScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (tab == CRAFTING && StationTabs.click(0, height - 15, width, StationTabs.CRAFTING_TABLE, mouseX, mouseY)) {
-            return true;
+        for (Object[] st : stationButtons()) {
+            if (in(mouseX, mouseY, (int) st[1], 2, (int) st[2], 13)) {
+                if (!st[0].equals(openStation) || !StationTabs.CRAFTING_TABLE.equals(st[0])) {
+                    ClientPlayNetworking.send(new com.cavmkii.seancraft.tarkov.TarkovNet.OpenStation(StationTabs.stations.positions().get((int) st[3])));
+                }
+                return true;
+            }
+        }
+        if (tab == INVENTORY) {
+            int[] cr = craftToggle();
+            if (in(mouseX, mouseY, cr[0], cr[1], cr[2], cr[3])) {
+                dropHeld();
+                craftMode = !craftMode;
+                colScroll = 0;
+                storageScroll = 0;
+                searchFocused = false;
+                ClientPlayNetworking.send(new TetrisNet.Craft("", 0));
+                return true;
+            }
         }
         for (int t = 0; t < TABS.length; t++) {
             if (overTab(t, mouseX, mouseY)) {
@@ -2136,52 +2363,23 @@ public class TarkovScreen extends Screen {
     }
 
     private boolean clickCrafting(double x, double y, int button) {
-        if (craftView == 1) {
-            searchFocused = x >= SEARCH_X && x < LIST_W && y >= 0 && y < 14;
-            int v = subTabAt(0, x, y);
-            if (v >= 0) {
-                craftView = v;
-                dropHeld();
-                layout();
-                return true;
-            }
-            return clickRecipes(x, y, button);
-        }
         TetrisNet.CraftList craft = ClientTetris.craft;
-        searchFocused = bookOpen() && in(x, y, LIST_X + 50, LIST_HEAD_Y, LIST_W2 - 50, 11);
-        if (searchFocused) {
-            return true;
-        }
         if (filterOpen >= 0 && clickFilter(x, y)) {
             return true;
         }
         if (clickControls(x, y, button)) {
             return true;
         }
-        if (overResult(x, y)) {
+        if (craftMode && overResult(x, y)) {
             if (!craft.result().isEmpty() && held.isEmpty()) {
                 ClientPlayNetworking.send(new TetrisNet.Craft("#grid", hasShiftDown() ? 64 : 1));
             }
             return true;
         }
-        if (bookOpen() && held.isEmpty() && in(x, y, LIST_X, listTop(), LIST_W2, R_BOTTOM - 3 - listTop())) {
-            double at = y - listTop() + craftScroll;
-            for (CraftRow row : craftRows()) {
-                if (row.entry == null && row.header != null && at >= row.y && at < row.y + HEAD) {
-                    if (!COLLAPSED.remove(row.header)) {
-                        COLLAPSED.add(row.header);
-                    }
-                    return true;
-                }
-                if (row.entry != null && at >= row.y && at < row.y + ROW - 2) {
-                    // Shows the pattern; nothing places items for the player (4.1).
-                    ghostRecipe = row.entry.id().equals(ghostRecipe) ? null : row.entry.id();
-                    return true;
-                }
-            }
+        if (button != 0 && button != 1) {
             return true;
         }
-        if (button != 0 && button != 1) {
+        if (clickStorage(x, y, button)) {
             return true;
         }
         return clickInventory(x, y, button);
@@ -2214,23 +2412,15 @@ public class TarkovScreen extends Screen {
         if (tab == WEB) {
             return web.mouseScrolled(mouseX, mouseY - TOP, scrollX, scrollY);
         }
-        if (tab == CRAFTING && craftView == 1) {
-            if (vx(mouseX) < LIST_W) {
-                recipeScroll -= scrollY * 20;
-            }
-        } else if (tab == INVENTORY) {
+        if (tab == INVENTORY) {
             double x = vx(mouseX);
             double y = vy(mouseY);
-            int[] st = stashArea();
-            int[] ch = chestArea();
-            if (in(x, y, COL_X, COL_Y, COL_W, COL_H)) {
+            if (craftMode && in(x, y, BOOK_X, BOOK_TOP, BOOK_W + 4, ZONE_Y + ZONE_H - BOOK_TOP)) {
+                bookScroll -= scrollY * BOOK_ROW;
+            } else if (in(x, y, cx(), ZONE_Y, 158, ZONE_H)) {
                 colScroll -= scrollY * 18;
-            } else if (bookOpen() && in(x, y, R_X, R_Y, R_W, R_BOTTOM - R_Y)) {
-                craftScroll -= scrollY * 20;
-            } else if (st != null && in(x, y, st[0], st[1], st[2], st[3])) {
-                stashScroll -= scrollY * 18;
-            } else if (ch != null && in(x, y, ch[0], ch[1], ch[2], ch[3])) {
-                chestScroll -= scrollY * 18;
+            } else if (in(x, y, sx(), ZONE_Y, sw(), ZONE_H)) {
+                storageScroll -= scrollY * 18;
             }
         }
         return true;
@@ -2238,7 +2428,7 @@ public class TarkovScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == GLFW.GLFW_KEY_T && renameIndex < 0 && !searchFocused && !hoverStack.isEmpty()) {
+        if (keyCode == GLFW.GLFW_KEY_T && renameIndex < 0 && !searchFocused && !storageSearchFocused && !hoverStack.isEmpty()) {
             // T on any item: track it (a stack's worth, or one if it doesn't stack).
             ClientTracker.add(hoverStack.getItem(), hoverStack.getMaxStackSize() > 1 ? hoverStack.getMaxStackSize() : 1);
             return true;
@@ -2253,10 +2443,22 @@ public class TarkovScreen extends Screen {
             }
             return true;
         }
+        if (tab == INVENTORY && storageSearchFocused) {
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !storageSearch.isEmpty()) {
+                storageSearch = storageSearch.substring(0, storageSearch.length() - 1);
+                storageScroll = 0;
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_ENTER) {
+                storageSearchFocused = false;
+                return true;
+            }
+            return keyCode != GLFW.GLFW_KEY_TAB || super.keyPressed(keyCode, scanCode, modifiers);
+        }
         if (tab == CRAFTING && searchFocused) {
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
                 search = search.substring(0, search.length() - 1);
-                craftScroll = 0;
+                bookScroll = 0;
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_ENTER) {
@@ -2319,9 +2521,14 @@ public class TarkovScreen extends Screen {
             }
             return true;
         }
+        if (tab == INVENTORY && storageSearchFocused && c >= ' ' && storageSearch.length() < 40) {
+            storageSearch += c;
+            storageScroll = 0;
+            return true;
+        }
         if (tab == CRAFTING && searchFocused && c >= ' ' && search.length() < 40) {
             search += c;
-            craftScroll = 0;
+            bookScroll = 0;
             return true;
         }
         return super.charTyped(c, modifiers);

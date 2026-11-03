@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "seancraft:item/weapon/crossbow/handle_planks",
+    "layer1": "seancraft:item/weapon/crossbow/limbs_planks",
+    "layer2": "seancraft:item/weapon/crossbow/wrap_leather"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "seancraft:item/trophy_bo_daddy"
+  }
+}

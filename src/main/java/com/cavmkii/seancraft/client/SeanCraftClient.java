@@ -128,6 +128,28 @@ public final class SeanCraftClient implements ClientModInitializer {
             }
         });
 
+        // UI-SPEC tooltips: Ash lines for size, stack, durability and weight class, then the key hints.
+        ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
+            int ash = com.cavmkii.seancraft.client.ui.Kit.ASH & 0xFFFFFF;
+            int[] size = com.cavmkii.seancraft.tetris.ItemSize.of(stack);
+            String line = "Size " + size[0] + "x" + size[1] + (stack.getMaxStackSize() > 1 ? "   Stacks to " + stack.getMaxStackSize() : "");
+            lines.add(Component.literal(line).withColor(ash));
+            if (stack.isDamageableItem() && !type.isAdvanced()) {
+                lines.add(Component.literal("Durability " + (stack.getMaxDamage() - stack.getDamageValue()) + " / " + stack.getMaxDamage()).withColor(ash));
+            }
+            double w = com.cavmkii.seancraft.combat.Load.weaponWeight(stack);
+            double a = com.cavmkii.seancraft.combat.Load.armorWeight(stack);
+            if (w > 0) {
+                String cls = w <= com.cavmkii.seancraft.combat.Load.LIGHT_WEAPON + 0.5 ? "Light" : w >= com.cavmkii.seancraft.combat.Load.HEAVY_WEAPON - 0.5 ? "Heavy" : "Medium";
+                lines.add(Component.literal(cls + " weapon: weighs " + String.format("%.1f", w)).withColor(ash));
+            } else if (a > 0) {
+                lines.add(Component.literal("Armor: weighs " + String.format("%.1f", a)).withColor(ash));
+            }
+            if (net.minecraft.client.Minecraft.getInstance().screen instanceof com.cavmkii.seancraft.client.tarkov.TarkovScreen) {
+                lines.add(Component.literal("T: gather list   Shift: to storage").withColor(ash));
+            }
+        });
+
         // Merch and the bonnet are dyed leather; tint the base layer of their icons.
         ColorProviderRegistry.ITEM.register((stack, tintIndex) -> tintIndex > 0 ? -1 : DyedItemColor.getOrDefault(stack, -1),
                 ModItems.MERCH, ModItems.BABY_BONNET);

@@ -125,8 +125,8 @@ public final class Tetris {
     /** Opens the inventory screen on its CRAFTING tab, as a crafting table does. */
     public static void openCrafting(ServerPlayer player) {
         sendCraftList(player);
-        // The INVENTORY tab, which has the crafting grid.
-        ServerPlayNetworking.send(player, new TetrisNet.Open(0));
+        // The INVENTORY tab with crafting mode on (TarkovScreen.CRAFT_MODE).
+        ServerPlayNetworking.send(player, new TetrisNet.Open(3));
         com.cavmkii.seancraft.tarkov.Stations.send(player);
     }
 
@@ -984,6 +984,15 @@ public final class Tetris {
             }
             case Loc.CONTAINER -> {
                 List<Shown> shown = containers(player);
+                if (to.b() == -2) {
+                    // Dropped on the storage list: into that chest, or (index -1) wherever the filters route it.
+                    if (to.a() == -1) {
+                        storeInStash(player, stack);
+                    } else if (to.a() >= 0 && to.a() < shown.size()) {
+                        storeIn(shown.get(to.a()), stack);
+                    }
+                    return stack;
+                }
                 if (to.a() < 0 || to.a() >= shown.size() || to.b() < 0) {
                     return stack;
                 }
@@ -1060,6 +1069,10 @@ public final class Tetris {
         String why = locked(player, data, from, source);
         if (why != null) {
             player.displayClientMessage(Component.literal(why).withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        if (from.kind() == Loc.CONTAINER && to.kind() == Loc.CONTAINER && to.b() == -2) {
+            // Storage back onto storage: it's already put away.
             return;
         }
         int n = count <= 0 ? source.getCount() : Math.min(count, source.getCount());

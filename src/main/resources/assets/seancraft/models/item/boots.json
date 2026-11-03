@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "seancraft:item/weapon/boots/plates_iron",
+    "layer1": "seancraft:item/weapon/boots/padding_leather",
+    "layer2": "seancraft:item/weapon/boots/straps_leather"
+  }
+}
