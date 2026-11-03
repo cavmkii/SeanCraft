@@ -193,6 +193,10 @@ public final class Tetris {
         });
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Action.TYPE, (p, ctx) -> {
             action(ctx.player(), p.action());
+            if (p.action() == 4) {
+                // The inventory opened: the station row needs this hideout's stations.
+                com.cavmkii.seancraft.tarkov.Stations.send(ctx.player());
+            }
             sync(ctx.player());
         });
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Track.TYPE, (p, ctx) -> {

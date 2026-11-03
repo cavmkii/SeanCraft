@@ -22,19 +22,21 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 |---|---|
 | E or J | Inventory screen (INVENTORY tab) |
 | H | Inventory screen, STATUS tab |
-| K | Inventory screen, CHARACTER tab (passive web, level, attributes, skills) |
+| K | Inventory screen, SKILLS tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY is everything in one place, Tarkov-style (UI v2):
-  - **Left:** your equipment in boxes around a body, and the secure pouch (its grid is kept on death).
-  - **Middle:** your rig, pockets and backpack, each with its own item beside its grid. The column scrolls when it's taller than the screen. The sort icon on the first label sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
-  - **Right:** crafting on top, then the stash (in a hideout) and the chest you opened. The stash has STASH ALL and organize at its top, and each chest in it has its own filter, sort and take-all icons; click a chest's name to rename it. The open chest has RENAME, sort, take all and refill stacks (puts in what you carry of anything it already holds).
-  - **Bottom:** the quick-use bar (your hotbar) with number badges, the auto-refill toggles after it, and load, health, stamina, and Rage or mana if your skills use them.
-  - Click anywhere off the panels with something held to drop it, like vanilla. Every small icon has a tooltip. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+The inventory screen has three tabs: INVENTORY, STATUS and SKILLS. INVENTORY is split into three zones: what you have on, what you carry, and what's stored.
+  - **Left (equipped):** your equipment in boxes around a body, the secure pouch (its grid is kept on death), and your load, health, stamina, and Rage or mana if your skills use them.
+  - **Middle (carried):** your rig, pockets and backpack, each with its own item beside its grid. It scrolls when it's taller than the screen. The sort icon on the first label sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
+  - **Right (stored):** the hideout's storage, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and filter, sort, STASH ALL and TAKE ALL icons. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
+  - **Bottom:** the quick-use bar (your hotbar) with number badges, then the auto-refill toggles.
+  - **CRAFT** (the button after the tabs) swaps the equipment zone for crafting and squeezes storage to 5 columns, so you can drag stuff in from your bags or storage. Right-clicking a crafting table opens it with CRAFT already on.
+  - **Station row** (top right, in a hideout only): one button per station in that hideout. Click one to open it; the open one shows its name.
+  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip, and item tooltips add size, stack size, durability and weight. SKILLS is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -156,10 +158,10 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
 - **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
 - **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** The crafting grid sits in the middle of the INVENTORY tab, so quick crafts never need another tab. It's 2x2 out in the world and 3x3 near a crafting table or in your hideout; right-clicking a crafting table opens the same tab. Above it are two books, like vanilla's recipe book button: the **crafting book** opens what you can make right now under the grid, and the **recipe book** opens every recipe, found or not (CRAFT takes you back).
+- **Crafting.** Turn on CRAFT on the INVENTORY tab (or right-click a crafting table). The grid is 2x2 out in the world and 3x3 at a crafting table or in your hideout. On the left is the recipe book: search, a CAN MAKE NOW box, categories, and every recipe, with ?????? for ones you haven't found. Pick one and its pattern shows as faded icons in the grid, with an ingredient list under it: how many you have, how many you need, and where they are (quick use, pockets, storage...). There's no craft button and nothing fills the grid for you; you lay it out yourself and click the result.
   - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory, and Shift-click the result to craft as many as you can. The same drag works on the hotbar.
   - Click a category heading to fold it shut, or click it again to open it.
-  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out yourself from either side. The Hideout Bench and Weapon Bench books do the same. The count beside each recipe includes your hotbar, grids and stash.
+  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out. The Hideout Bench and Weapon Bench books do the same. Have/need counts include your hotbar, grids and stash. PIN TO HUD puts the ingredients on your gather list.
   - PIN TO HUD under the result (while a recipe is picked) puts its ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
   - The recipe book shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the crafting book does the same ghost.
@@ -310,7 +312,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   | | Divine Shield (30, 25 s) | Shield yourself or the player you're looking at (8 blocks) for 25% of max health for 6 s; no new bleeds or fractures while it holds | 30% / 8 s / knocks monsters back when it breaks |
   | | Judgment (35, 16 s) | 0.8 s cast, then a second later a pillar where you're aiming (up to 20 blocks): 2.5×power spirit in 3 blocks, double on anything under 25% health | 3× / radius 4 / kills anything but a boss under 15% |
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
-- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the CHARACTER tab.
+- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
 - **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
 - **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
 - **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.
@@ -417,6 +419,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons show their standard build, layered from the pack's part textures; they don't change look when you swap parts yet. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons are layered from the pack's part textures, so they change look when you swap parts. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
 
 A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.

@@ -457,7 +457,10 @@ public class TarkovScreen extends Screen {
             // CRAFT toggle: crafting mode swaps the equipment zone for the crafting workspace.
             int[] cr = craftToggle();
             boolean over = in(mouseX, mouseY, cr[0], cr[1], cr[2], cr[3]);
-            Kit.blit(g, craftMode ? "button/pressed" : over ? "button/hover" : "button/normal", cr[0], cr[1], cr[2], cr[3]);
+            Kit.blit(g, craftMode || over ? "button/hover" : "button/normal", cr[0], cr[1], cr[2], cr[3]);
+            if (craftMode) {
+                g.fill(cr[0] + 2, cr[1] + cr[3] - 2, cr[0] + cr[2] - 2, cr[1] + cr[3] - 1, Kit.GOLD_LIGHT);
+            }
             Kit.blit(g, "icon/tab/crafting", cr[0] + 4, cr[1] + 2, 9, 9);
             Kit.text(g, font, "CRAFT", cr[0] + 16, cr[1] + 3, craftMode ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
             tabsEnd = cr[0] + cr[2] + 8;
@@ -484,7 +487,8 @@ public class TarkovScreen extends Screen {
         if (ClientTarkov.raid.state() == 1) {
             String t = "HIDEOUT";
             int rx = right - font.width(t);
-            if (rx - 11 >= tabsEnd) {
+            // Only when no station is open (the open station's button names where you are).
+            if (openStation == null && rx - 11 >= tabsEnd) {
                 Kit.blit(g, "icon/tab/hideout", rx - 11, 4, 9, 9);
                 Kit.text(g, font, t, rx, 5, Kit.MOSS);
             }
@@ -2182,7 +2186,10 @@ public class TarkovScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (Object[] st : stationButtons()) {
             if (in(mouseX, mouseY, (int) st[1], 2, (int) st[2], 13)) {
-                if (!st[0].equals(openStation) || !StationTabs.CRAFTING_TABLE.equals(st[0])) {
+                if (st[0].equals(openStation) && StationTabs.CRAFTING_TABLE.equals(st[0])) {
+                    dropHeld();
+                    setTab(CRAFT_MODE);
+                } else {
                     ClientPlayNetworking.send(new com.cavmkii.seancraft.tarkov.TarkovNet.OpenStation(StationTabs.stations.positions().get((int) st[3])));
                 }
                 return true;
