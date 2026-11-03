@@ -179,10 +179,10 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A **surgery case** (2x2, Medstation level 3, rare in chests) brings a part back to new, lasting damage and all.
 - **Locked health.** A destroyed part locks away its share of your health, and lasting damage locks part of a part's share. Food, regen and potions can't fill it. It shows as a dark, striped end on the health bar.
 - **On screen.**
-  - A small body shows each part's health at a glance: green, then orange, then red, dark when destroyed. A bleeding part flashes and a fracture gets a white mark. It sits in the top left with your food slots beside it, and the gather list under them, so the top right stays free for a minimap like JourneyMap.
-  - Bottom left lists your injuries with their severity and what fixes them. Long lines wrap or shrink so they never run under the health bar.
-  - Above that, a small line shows what they're doing to you right now, like `Walk -24%  Sprint -38%  Jump -6%`. It turns cyan while painkillers are taking the edge off.
-  - Above that, every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.
+  - Top left, a small body shows each part's health: green, then orange, then red, dark when destroyed. Problems show as tiny icons on the part itself: a blood drop for a bleed (the part also flashes), a bone for a fracture, a barrier for a destroyed part. The exact severities are on the STATUS tab.
+  - Next to it, under your food slots, small lines say what the injuries are costing you right now, like `Walk -18%`, `Sprint -29%`, `Jump -4%`. They turn cyan while painkillers are taking the edge off.
+  - A biome hazard gets its own line in the bottom left.
+  - Every effect you have, good or bad, shows as a small icon with the time left. That covers poison, painkillers, and ability effects like going invisible. It blinks yellow for the last 5 seconds. This replaces the vanilla effect icons in the top right, which don't show a timer.
   - The edges of the screen glow while you're hurt: pulsing red while you bleed, white for a fracture, grey for a destroyed part. They get stronger the worse it is.
   - The STATUS tab shows every part's severities and lasting damage.
 - **Meds:** bandage (light bleeds), tourniquet (any bleed), splint (fractures), painkillers, field kit, surgical kit and surgery case.
