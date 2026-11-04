@@ -1,10 +1,5 @@
 package com.cavmkii.seancraft.client.tarkov;
 
-import com.cavmkii.seancraft.client.rpg.ClientRpg;
-import com.cavmkii.seancraft.rpg.Attr;
-import com.cavmkii.seancraft.rpg.PlayerData;
-import com.cavmkii.seancraft.rpg.Skill;
-import com.cavmkii.seancraft.rpg.Stats;
 import com.cavmkii.seancraft.tetris.GearItem;
 import com.cavmkii.seancraft.tetris.Grid;
 import com.cavmkii.seancraft.tetris.GridId;
@@ -28,40 +23,32 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * The Tarkov screen. INVENTORY: equipment, hotbar and the Tetris grids on the left, the crafting grid and its recipe
- * books in the middle, any open container or the stash on the right. STATUS: body and effects. CHARACTER: the passive
- * web with level, attributes and use-skills.
- * STATUS: body health and meds.
+ * The inventory screen (UI-SPEC Part 2, inventory v5). INVENTORY: equipment and the player model on the left,
+ * crafting over the player inventory in the middle, the stash or open container on the right, the hotbar at the
+ * bottom. RECIPES opens the recipe book over the equipment zone. STATUS: body and effects. CHARACTER: the passive
+ * web with level, attributes, skills and the loadout.
  *
- * <p>GEAR controls, mostly vanilla's: click to pick up and put down, right-click to pick up half or put down one,
+ * <p>Controls, mostly vanilla's: click to pick up and put down, right-click to pick up half or put down one,
  * Shift+click (or Ctrl) to transfer, R to rotate, 1-9 to send the hovered item to a hotbar slot, Q to drop one
- * (Ctrl+Q the stack), Esc to let go.
+ * (Ctrl+Q the stack), Esc to let go (or close the recipe book).
  */
 public class TarkovScreen extends Screen {
-    /** Equipment, grids, hotbar, the crafting grid with its recipe books, and the stash: GEAR and CRAFTING in one. */
+    /** Equipment, crafting, the grids, the stash and the hotbar. */
     public static final int INVENTORY = 0;
     /** Old names for the INVENTORY tab, for callers that open it (E, a crafting table). */
     public static final int GEAR = INVENTORY;
     public static final int CRAFTING = INVENTORY;
     public static final int STATUS = 1;
-    /** The passive web with level, attributes and use-skills beside it (SKILLS and WEB used to be two tabs). */
+    /** CHARACTER: the passive web with level, attributes, skills and the loadout. */
     public static final int WEB = 2;
+    public static final int CHARACTER = WEB;
     public static final int SKILLS = WEB;
-    /** Open INVENTORY with crafting mode on (a crafting table). */
+    /** Open INVENTORY from a crafting table: the 3x3 grid with the recipe book open. */
     public static final int CRAFT_MODE = 3;
-    private static final String[] TABS = {"INVENTORY", "STATUS", "SKILLS"};
+    private static final String[] TABS = {"INVENTORY", "STATUS", "CHARACTER"};
 
     private static final int C = 18;
-    private static final int W = 426;
-    private static final int H = 220;
     private static final int TOP = 24;
-    private static final int ROW = 22;
-
-
-    /** Virtual width of the recipe-book view (the INVENTORY layout is VW). */
-    private int vw() {
-        return W;
-    }
 
     private int tab;
     private float scale = 1;
@@ -77,7 +64,6 @@ public class TarkovScreen extends Screen {
     private int swapSync = -1;
     private int swapTick;
 
-    private double craftScroll;
     private String search = "";
     private boolean searchFocused;
     private int ticks;
@@ -88,27 +74,26 @@ public class TarkovScreen extends Screen {
         super(Component.literal("Inventory"));
         this.tab = tab == CRAFT_MODE ? INVENTORY : tab;
         if (tab == CRAFT_MODE) {
-            craftMode = true;
+            bookOpen = true;
             openStation = StationTabs.CRAFTING_TABLE;
         }
     }
 
     void setTab(int tab) {
         if (tab == CRAFT_MODE) {
-            craftMode = true;
+            bookOpen = true;
             openStation = StationTabs.CRAFTING_TABLE;
             tab = INVENTORY;
         }
         this.tab = tab;
         layout();
-        if (tab == CRAFTING) {
+        if (tab == INVENTORY) {
             ClientPlayNetworking.send(new TetrisNet.Craft("", 0));
         }
     }
 
     @Override
     protected void init() {
-        // Room at the bottom for the station tabs (hideout, Weapon Bench...).
         layout();
         status = new StatusScreen();
         status.init(minecraft, width, height - TOP);
@@ -120,30 +105,19 @@ public class TarkovScreen extends Screen {
             announced = true;
             minecraft.getTutorial().onOpenInventory();
             ClientPlayNetworking.send(new TetrisNet.Action(4));
-            if (tab == CRAFTING) {
+            if (tab == INVENTORY) {
                 ClientPlayNetworking.send(new TetrisNet.Craft("", 0));
             }
         }
     }
 
-    /** Scale and place the virtual canvas for the current tab. */
+    /** Scale and place the 480 x 270 canvas: content under the tab bar at y 18, scaled down only if it must be. */
     private void layout() {
-        if (tab == INVENTORY && craftView == 0) {
-            // GEAR-V2: a 480 x 270 canvas whose content starts under the tab bar at y 18, scaled down only if it must be.
-            int bottom = 2;
-            scale = Math.min(1f, Math.min((width - 4) / (float) VW, (height - 18 - bottom) / (float) (VH - 18)));
-            ox = (width - VW * scale) / 2f;
-            oy = 18 - 18 * scale;
-            return;
-        }
-        // Room at the bottom for the station tabs (hideout, Weapon Bench...).
-        int bottom = 16;
-        int w = vw();
-        // Keep clear of the window frame on both sides.
-        scale = Math.min(1f, Math.min((width - 24) / (float) w, (height - TOP - 4 - bottom) / (float) H));
-        ox = (width - w * scale) / 2f;
-        oy = TOP + Math.max(0, (height - TOP - bottom - H * scale) / 2f - 4);
+        scale = Math.min(1f, Math.min((width - 4) / (float) VW, (height - 18 - 1) / (float) (VH - 18)));
+        ox = (width - VW * scale) / 2f;
+        oy = 18 - 18 * scale;
     }
+
 
     @Override
     public void removed() {
@@ -187,52 +161,46 @@ public class TarkovScreen extends Screen {
 
     private record Box(GridId id, int x, int y, int w, int h, List<Placed> items) {}
 
+    /** The grids on screen: the pouch (unless the recipe book covers it), then rig, pockets and backpack, scrolled. */
     private List<Box> boxes() {
         TetrisNet.Sync s = ClientTetris.sync;
         List<Box> out = new ArrayList<>();
-        if (!craftMode) {
-            out.add(new Box(GridId.POUCH, POUCH_GRID_X, POUCH_Y, s.pouchW(), s.pouchH(), s.pouch()));
+        if (!bookOpen) {
+            out.add(new Box(GridId.POUCH, POUCH_GRID_X, pouchY(), s.pouchW(), s.pouchH(), s.pouch()));
         }
         for (ColSec sec : colSections()) {
-            int gy = sec.y() + 11 - (int) colScroll;
+            int gy = sec.y() + 9 - (int) colScroll;
             if (sec.kind() == 1 && s.rig().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.RIG, secGridX(), gy, g.spec.gridWidth, g.spec.gridHeight, s.rigItems()));
+                out.add(new Box(GridId.RIG, sec.x() + 21, gy, g.spec.gridWidth, g.spec.gridHeight, s.rigItems()));
             } else if (sec.kind() == 2) {
-                out.add(new Box(GridId.POCKETS, secGridX(), gy, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
+                out.add(new Box(GridId.POCKETS, sec.x(), gy, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
             } else if (sec.kind() == 3 && s.backpack().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.BACKPACK, secGridX(), gy, g.spec.gridWidth, g.spec.gridHeight, s.backpackItems()));
+                out.add(new Box(GridId.BACKPACK, sec.x() + 21, gy, g.spec.gridWidth, g.spec.gridHeight, s.backpackItems()));
             }
         }
         return out;
     }
 
-
-
-    /** x, y, size of an equipment slot: in its box, or (rig, backpack) beside its grid; null if scrolled away. */
+    /** x, y, size of an equipment slot: in its box, or (rig, backpack) beside its grid; null if hidden. */
     private int[] equipRect(int slot) {
         if (EQUIP_BOX[slot] != null) {
-            return craftMode ? null : new int[] {EQUIP_BOX[slot][0] + 11, EQUIP_BOX[slot][1] + 11, C};
+            return bookOpen ? null : new int[] {EQUIP_BOX[slot][0] + 7, EQUIP_BOX[slot][1] + 10, C};
         }
         for (ColSec sec : colSections()) {
             if (slot == 4 && sec.kind() == 1 || slot == 5 && sec.kind() == 3) {
-                return new int[] {secX(), sec.y() + 11 - (int) colScroll, C};
+                return new int[] {sec.x(), sec.y() + 9 - (int) colScroll, C};
             }
         }
         return null;
     }
 
-
-    private static final String[] EQUIP_NAMES = {"Head", "Chest", "Legs", "Feet", "Rig", "Backpack", "Off-hand"};
     /** Outlines shown in empty equipment slots (ghost/*). */
     private static final String[] EQUIP_GHOSTS = {"helmet", "chestplate", "leggings", "boots", "rig", "backpack", "offhand"};
-
-
-
 
     /** A grid on screen: top-left, size in cells, and its items. */
     private record GridRef(int x, int y, int w, int h, List<Placed> items) {}
 
-    /** The grid a GRID or container-cell location belongs to. */
+    /** The grid a GRID location belongs to. */
     private GridRef gridFor(Loc loc) {
         if (loc == null) {
             return null;
@@ -244,18 +212,14 @@ public class TarkovScreen extends Screen {
         return null;
     }
 
-    private static int rows(int n) {
-        return Math.max(1, (n + 8) / 9);
-    }
-
-
     /** What's under a point (virtual coords) on the INVENTORY tab. For grids it's the cell. */
     private Loc locAt(double x, double y) {
-        if (tab == INVENTORY && craftMode) {
-            int cell = cellAt(x, y);
-            if (cell >= 0) {
-                return Loc.craft(cell);
-            }
+        if (tab != INVENTORY) {
+            return null;
+        }
+        int cell = cellAt(x, y);
+        if (cell >= 0) {
+            return Loc.craft(cell);
         }
         for (int slot = 0; slot < 7; slot++) {
             int[] r = equipRect(slot);
@@ -267,7 +231,7 @@ public class TarkovScreen extends Screen {
             }
         }
         for (int i = 0; i < 9; i++) {
-            if (in(x, y, quX() + i * QU_STEP, QU_Y, C, C)) {
+            if (in(x, y, HB_X + i * HB_STEP, HB_Y, C, C)) {
                 return Loc.hand(i);
             }
         }
@@ -284,11 +248,11 @@ public class TarkovScreen extends Screen {
                 if (sec.kind() != 0) {
                     continue;
                 }
-                int top = sec.y() + 11 - (int) colScroll;
+                int top = sec.y() + 9 - (int) colScroll;
                 int n = ClientTetris.sync.unsorted().size();
-                if (x >= secX() && x < secX() + 8 * C && y >= top) {
-                    int i = (int) ((y - top) / C) * 8 + (int) ((x - secX()) / C);
-                    if (i >= 0 && i < n && y < top + ((n + 7) / 8) * C) {
+                if (x >= sec.x() && x < sec.x() + UNSORTED_COLS * C && y >= top) {
+                    int i = (int) ((y - top) / C) * UNSORTED_COLS + (int) ((x - sec.x()) / C);
+                    if (i >= 0 && i < n && y < top + ((n + UNSORTED_COLS - 1) / UNSORTED_COLS) * C) {
                         return Loc.unsorted(i);
                     }
                 }
@@ -360,22 +324,10 @@ public class TarkovScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         settleSwap();
-        boolean v2 = tab == INVENTORY && craftView == 0;
-        if (v2) {
-            // The world stays visible behind it, dimmed (GEAR-V2).
+        if (tab == INVENTORY) {
+            // The world stays visible behind it, dimmed.
             layout();
             g.fill(0, 0, width, height, 0xC70A0908);
-        } else {
-            g.fill(0, 0, width, height, Kit.BACKDROP);
-            int[] pr = panelRect();
-            Kit.panel(g, pr[0], pr[1], pr[2], pr[3]);
-        }
-        if (tab == STATUS || tab == WEB) {
-            g.pose().pushPose();
-            g.pose().translate(0, TOP, 0);
-            (tab == STATUS ? status : web).render(g, mouseX, mouseY - TOP, partialTick);
-            g.pose().popPose();
-        } else {
             g.pose().pushPose();
             g.pose().translate(ox, oy, 0);
             g.pose().scale(scale, scale, 1);
@@ -383,7 +335,7 @@ public class TarkovScreen extends Screen {
             int my = (int) Math.floor(vy(mouseY));
             hoverRecipe = null;
             uiTip = null;
-            ItemStack tip = tab == INVENTORY ? renderCrafting(g, mx, my) : ItemStack.EMPTY;
+            ItemStack tip = renderInventory(g, mx, my, mouseX, mouseY);
             g.pose().popPose();
             hoverStack = tip;
             // Next frame's grid preview follows what's hovered now.
@@ -399,23 +351,21 @@ public class TarkovScreen extends Screen {
                     g.renderTooltip(font, tip, mouseX, mouseY);
                 }
             }
+        } else {
+            g.fill(0, 0, width, height, Kit.BACKDROP);
+            Kit.panel(g, 2, PANEL_TOP, width - 4, height - PANEL_TOP - 2);
+            g.pose().pushPose();
+            g.pose().translate(0, TOP, 0);
+            (tab == STATUS ? status : web).render(g, mouseX, mouseY - TOP, partialTick);
+            g.pose().popPose();
         }
         renderTabs(g, mouseX, mouseY);
     }
 
-    /** Top of the panel; the tab row sits on its edge (Appendix C, spacing rules). */
+    /** Top of the STATUS and CHARACTER panel; the tab row sits on its edge. */
     private static final int PANEL_TOP = 18;
-
-    /** The window frame, in screen coordinates: around the scaled content, or the full width for STATUS and WEB. */
-    private int[] panelRect() {
-        if (tab == STATUS || tab == WEB) {
-            return new int[] {2, PANEL_TOP, width - 4, height - PANEL_TOP - 2};
-        }
-        int x = Math.max(2, (int) Math.floor(ox - 8 * scale) - 2);
-        int right = Math.min(width - 2, (int) Math.ceil(ox + vw() * scale + 8 * scale) + 2);
-        int bottom = Math.min(height - (tab == CRAFTING ? 17 : 2), (int) Math.ceil(oy + H * scale + 8 * scale));
-        return new int[] {x, PANEL_TOP, right - x, bottom - PANEL_TOP};
-    }
+    /** The line under the tab bar, and the active tab, in rust (inventory v5). */
+    private static final int RUST = 0xFF5A3220;
 
     private int tabW(int t) {
         return font.width(TABS[t]) + 26;
@@ -424,7 +374,7 @@ public class TarkovScreen extends Screen {
     private int tabX(int t) {
         int x = 4;
         for (int i = 0; i < t; i++) {
-            x += tabW(i) + 2;
+            x += tabW(i) + 1;
         }
         return x;
     }
@@ -434,41 +384,28 @@ public class TarkovScreen extends Screen {
         return mouseX >= x && mouseX < x + tabW(t) && mouseY >= 1 && mouseY < 16;
     }
 
-    private static final String[] TAB_ICONS = {"gear", "status", "skills"};
+    private static final String[] TAB_ICONS = {"gear", "status", "web"};
 
-    /** The tab bar (GEAR-V2): each tab with its icon, a gold line under them, and where you are at the right. */
+    /** The tab bar: each tab with its icon, a rust line under them, the station row and where you are at the right. */
     private void renderTabs(GuiGraphics g, int mouseX, int mouseY) {
-        g.fill(0, 16, width, 17, Kit.GOLD_DARK);
+        g.fill(0, 16, width, 17, RUST);
         for (int t = 0; t < TABS.length; t++) {
             int x = tabX(t);
             int w = tabW(t);
             boolean active = t == tab;
             boolean over = !active && overTab(t, mouseX, mouseY);
             if (active) {
-                Kit.blit(g, "tab/active", x, 1, w, 16);
+                Kit.blit(g, "tab/active_rust", x, 1, w, 16);
             } else {
-                Kit.blit(g, over ? "tab/inactive_hover" : "tab/inactive", x, 3, w, 13);
+                Kit.blit(g, over ? "tab/inactive_hover" : "tab/inactive", x, 2, w, 14);
             }
             Kit.blit(g, "icon/tab/" + TAB_ICONS[t], x + 6, active ? 4 : 5, 9, 9);
             Kit.text(g, font, TABS[t], x + 18, active ? 5 : 6, active ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
         }
         int tabsEnd = tabX(TABS.length - 1) + tabW(TABS.length - 1) + 8;
-        if (tab == INVENTORY) {
-            // CRAFT toggle: crafting mode swaps the equipment zone for the crafting workspace.
-            int[] cr = craftToggle();
-            boolean over = in(mouseX, mouseY, cr[0], cr[1], cr[2], cr[3]);
-            Kit.blit(g, craftMode || over ? "button/hover" : "button/normal", cr[0], cr[1], cr[2], cr[3]);
-            if (craftMode) {
-                g.fill(cr[0] + 2, cr[1] + cr[3] - 2, cr[0] + cr[2] - 2, cr[1] + cr[3] - 1, Kit.GOLD_LIGHT);
-            }
-            Kit.blit(g, "icon/tab/crafting", cr[0] + 4, cr[1] + 2, 9, 9);
-            Kit.text(g, font, "CRAFT", cr[0] + 16, cr[1] + 3, craftMode ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
-            tabsEnd = cr[0] + cr[2] + 8;
-        }
         // Station row (inside a hideout), right-aligned; the open one is widened with its name.
         int right = width - 4;
-        List<Object[]> stations = stationButtons();
-        for (Object[] st : stations) {
+        for (Object[] st : stationButtons()) {
             String kind = (String) st[0];
             int x = (int) st[1];
             int w = (int) st[2];
@@ -504,11 +441,6 @@ public class TarkovScreen extends Screen {
         }
     }
 
-    /** The CRAFT toggle's rectangle in screen coordinates. */
-    private int[] craftToggle() {
-        int x = tabX(TABS.length - 1) + tabW(TABS.length - 1) + 6;
-        return new int[] {x, 2, font.width("CRAFT") + 20, 14};
-    }
 
     private void slot(GuiGraphics g, int x, int y, int size, ItemStack stack, boolean hover, String empty) {
         Kit.slot(g, x, y, size, hover ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
@@ -741,35 +673,67 @@ public class TarkovScreen extends Screen {
         g.pose().popPose();
     }
 
-    // ================================================================== INVENTORY layout (UI-SPEC Part 2, v3: 480 x 270 GUI pixels)
+    // ================================================================== INVENTORY layout (UI-SPEC Part 2, inventory v5: 480 x 270)
 
     private static final int VW = 480;
     private static final int VH = 270;
-    /** Equipment boxes (40 x 30) for head, chest, legs, feet and off-hand; the rig and backpack sit by their grids. */
-    private static final int[][] EQUIP_BOX = {{10, 23}, {10, 55}, {10, 87}, {10, 119}, null, null, {72, 119}};
-    private static final String[] EQUIP_LABEL = {"HEAD", "CHEST", "LEGS", "FEET", "RIG", "BACKPACK", "OFF-HAND"};
-    private static final int POUCH_Y = 165;
-    private static final int POUCH_GRID_X = 32;
-    private static final int ZONE_Y = 18;
-    private static final int ZONE_H = 221;
-    private static final int COL_TOP = 21;
-    private static final int COL_BOTTOM = 237;
-    private static final int QU_Y = 245;
-    private static final int QU_STEP = 19;
-    // Crafting mode: the crafting zone replaces the equipment zone.
-    private static final int BOOK_X = 8;
-    private static final int BOOK_W = 84;
-    private static final int GX = 100;
-    private static final int GRID_Y = 56;
+    // Zones: x, y, w, h. Each gets an ornate frame 3 px outside its bounds.
+    private static final int[] EQ = {6, 21, 112, 214};
+    private static final int[] CR = {124, 21, 204, 90};
+    private static final int[] PI = {124, 117, 204, 118};
+    private static final int[] ST = {334, 21, 140, 214};
+    private static final int[] HB = {144, 241, 192, 28};
+    /** The stash zone's top and height (the filter popup keeps inside them). */
+    private static final int ZONE_Y = 21;
+    private static final int ZONE_H = 214;
+    /** Equipment boxes (32 x 30) for head, chest, legs, feet and off-hand; the rig and backpack sit by their grids. */
+    private static final int[][] EQUIP_BOX = {{10, 41}, {10, 73}, {10, 105}, {10, 137}, null, null, {82, 91}};
+    private static final String[] EQUIP_LABEL = {"HEAD", "CHEST", "LEGS", "FEET", "RIG", "BACKPACK", "OFF"};
+    /** MAIN: a read-only mirror of the selected hotbar item. */
+    // The spec says x 88 for OFF and MAIN, which runs past the zone; the mock-up has them at 82.
+    private static final int MAIN_X = 82;
+    private static final int MAIN_Y = 123;
+    /** The player model's box. */
+    private static final int[] MODEL = {44, 49, 40, 84};
+    private static final int POUCH_GRID_X = 34;
+    // Player inventory: content from y 135, clipped and scrolled between COL_TOP and COL_BOTTOM.
+    private static final int COL_TOP = 133;
+    private static final int COL_BOTTOM = 233;
+    private static final int COL_LEFT = 130;
+    private static final int COL_RIGHT = 326;
+    private static final int UNSORTED_COLS = 10;
+    // Crafting.
+    private static final int GX = 132;
+    private static final int GRID_Y = 43;
     private static final int GC = 18;
-    private static final int RESULT_X = 166;
-    private static final int RESULT_Y = 70;
+    private static final int RESULT_X = 220;
+    private static final int RESULT_Y = 57;
+    private static final int[] CLEAR = {220, 87, 34, 14};
+    private static final int[] RECIPES = {268, 24, 56, 12};
+    private static final int[] PIN = {254, 24, 12, 12};
+    private static final int NEEDS_X = 254;
+    // Stash.
+    private static final int SGX = 340;
+    private static final int SGY = 70;
+    private static final int SCOLS = 7;
+    private static final int SW_ROWS = 8;
+    // Hotbar.
+    private static final int HB_X = 150;
+    private static final int HB_Y = 246;
+    private static final int HB_STEP = 20;
+    private static final int TOGGLE_X = 340;
+    private static final int TOGGLE_Y = 249;
+    // Recipe book, over the equipment zone.
+    private static final int[] BOOK = {8, 23, 108, 211};
+    private static final int BOOK_X = 11;
+    private static final int BOOK_W = 100;
+    private static final int BOOK_TOP = 68;
+    private static final int BOOK_BOTTOM = 232;
     private static final int BOOK_ROW = 17;
     private static final int BOOK_HEAD = 11;
-    private static final int BOOK_TOP = 49;
 
-    /** CRAFT toggle: crafting mode replaces the equipment zone with the crafting workspace. */
-    private boolean craftMode;
+    /** RECIPES: the recipe book over the equipment zone. */
+    private boolean bookOpen;
     /** The station this screen was opened from (crafting table), shown widened in the station row; null for none. */
     private String openStation;
     private static boolean canMakeOnly;
@@ -783,53 +747,44 @@ public class TarkovScreen extends Screen {
     /** Tooltip for whatever small control is under the mouse this frame. */
     private String uiTip;
 
-    // Zone geometry, which moves when crafting mode widens the left zone.
-    private int cx() {
-        return craftMode ? 208 : 122;
+    private int pouchY() {
+        // A three-row pouch starts right under its title so it stays inside the zone.
+        return ClientTetris.sync.pouchH() > 2 ? 181 : 183;
     }
 
-    private int secX() {
-        return cx() + 4;
+    /** True when the stats can't sit under a tall pouch and move beside the hotbar instead. */
+    private boolean statsBesideHotbar() {
+        return ClientTetris.sync.pouchH() > 2;
     }
-
-    private int secGridX() {
-        return cx() + 26;
-    }
-
-    private int sx() {
-        return craftMode ? 370 : 284;
-    }
-
-    private int sw() {
-        return craftMode ? 106 : 192;
-    }
-
-    private int scols() {
-        return craftMode ? 5 : 10;
-    }
-
-    private int quX() {
-        return craftMode ? 248 : 200;
-    }
-
-    private static final int SW_ROWS = 8;
 
     private static boolean in(double x, double y, int rx, int ry, int w, int h) {
         return x >= rx && x < rx + w && y >= ry && y < ry + h;
+    }
+
+    private static boolean in(double x, double y, int[] r) {
+        return in(x, y, r[0], r[1], r[2], r[3]);
     }
 
     private static boolean inCol(double y) {
         return y >= COL_TOP && y < COL_BOTTOM;
     }
 
-    /** A zone background (UI-SPEC: tiled column texture, 1 px Iron dark border, Iron top inner line). */
-    private void zone(GuiGraphics g, int x, int y, int w, int h) {
-        Kit.blit(g, "panel/column_texture", x + 1, y + 1, w - 2, h - 2);
-        g.fill(x, y, x + w, y + 1, Kit.IRON_DARK);
-        g.fill(x, y + h - 1, x + w, y + h, Kit.IRON_DARK);
-        g.fill(x, y, x + 1, y + h, Kit.IRON_DARK);
-        g.fill(x + w - 1, y, x + w, y + h, Kit.IRON_DARK);
-        g.fill(x + 1, y + 1, x + w - 1, y + 2, Kit.IRON);
+    /** A zone: the ornate iron frame with rust trim 3 px outside its bounds, and a title bar with an optional icon. */
+    private void zone(GuiGraphics g, int[] z, String title, String icon, int titleColor) {
+        Kit.blit(g, "panel/ornate", z[0] - 3, z[1] - 3, z[2] + 6, z[3] + 6);
+        if (title != null) {
+            titleBar(g, z[0] + 3, z[1] + 3, z[2] - 6, title, icon, titleColor);
+        }
+    }
+
+    private void titleBar(GuiGraphics g, int x, int y, int w, String title, String icon, int color) {
+        Kit.blit(g, "panel/title", x, y, w, 13);
+        int tx = x + 4;
+        if (icon != null) {
+            Kit.blit(g, icon, x + 3, y + 2, 9, 9);
+            tx = x + 15;
+        }
+        Kit.text(g, font, title, tx, y + 3, color);
     }
 
     private void small(GuiGraphics g, String text, float x, float y, int color, float k) {
@@ -838,6 +793,13 @@ public class TarkovScreen extends Screen {
         g.pose().scale(k, k, 1);
         g.drawString(font, text, 0, 0, color, false);
         g.pose().popPose();
+    }
+
+    /** Text fitted to a width: scaled down to 0.75 if needed, then cut. */
+    private void fitted(GuiGraphics g, String text, float x, float y, int color, int maxW, float k) {
+        float s = Math.max(Math.min(k, 0.75f), Math.min(k, maxW / (float) Math.max(1, font.width(text))));
+        String shown = font.plainSubstrByWidth(text, (int) (maxW / s));
+        small(g, shown, x, y, color, s);
     }
 
     /** An icon-only button (button_small/name_*); hovering it sets the tooltip. */
@@ -849,41 +811,50 @@ public class TarkovScreen extends Screen {
         }
     }
 
-    // ------------------------------------------------------------------ carried zone
+    // ------------------------------------------------------------------ player inventory (carried)
 
-    /** One of the carried zone's sections: 0 unsorted, 1 rig, 2 pockets, 3 backpack. y is before scrolling. */
-    private record ColSec(int kind, String title, int y, int h) {}
+    /** One of the player inventory's sections: 0 unsorted, 1 rig, 2 pockets, 3 backpack. y is before scrolling. */
+    private record ColSec(int kind, String title, int x, int y, int h) {}
 
+    /**
+     * Rig and pockets down the left, the backpack to their right when it fits (inventory v5), otherwise under the
+     * pockets; the whole thing scrolls inside the zone. Anything with no room sits on top as UNSORTED.
+     */
     private List<ColSec> colSections() {
         TetrisNet.Sync s = ClientTetris.sync;
         List<ColSec> out = new ArrayList<>();
-        int y = COL_TOP;
+        int y = COL_TOP + 2;
         if (!s.unsorted().isEmpty()) {
-            int h = 11 + ((s.unsorted().size() + 7) / 8) * C;
-            out.add(new ColSec(0, "UNSORTED (NO ROOM)", y, h));
-            y += h + 2;
+            int h = 9 + ((s.unsorted().size() + UNSORTED_COLS - 1) / UNSORTED_COLS) * C;
+            out.add(new ColSec(0, "UNSORTED (NO ROOM)", COL_LEFT, y, h));
+            y += h + 5;
         }
         int rigW = s.rig().getItem() instanceof GearItem g ? g.spec.gridWidth : 0;
         int rigH = s.rig().getItem() instanceof GearItem g ? g.spec.gridHeight : 0;
         String rig = s.rig().isEmpty() ? "RIG" : s.rig().getHoverName().getString().toUpperCase(Locale.ROOT) + "  " + rigW + "X" + rigH;
-        out.add(new ColSec(1, rig, y, 11 + Math.max(1, rigH) * C));
-        y += 11 + Math.max(1, rigH) * C + 2;
-        out.add(new ColSec(2, "POCKETS  " + InvData.POCKET_W + "X" + InvData.POCKET_H, y, 11 + InvData.POCKET_H * C));
-        y += 11 + InvData.POCKET_H * C + 2;
+        int rigBlock = 9 + Math.max(1, rigH) * C;
+        out.add(new ColSec(1, rig, COL_LEFT, y, rigBlock));
+        int py = y + rigBlock + 5;
+        out.add(new ColSec(2, "POCKETS  " + InvData.POCKET_W + "X" + InvData.POCKET_H, COL_LEFT, py, 9 + InvData.POCKET_H * C));
+        int leftBottom = py + 9 + InvData.POCKET_H * C;
         int packW = s.backpack().getItem() instanceof GearItem g ? g.spec.gridWidth : 0;
         int packH = s.backpack().getItem() instanceof GearItem g ? g.spec.gridHeight : 0;
         String pack = s.backpack().isEmpty() ? "BACKPACK" : s.backpack().getHoverName().getString().toUpperCase(Locale.ROOT) + "  " + packW + "X" + packH;
-        out.add(new ColSec(3, pack, y, 11 + Math.max(1, packH) * C));
+        int bx = Math.max(228, COL_LEFT + 21 + rigW * C + 5);
+        boolean beside = bx + 21 + Math.max(1, packW) * C <= COL_RIGHT;
+        out.add(new ColSec(3, pack, beside ? bx : COL_LEFT, beside ? y : leftBottom + 5, 9 + Math.max(1, packH) * C));
         return out;
     }
 
     private int colContent() {
-        List<ColSec> secs = colSections();
-        ColSec last = secs.get(secs.size() - 1);
-        return last.y + last.h - COL_TOP;
+        int bottom = COL_TOP;
+        for (ColSec sec : colSections()) {
+            bottom = Math.max(bottom, sec.y + sec.h);
+        }
+        return bottom + 2 - COL_TOP;
     }
 
-    // ------------------------------------------------------------------ storage zone
+    // ------------------------------------------------------------------ stash
 
     /** A storage cell: a stack in one of the shown containers (b, c its grid origin; slot for an overflow stack). */
     private record SCell(int index, Placed placed, ItemStack overflow, int slot) {
@@ -930,41 +901,36 @@ public class TarkovScreen extends Screen {
         return out;
     }
 
-    private int storageGridY() {
-        return ZONE_Y + 47;
-    }
-
     private SCell storageAt(double x, double y) {
-        int gx = sx() + 5;
-        int gy = storageGridY();
-        if (x < gx || x >= gx + scols() * C || y < gy || y >= gy + SW_ROWS * C) {
+        if (x < SGX || x >= SGX + SCOLS * C || y < SGY || y >= SGY + SW_ROWS * C) {
             return null;
         }
-        int i = ((int) ((y - gy + storageScroll) / C)) * scols() + (int) ((x - gx) / C);
+        int i = ((int) ((y - SGY + storageScroll) / C)) * SCOLS + (int) ((x - SGX) / C);
         List<SCell> cells = storageCells();
         return i >= 0 && i < cells.size() ? cells.get(i) : null;
     }
 
     /** True if a point is in the storage grid area (dropping there puts things away). */
     private boolean overStorageGrid(double x, double y) {
-        return anyStorage() && in(x, y, sx() + 5, storageGridY(), scols() * C, SW_ROWS * C);
+        return anyStorage() && in(x, y, SGX, SGY, SCOLS * C, SW_ROWS * C);
     }
 
-    /** Storage tab rectangles: x, width for ALL (index -1) and each container. */
+    private static final int STAB_Y = 55;
+
+    /** Storage tab rectangles: index (-1 for ALL), x, width. Only in a hideout. */
     private List<int[]> storageTabs() {
         List<int[]> out = new ArrayList<>();
         List<TetrisNet.ContainerView> cs = ClientTetris.sync.containers();
         if (!ClientTetris.sync.stash()) {
             return out;
         }
-        int avail = sw() - 10;
-        int n = cs.size() + 1;
+        int avail = ST[2] - 10;
         int full = font.width("ALL") + 10;
         for (TetrisNet.ContainerView c : cs) {
             full += font.width(c.name().toUpperCase(Locale.ROOT)) + 11;
         }
         float k = full <= avail ? 1f : avail / (float) full;
-        int x = sx() + 5;
+        int x = ST[0] + 5;
         for (int i = -1; i < cs.size(); i++) {
             String label = i < 0 ? "ALL" : cs.get(i).name().toUpperCase(Locale.ROOT);
             int w = Math.max(14, (int) ((font.width(label) + 10) * k));
@@ -974,76 +940,87 @@ public class TarkovScreen extends Screen {
         return out;
     }
 
+    /** Stash title-bar buttons, right to left: filter, sort, take all, stash all, refill stacks. */
+    private static final String[] STASH_BUTTONS = {"filter", "sort", "take_all", "stash_all", "refill"};
+
+    private static int stashButtonX(int i) {
+        return 457 - i * 14;
+    }
+
     private void renderStorage(GuiGraphics g, int mx, int my) {
         TetrisNet.Sync s = ClientTetris.sync;
-        int x0 = sx();
-        int w = sw();
-        zone(g, x0, ZONE_Y, w, ZONE_H);
         List<TetrisNet.ContainerView> cs = s.containers();
+        boolean hideout = s.stash();
+        String title = hideout ? "STASH" : !cs.isEmpty() ? cs.get(0).name().toUpperCase(Locale.ROOT) : "STORAGE";
+        zone(g, ST, null, null, 0);
+        Kit.blit(g, "panel/title", ST[0] + 3, ST[1] + 3, ST[2] - 6, 13);
+        Kit.blit(g, "icon/tab/stash", ST[0] + 6, ST[1] + 5, 9, 9);
         if (!anyStorage()) {
-            g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. Inside a hideout, the storage shows here."),
-                    x0 + 6, ZONE_Y + 8, w - 12, Kit.ASH);
+            Kit.text(g, font, title, ST[0] + 18, ST[1] + 6, Kit.BONE);
+            g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. Inside a hideout, the stash shows here."),
+                    ST[0] + 6, ST[1] + 24, ST[2] - 12, Kit.ASH);
             return;
         }
-        // Header: icon and title; buttons right to left: filter, sort, STASH ALL, TAKE ALL (crafting mode: filter, sort).
-        boolean hideout = s.stash();
-        Kit.blit(g, "icon/tab/stash", x0 + 5, ZONE_Y + 4, 9, 9);
-        String title = craftMode ? "STORAGE" : hideout ? "HIDEOUT STORAGE" : cs.get(0).name().toUpperCase(Locale.ROOT);
-        Kit.text(g, font, font.plainSubstrByWidth(title, w - (craftMode ? 50 : 80)), x0 + 17, ZONE_Y + 5, Kit.BONE);
-        int bx = x0 + w - 16;
+        int textMax = stashButtonX(4) - (ST[0] + 18) - 3;
+        if (font.width(title) <= textMax) {
+            Kit.text(g, font, title, ST[0] + 18, ST[1] + 6, Kit.BONE);
+        } else {
+            fitted(g, title, ST[0] + 18, ST[1] + 7, Kit.BONE, textMax, 1f);
+        }
         boolean chestTab = storageTab >= 0 || !hideout;
-        iconButton(g, "filter", bx, ZONE_Y + 3, 12, chestTab, mx, my, chestTab ? "Filter: what this chest takes" : "Pick a chest's tab to set its filter");
         int fi = storageTab >= 0 ? storageTab : 0;
-        if (chestTab && fi < cs.size() && cs.get(fi).filter() != com.cavmkii.seancraft.tetris.StorageCategory.ALL) {
-            g.renderOutline(bx - 1, ZONE_Y + 2, 14, 14, Kit.GOLD);
+        int by = ST[1] + 3;
+        iconButton(g, "filter", stashButtonX(0), by, 12, chestTab, mx, my, chestTab ? "Filter: what this chest takes" : "Pick a chest's tab to set its filter");
+        if (chestTab && fi < cs.size() && cs.get(fi).filter() != StorageCategory.ALL) {
+            g.renderOutline(stashButtonX(0) - 1, by - 1, 14, 14, Kit.GOLD);
         }
-        iconButton(g, "sort", bx - 14, ZONE_Y + 3, 12, true, mx, my, chestTab ? "Sort this chest" : "Organize: merge and sort across the storage");
-        if (!craftMode) {
-            iconButton(g, "stash_all", bx - 28, ZONE_Y + 3, 12, hideout, mx, my, hideout ? "Stash all: your pockets, rig and backpack" : "Stash all: inside a hideout only");
-            iconButton(g, "take_all", bx - 42, ZONE_Y + 3, 12, !cs.isEmpty(), mx, my, chestTab ? "Take all from this chest" : "Take all from every chest");
-        }
+        iconButton(g, "sort", stashButtonX(1), by, 12, true, mx, my, chestTab ? "Sort this chest" : "Organize: merge and sort across the stash");
+        iconButton(g, "take_all", stashButtonX(2), by, 12, !cs.isEmpty(), mx, my, chestTab ? "Take all from this chest" : "Take all from every chest");
+        iconButton(g, "stash_all", stashButtonX(3), by, 12, hideout, mx, my,
+                hideout ? "Stash all: your pockets, rig and backpack" : "Stash all: inside a hideout only");
+        iconButton(g, "refill", stashButtonX(4), by, 12, !cs.isEmpty(), mx, my,
+                "Refill stacks: top up the partial stacks you carry from " + (hideout ? "the stash" : "this container"));
         // Search field.
-        int fy = ZONE_Y + 18;
-        Kit.blit(g, storageSearchFocused ? "text_field/focused" : "text_field/normal", x0 + 5, fy, w - 10, 12);
-        Kit.blit(g, "icon/hud/search", x0 + 7, fy + 2, 9, 9);
+        int fy = 40;
+        Kit.blit(g, storageSearchFocused ? "text_field/focused" : "text_field/normal", 339, fy, 130, 12);
+        Kit.blit(g, "icon/hud/search", 341, fy + 2, 9, 9);
         String shown = storageSearch.isEmpty() && !storageSearchFocused ? "SEARCH" : storageSearch + (storageSearchFocused && ticks / 6 % 2 == 0 ? "_" : "");
-        small(g, font.plainSubstrByWidth(shown, (int) ((w - 30) / 0.75f), true), x0 + 19, fy + 3, storageSearch.isEmpty() && !storageSearchFocused ? Kit.ASH : Kit.BONE, 0.75f);
-        // Tabs: ALL, then one per chest or barrel.
-        int ty = ZONE_Y + 33;
+        small(g, font.plainSubstrByWidth(shown, (int) (112 / 0.75f), true), 353, fy + 3,
+                storageSearch.isEmpty() && !storageSearchFocused ? Kit.ASH : Kit.BONE, 0.75f);
+        // Tabs: ALL, then one per chest or barrel (the active one in rust).
         for (int[] t : storageTabs()) {
             boolean active = t[0] == storageTab;
-            boolean over = !active && in(mx, my, t[1], ty, t[2], 13);
+            boolean over = !active && in(mx, my, t[1], STAB_Y, t[2], 13);
             if (active) {
-                Kit.blit(g, "tab/active", t[1], ty, t[2], 14);
+                Kit.blit(g, "tab/active_rust", t[1], STAB_Y, t[2], 14);
             } else {
-                Kit.blit(g, over ? "tab/inactive_hover" : "tab/inactive", t[1], ty + 2, t[2], 12);
+                Kit.blit(g, over ? "tab/inactive_hover" : "tab/inactive", t[1], STAB_Y + 2, t[2], 12);
             }
             String label = t[0] < 0 ? "ALL" : cs.get(t[0]).name().toUpperCase(Locale.ROOT);
             if (renameIndex == t[0] && t[0] >= 0) {
                 label = renameText + (ticks / 6 % 2 == 0 ? "_" : "");
             }
             float k = Math.min(0.75f, (t[2] - 6) / (float) Math.max(1, font.width(label)));
-            small(g, label, t[1] + 5, ty + 5, active ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH, k);
+            small(g, label, t[1] + 5, STAB_Y + 5, active ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH, k);
             if (over && t[0] >= 0) {
                 uiTip = "Right-click to rename";
             }
         }
         // The grid: stacks in reading order, scrolling.
         List<SCell> cells = storageCells();
-        int gx = x0 + 5;
-        int gy = storageGridY();
-        int rows = Math.max(SW_ROWS, (cells.size() + scols() - 1) / scols());
+        int rows = Math.max(SW_ROWS, (cells.size() + SCOLS - 1) / SCOLS);
         double max = Math.max(0, (rows - SW_ROWS) * C);
         storageScroll = Math.max(0, Math.min(max, storageScroll));
-        g.enableScissor((int) (ox + gx * scale), (int) (oy + gy * scale), (int) (ox + (gx + scols() * C) * scale), (int) (oy + (gy + SW_ROWS * C) * scale));
+        g.enableScissor((int) (ox + SGX * scale), (int) (oy + SGY * scale), (int) Math.ceil(ox + (SGX + SCOLS * C) * scale),
+                (int) Math.ceil(oy + (SGY + SW_ROWS * C) * scale));
         boolean dropHere = !held.isEmpty() && overStorageGrid(mx, my);
-        for (int i = 0; i < rows * scols(); i++) {
-            int cxx = gx + (i % scols()) * C;
-            int cyy = gy + (i / scols()) * C - (int) storageScroll;
-            if (cyy + C < gy || cyy > gy + SW_ROWS * C) {
+        for (int i = 0; i < rows * SCOLS; i++) {
+            int cxx = SGX + (i % SCOLS) * C;
+            int cyy = SGY + (i / SCOLS) * C - (int) storageScroll;
+            if (cyy + C < SGY || cyy > SGY + SW_ROWS * C) {
                 continue;
             }
-            boolean over = in(mx, my, cxx, cyy, C, C) && in(mx, my, gx, gy, scols() * C, SW_ROWS * C);
+            boolean over = in(mx, my, cxx, cyy, C, C) && in(mx, my, SGX, SGY, SCOLS * C, SW_ROWS * C);
             Kit.slot(g, cxx, cyy, C, over && !dropHere ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
             if (i < cells.size()) {
                 SCell c = cells.get(i);
@@ -1056,14 +1033,13 @@ public class TarkovScreen extends Screen {
         }
         g.disableScissor();
         if (dropHere) {
-            g.renderOutline(gx - 1, gy - 1, scols() * C + 2, SW_ROWS * C + 2, Kit.GOLD_LIGHT);
+            g.renderOutline(SGX - 1, SGY - 1, SCOLS * C + 2, SW_ROWS * C + 2, Kit.GOLD_LIGHT);
         }
         if (max > 0) {
             int span = SW_ROWS * C;
             int barH = Math.max(10, (int) (span * (double) span / (span + max)));
-            Kit.blit(g, "scroll/handle", gx + scols() * C + 1, gy + (int) ((span - barH) * storageScroll / max), 3, barH);
+            Kit.blit(g, "scroll/handle", SGX + SCOLS * C + 1, SGY + (int) ((span - barH) * storageScroll / max), 4, barH);
         }
-        // Slot count.
         int used = 0;
         int total = 0;
         for (int i = 0; i < cs.size(); i++) {
@@ -1073,10 +1049,10 @@ public class TarkovScreen extends Screen {
             used += cs.get(i).items().size() + cs.get(i).overflow().size();
             total += cs.get(i).width() * cs.get(i).height();
         }
-        small(g, used + " / " + total + " SLOTS", gx, gy + SW_ROWS * C + 3, Kit.ASH, 0.75f);
+        small(g, used + " / " + total + " SLOTS", SGX, SGY + SW_ROWS * C + 4, Kit.ASH, 0.75f);
     }
 
-    // ------------------------------------------------------------------ equipment zone
+    // ------------------------------------------------------------------ equipment
 
     /** The secure pouch's own item, from its size. */
     private static ItemStack pouchItem() {
@@ -1091,27 +1067,38 @@ public class TarkovScreen extends Screen {
 
     private ItemStack renderEquipment(GuiGraphics g, int mx, int my, Loc hover) {
         ItemStack tip = ItemStack.EMPTY;
-        zone(g, 4, ZONE_Y, 114, ZONE_H);
-        Kit.blit(g, "gear/silhouette", 54, 28, 56, 118);
+        zone(g, EQ, "EQUIPMENT", null, Kit.BONE);
+        if (bookOpen) {
+            return renderBook(g, mx, my);
+        }
+        drawPlayer(g, mx, my);
         for (int slot = 0; slot < 7; slot++) {
             if (EQUIP_BOX[slot] == null) {
                 continue;
             }
-            int bx = EQUIP_BOX[slot][0];
-            int by = EQUIP_BOX[slot][1];
-            Kit.blit(g, "panel/equip_box", bx, by, 40, 30);
-            float k = Math.min(0.75f, 34f / font.width(EQUIP_LABEL[slot]));
-            small(g, EQUIP_LABEL[slot], bx + 3, by + 3, Kit.ASH, k);
+            equipBox(g, EQUIP_BOX[slot][0], EQUIP_BOX[slot][1], EQUIP_LABEL[slot]);
             equipSlot(g, slot, hover);
         }
+        // MAIN: the selected hotbar item, read-only.
+        equipBox(g, MAIN_X, MAIN_Y, "MAIN");
+        ItemStack main = minecraft.player.getInventory().getSelected();
+        boolean overMain = in(mx, my, MAIN_X + 7, MAIN_Y + 10, C, C);
+        slot(g, MAIN_X + 7, MAIN_Y + 10, C, main, overMain, null);
+        if (overMain) {
+            if (!main.isEmpty()) {
+                tip = main;
+            } else {
+                uiTip = "Main hand: your selected hotbar slot";
+            }
+        }
+        // Secure pouch, kept on death.
         ItemStack pi = pouchItem();
-        Kit.blit(g, "panel/label", 10, 154, 102, 9);
-        String tier = (pi.isEmpty() ? "SECURE POUCH" : pi.getHoverName().getString().toUpperCase(Locale.ROOT)) + "  KEPT";
-        small(g, tier, 13, 155.5f, Kit.GOLD, Math.min(0.75f, 94f / font.width(tier)));
-        Kit.slot(g, 10, POUCH_Y, C, Kit.SlotState.NORMAL);
+        titleBar(g, 9, 168, 106, "SECURE  KEPT", null, Kit.GOLD);
+        int py = pouchY();
+        Kit.slot(g, 12, py, C, Kit.SlotState.NORMAL);
         if (!pi.isEmpty()) {
-            g.renderItem(pi, 11, POUCH_Y + 1);
-            if (in(mx, my, 10, POUCH_Y, C, C)) {
+            g.renderItem(pi, 13, py + 1);
+            if (in(mx, my, 12, py, C, C)) {
                 tip = pi;
             }
         }
@@ -1119,19 +1106,42 @@ public class TarkovScreen extends Screen {
         if (pouch != null) {
             renderGrid(g, pouch);
         }
-        // Load and roll, then health, stamina, and Rage or mana if the build uses them.
+        if (!statsBesideHotbar()) {
+            renderStats(g, 11, 217, mx, my);
+        }
+        return tip;
+    }
+
+    private void equipBox(GuiGraphics g, int x, int y, String label) {
+        Kit.blit(g, "panel/equip_box", x, y, 32, 30);
+        small(g, label, x + 3, y + 2.5f, Kit.ASH, Math.min(0.75f, 26f / font.width(label)));
+    }
+
+    /** Two stat lines: load and class, health; then stamina, and Rage or mana if the build uses them. */
+    private void renderStats(GuiGraphics g, int x, int y, int mx, int my) {
         com.cavmkii.seancraft.combat.Load.State load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
         com.cavmkii.seancraft.combat.Load.Tier lt = load.tier();
-        Kit.blit(g, "icon/tab/load", 10, 206, 9, 9);
-        int lc = lt == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT : lt == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.BONE;
-        small(g, "LOAD " + Math.round(load.fraction() * 100) + "%  " + lt.label, 22, 207.5f, lc, 0.75f);
-        String pen = (lt.walk != 0 ? "WALK " + Math.round(lt.walk * 100) + "%  " : "") + (lt.rollTicks == 0 ? "NO ROLL" : String.format("ROLL %.1f S", lt.rollTicks / 20f));
-        small(g, pen, 22, 216.5f, Kit.ASH, 0.75f);
-        Kit.blit(g, "icon/filter/meds", 10, 227, 9, 9);
+        Kit.blit(g, "icon/tab/load", x, y, 9, 9);
+        int lc = lt == com.cavmkii.seancraft.combat.Load.Tier.OVERLOADED ? Kit.BLOOD_LIGHT
+                : lt == com.cavmkii.seancraft.combat.Load.Tier.HEAVY ? Kit.EMBER : Kit.BONE;
+        String cls = switch (lt) {
+            case LIGHT -> "LIGHT";
+            case MEDIUM -> "MED";
+            case HEAVY -> "HEAVY";
+            case OVERLOADED -> "OVER";
+        };
+        small(g, Math.round(load.fraction() * 100) + "% " + cls, x + 11, y + 1.5f, lc, 0.75f);
+        if (in(mx, my, x, y, 50, 9)) {
+            uiTip = "Load " + Math.round(load.fraction() * 100) + "% (" + lt.label + "): "
+                    + (lt.walk != 0 ? "walk " + Math.round(lt.walk * 100) + "%, " : "no walk penalty, ")
+                    + (lt.rollTicks() == 0 ? "no roll" : String.format("roll protects %.1f s", lt.rollTicks() / 20f));
+        }
+        Kit.blit(g, "icon/filter/meds", x + 53, y, 9, 9);
         String hp = Math.round(minecraft.player.getHealth()) + "/" + Math.round(minecraft.player.getMaxHealth());
-        small(g, hp, 21, 228.5f, Kit.BLOOD_LIGHT, 0.75f);
+        small(g, hp, x + 64, y + 1.5f, Kit.BLOOD_LIGHT, 0.75f);
         com.cavmkii.seancraft.rpg.Stats st = com.cavmkii.seancraft.client.rpg.ClientRpg.stats;
-        float x = stat(g, 52, "stamina", com.cavmkii.seancraft.client.rpg.ClientRpg.stamina,
+        int y2 = y + 10;
+        stat(g, x, y2, "stamina", com.cavmkii.seancraft.client.rpg.ClientRpg.stamina,
                 st.maxStamina() + com.cavmkii.seancraft.client.food.ClientFood.stamina(), Kit.MOSS);
         java.util.Set<com.cavmkii.seancraft.rpg.Resource> used = java.util.EnumSet.noneOf(com.cavmkii.seancraft.rpg.Resource.class);
         com.cavmkii.seancraft.rpg.PlayerData data = com.cavmkii.seancraft.client.rpg.ClientRpg.data;
@@ -1144,22 +1154,46 @@ public class TarkovScreen extends Screen {
                 }
             }
         }
-        if (used.contains(com.cavmkii.seancraft.rpg.Resource.MANA) && x < 100) {
-            stat(g, x, "mana", com.cavmkii.seancraft.client.rpg.ClientRpg.mana, st.maxMana(), Kit.ARCANE);
-        } else if (used.contains(com.cavmkii.seancraft.rpg.Resource.RAGE) && x < 100) {
-            stat(g, x, "rage", com.cavmkii.seancraft.client.rpg.ClientRpg.rage, st.maxRage(), Kit.EMBER);
+        if (used.contains(com.cavmkii.seancraft.rpg.Resource.MANA)) {
+            stat(g, x + 53, y2, "mana", com.cavmkii.seancraft.client.rpg.ClientRpg.mana, st.maxMana(), Kit.ARCANE);
+        } else if (used.contains(com.cavmkii.seancraft.rpg.Resource.RAGE)) {
+            stat(g, x + 53, y2, "rage", com.cavmkii.seancraft.client.rpg.ClientRpg.rage, st.maxRage(), Kit.EMBER);
         }
-        return tip;
     }
 
-    private float stat(GuiGraphics g, float x, String icon, float value, float max, int color) {
-        g.pose().pushPose();
-        g.pose().translate(x, 227, 0);
-        Kit.blit(g, "icon/resource/" + icon, 0, 0, 9, 9);
-        g.pose().popPose();
-        String t = Math.round(value) + "/" + Math.round(max);
-        small(g, t, x + 10, 228.5f, color, 0.75f);
-        return x + 10 + font.width(t) * 0.75f + 4;
+    private void stat(GuiGraphics g, int x, int y, String icon, float value, float max, int color) {
+        Kit.blit(g, "icon/resource/" + icon, x, y, 9, 9);
+        small(g, Math.round(value) + "/" + Math.round(max), x + 11, y + 1.5f, color, 0.75f);
+    }
+
+    /** The real player, turning to follow the mouse, as vanilla's inventory draws it. */
+    private void drawPlayer(GuiGraphics g, int mx, int my) {
+        var player = minecraft.player;
+        float cx = MODEL[0] + MODEL[2] / 2f;
+        float cy = MODEL[1] + MODEL[3] / 2f;
+        float yaw = (float) Math.atan((cx - mx) / 40f);
+        float pitch = (float) Math.atan((cy - my) / 40f);
+        org.joml.Quaternionf pose = new org.joml.Quaternionf().rotateZ((float) Math.PI);
+        org.joml.Quaternionf camera = new org.joml.Quaternionf().rotateX(pitch * 20f * ((float) Math.PI / 180f));
+        pose.mul(camera);
+        float bodyRot = player.yBodyRot;
+        float yRot = player.getYRot();
+        float xRot = player.getXRot();
+        float headRotO = player.yHeadRotO;
+        float headRot = player.yHeadRot;
+        player.yBodyRot = 180f + yaw * 20f;
+        player.setYRot(180f + yaw * 40f);
+        player.setXRot(-pitch * 20f);
+        player.yHeadRot = player.getYRot();
+        player.yHeadRotO = player.getYRot();
+        float size = player.getScale();
+        org.joml.Vector3f offset = new org.joml.Vector3f(0, player.getBbHeight() / 2f + 0.0625f * size, 0);
+        net.minecraft.client.gui.screens.inventory.InventoryScreen.renderEntityInInventory(g, cx, cy, 40f / size, offset, pose, camera, player);
+        player.yBodyRot = bodyRot;
+        player.setYRot(yRot);
+        player.setXRot(xRot);
+        player.yHeadRotO = headRotO;
+        player.yHeadRot = headRot;
     }
 
     private void equipSlot(GuiGraphics g, int slot, Loc hover) {
@@ -1177,10 +1211,10 @@ public class TarkovScreen extends Screen {
         }
     }
 
-    // ------------------------------------------------------------------ crafting zone
+    // ------------------------------------------------------------------ crafting
 
     /** A recipe-book row: a category header, or a recipe (known or not). */
-    private record BookRow(com.cavmkii.seancraft.tetris.StorageCategory header, RecipeCell cell, int y, int h) {}
+    private record BookRow(StorageCategory header, RecipeCell cell, int y, int h) {}
 
     /** Times you can make a recipe now (from the server's list); 0 if missing ingredients, -1 if it needs a crafting table. */
     private int makeable(String id) {
@@ -1192,13 +1226,38 @@ public class TarkovScreen extends Screen {
         return 0;
     }
 
+    private static final String BENCH_ID = com.cavmkii.seancraft.SeanCraft.id("hideout_bench").toString();
+
+    /** Categories with their recipes; outside a hideout the Hideout Bench is pinned on top (4.1). */
+    /** The Hideout Bench row pinned on top outside a hideout; shown by name even before it's discovered. */
+    private RecipeCell pinnedBench;
+
     private List<BookRow> bookRows() {
         List<BookRow> out = new ArrayList<>();
         int y = 0;
         String q = search.toLowerCase(Locale.ROOT);
+        RecipeCell bench = null;
+        pinnedBench = null;
+        if (!ClientTetris.craft.inHideout() && q.isEmpty() && !canMakeOnly) {
+            for (RecipeSection sec : recipeSections()) {
+                for (RecipeCell c : sec.cells()) {
+                    if (net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(c.result().getItem()).toString().equals(BENCH_ID)) {
+                        bench = c;
+                    }
+                }
+            }
+            pinnedBench = bench;
+            if (bench != null) {
+                out.add(new BookRow(null, bench, y, BOOK_ROW));
+                y += BOOK_ROW + 2;
+            }
+        }
         for (RecipeSection sec : recipeSections()) {
             List<RecipeCell> cells = new ArrayList<>();
             for (RecipeCell c : sec.cells()) {
+                if (c == bench) {
+                    continue;
+                }
                 if (canMakeOnly && (!c.known() || makeable(c.holder().id().toString()) <= 0)) {
                     continue;
                 }
@@ -1223,50 +1282,58 @@ public class TarkovScreen extends Screen {
         return out;
     }
 
-    private ItemStack renderCraftZone(GuiGraphics g, int mx, int my) {
-        TetrisNet.CraftList craft = ClientTetris.craft;
+    /** The recipe book over the equipment zone: search, CAN MAKE NOW, folding categories and recipe rows. */
+    private ItemStack renderBook(GuiGraphics g, int mx, int my) {
         ItemStack tip = ItemStack.EMPTY;
-        zone(g, 4, ZONE_Y, 200, ZONE_H);
-        // Recipe book: search, CAN MAKE NOW, categories and rows.
-        Kit.blit(g, searchFocused ? "text_field/focused" : "text_field/normal", BOOK_X, 22, BOOK_W, 12);
-        Kit.blit(g, "icon/hud/search", BOOK_X + 2, 24, 9, 9);
+        g.fill(BOOK[0], BOOK[1], BOOK[0] + BOOK[2], BOOK[1] + BOOK[3], Kit.VOID);
+        Kit.text(g, font, "RECIPE BOOK", BOOK_X + 1, 27, Kit.GOLD_LIGHT);
+        g.fill(BOOK_X, 36, BOOK_X + BOOK_W + 2, 37, Kit.GOLD_DARK);
+        Kit.blit(g, searchFocused ? "text_field/focused" : "text_field/normal", BOOK_X, 40, BOOK_W + 2, 12);
+        Kit.blit(g, "icon/hud/search", BOOK_X + 2, 42, 9, 9);
         String shown = search.isEmpty() && !searchFocused ? "SEARCH" : search + (searchFocused && ticks / 6 % 2 == 0 ? "_" : "");
-        small(g, font.plainSubstrByWidth(shown, (int) ((BOOK_W - 16) / 0.75f), true), BOOK_X + 13, 25, search.isEmpty() && !searchFocused ? Kit.ASH : Kit.BONE, 0.75f);
-        Kit.blit(g, canMakeOnly ? "checkbox/on" : "checkbox/off", BOOK_X, 37, 10, 10);
-        small(g, "CAN MAKE NOW", BOOK_X + 13, 39, in(mx, my, BOOK_X, 37, BOOK_W, 10) ? Kit.GOLD_LIGHT : Kit.BONE, 0.75f);
+        small(g, font.plainSubstrByWidth(shown, (int) ((BOOK_W - 16) / 0.75f), true), BOOK_X + 14, 43,
+                search.isEmpty() && !searchFocused ? Kit.ASH : Kit.BONE, 0.75f);
+        Kit.blit(g, canMakeOnly ? "checkbox/on" : "checkbox/off", BOOK_X, 55, 10, 10);
+        Kit.text(g, font, "CAN MAKE NOW", BOOK_X + 14, 56, in(mx, my, BOOK_X, 55, BOOK_W, 10) ? Kit.GOLD_LIGHT : Kit.BONE);
         List<BookRow> rows = bookRows();
-        int bottom = ZONE_Y + ZONE_H - 3;
         int total = rows.isEmpty() ? 0 : rows.get(rows.size() - 1).y + rows.get(rows.size() - 1).h;
-        double max = Math.max(0, total - (bottom - BOOK_TOP));
+        double max = Math.max(0, total - (BOOK_BOTTOM - BOOK_TOP));
         bookScroll = Math.max(0, Math.min(max, bookScroll));
-        g.enableScissor((int) (ox + BOOK_X * scale), (int) (oy + BOOK_TOP * scale), (int) (ox + (BOOK_X + BOOK_W) * scale), (int) (oy + bottom * scale));
+        g.enableScissor((int) (ox + BOOK_X * scale), (int) (oy + BOOK_TOP * scale), (int) Math.ceil(ox + (BOOK_X + BOOK_W) * scale),
+                (int) Math.ceil(oy + BOOK_BOTTOM * scale));
         for (BookRow r : rows) {
             int y = BOOK_TOP + r.y - (int) bookScroll;
-            if (y + r.h < BOOK_TOP || y > bottom) {
+            if (y + r.h < BOOK_TOP || y > BOOK_BOTTOM) {
                 continue;
             }
-            boolean over = in(mx, my, BOOK_X, y, BOOK_W, r.h - 1) && my >= BOOK_TOP && my < bottom;
+            boolean over = in(mx, my, BOOK_X, y, BOOK_W, r.h - 1) && my >= BOOK_TOP && my < BOOK_BOTTOM;
             if (r.header != null) {
                 boolean open = !COLLAPSED.contains(r.header) || !search.isEmpty();
                 Kit.blit(g, open ? "list/category_open" : "list/category_closed", BOOK_X + 1, y + 2, 7, 7);
-                small(g, r.header.label.toUpperCase(Locale.ROOT), BOOK_X + 11, y + 2.5f, open ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH, 0.75f);
+                Kit.text(g, font, r.header.label.toUpperCase(Locale.ROOT), BOOK_X + 11, y + 1, open ? Kit.GOLD_LIGHT : over ? Kit.BONE : Kit.ASH);
                 continue;
             }
             RecipeCell c = r.cell;
             String id = c.holder().id().toString();
             boolean selected = id.equals(ghostRecipe);
-            if (!c.known()) {
+            if (!c.known() && c != pinnedBench) {
                 Kit.blit(g, "list/row_locked", BOOK_X, y, BOOK_W, 16);
-                small(g, "??????", BOOK_X + 20, y + 5, Kit.DISABLED, 0.75f);
+                g.drawString(font, "??????", BOOK_X + 19, y + 4, Kit.DISABLED, false);
                 continue;
             }
             int can = makeable(id);
             Kit.blit(g, selected ? "list/row_selected" : over ? "list/row_hover" : "list/row", BOOK_X, y, BOOK_W, 16);
             g.renderItem(c.result(), BOOK_X + 1, y);
-            String name = font.plainSubstrByWidth(c.result().getHoverName().getString(), (int) ((BOOK_W - 32) / 0.75f));
-            small(g, name, BOOK_X + 19, y + 5, can > 0 ? (over || selected ? Kit.GOLD_LIGHT : Kit.BONE) : Kit.ASH, 0.75f);
+            String name = font.plainSubstrByWidth(c.result().getHoverName().getString(), BOOK_W - (can != 0 ? 33 : 21));
+            int color = can > 0 ? (over || selected ? Kit.GOLD_LIGHT : Kit.BONE) : Kit.ASH;
             if (can > 0) {
-                Kit.blit(g, "icon/hud/gather_check", BOOK_X + BOOK_W - 11, y + 3, 9, 9);
+                Kit.text(g, font, name, BOOK_X + 19, y + 4, color);
+                Kit.blit(g, "icon/hud/gather_check", BOOK_X + BOOK_W - 12, y + 3, 9, 9);
+            } else {
+                g.drawString(font, name, BOOK_X + 19, y + 4, color, false);
+                if (can < 0) {
+                    Kit.blit(g, "list/lock", BOOK_X + BOOK_W - 12, y + 3, 9, 9);
+                }
             }
             if (over) {
                 tip = c.result();
@@ -1275,27 +1342,43 @@ public class TarkovScreen extends Screen {
         }
         g.disableScissor();
         if (max > 0) {
-            int span = bottom - BOOK_TOP;
+            int span = BOOK_BOTTOM - BOOK_TOP;
             int barH = Math.max(10, (int) (span * (double) span / (span + max)));
-            Kit.blit(g, "scroll/handle", BOOK_X + BOOK_W + 1, BOOK_TOP + (int) ((span - barH) * bookScroll / max), 3, barH);
+            Kit.blit(g, "scroll/handle", BOOK_X + BOOK_W + 1, BOOK_TOP + (int) ((span - barH) * bookScroll / max), 4, barH);
         }
+        return tip;
+    }
 
-        // Selected recipe: name, what it is and its gate; then the grid, arrow and result.
+    /** CRAFTING: the grid with the selected recipe's ghost, arrow, result, CLEAR, NEEDS and the hint line. */
+    private ItemStack renderCraftZone(GuiGraphics g, int mx, int my) {
+        TetrisNet.CraftList craft = ClientTetris.craft;
+        ItemStack tip = ItemStack.EMPTY;
+        zone(g, CR, "CRAFTING", "icon/tab/crafting", Kit.BONE);
+        boolean table = craft.table();
+        String where = table ? (craft.inHideout() ? "3X3  HIDEOUT" : "3X3  TABLE") : "2X2";
+        small(g, where, CR[0] + 18 + font.width("CRAFTING") + 6, CR[1] + 7, table ? Kit.MOSS : Kit.ASH, 0.75f);
+        if (in(mx, my, CR[0] + 18 + font.width("CRAFTING") + 6, CR[1] + 4, 50, 10)) {
+            uiTip = table ? "3x3 grid: " + (craft.inHideout() ? "you're in a hideout" : "a crafting table is close")
+                    : "2x2 grid: 3x3 needs a crafting table within 6 blocks, or a hideout";
+        }
+        boolean recipesOver = in(mx, my, RECIPES);
+        Kit.blit(g, recipesOver || bookOpen ? "button_small/recipes_hover" : "button_small/recipes_normal", RECIPES[0], RECIPES[1], RECIPES[2], RECIPES[3]);
+        Kit.text(g, font, "RECIPES", RECIPES[0] + 4, RECIPES[1] + 2, bookOpen || recipesOver ? Kit.GOLD_LIGHT : Kit.BONE);
+        // The down (or, while open, up) arrow.
+        int ax = RECIPES[0] + RECIPES[2] - 10;
+        int ay = RECIPES[1] + 4;
+        for (int i = 0; i < 3; i++) {
+            int row = bookOpen ? 2 - i : i;
+            g.fill(ax + i, ay + row, ax + 5 - i, ay + row + 1, bookOpen || recipesOver ? Kit.GOLD_LIGHT : Kit.BONE);
+        }
+        if (recipesOver) {
+            uiTip = bookOpen ? "Close the recipe book" : "Open the recipe book";
+        }
+        if (ghostRecipe != null) {
+            iconButton(g, "pin", PIN[0], PIN[1], 12, true, mx, my, "Pin to HUD: put this recipe's ingredients on your gather list");
+        }
         String sel = shownHover != null ? shownHover : ghostRecipe;
         var recipe = recipeFor(sel);
-        Kit.blit(g, "panel/label", 98, 22, 100, 9);
-        if (recipe != null) {
-            ItemStack out = recipe.getResultItem(minecraft.level.registryAccess());
-            small(g, out.getHoverName().getString().toUpperCase(Locale.ROOT), 101, 23.5f, Kit.GOLD_LIGHT, Math.min(0.75f, 94f / font.width(out.getHoverName().getString())));
-            boolean big = recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe sh && (sh.getWidth() > 2 || sh.getHeight() > 2)
-                    || !(recipe instanceof net.minecraft.world.item.crafting.ShapedRecipe) && recipe.getIngredients().size() > 4;
-            small(g, out.getCount() > 1 ? "Makes " + out.getCount() : "Makes 1", 98, 34, Kit.ASH, 0.75f);
-            small(g, big ? "3x3: crafting table or hideout" : "2x2: anywhere", 98, 42, Kit.ASH, 0.75f);
-        } else {
-            small(g, "PICK A RECIPE", 101, 23.5f, Kit.ASH, 0.75f);
-            small(g, "Its pattern shows in the grid;", 98, 34, Kit.ASH, 0.75f);
-            small(g, "place the items by hand.", 98, 42, Kit.ASH, 0.75f);
-        }
         if (!craft.result().isEmpty()) {
             ghostRecipe = null;
         }
@@ -1304,9 +1387,9 @@ public class TarkovScreen extends Screen {
             int x = GX + (c % 3) * GC;
             int y = GRID_Y + (c / 3) * GC;
             boolean over = cellAt(mx, my) == c || dragging(Loc.craft(c));
-            boolean locked = !craft.table() && (c % 3 == 2 || c / 3 == 2);
+            boolean locked = !table && (c % 3 == 2 || c / 3 == 2);
             ItemStack in = c < craft.grid().size() ? craft.grid().get(c) : ItemStack.EMPTY;
-            if (in.isEmpty() && ghostAt[c] != null && !ghostAt[c].isEmpty()) {
+            if (in.isEmpty() && !locked && ghostAt[c] != null && !ghostAt[c].isEmpty()) {
                 Kit.blit(g, "slot/ghost", x, y, GC, GC);
                 g.renderItem(ghostAt[c], x + 1, y + 1);
                 g.pose().pushPose();
@@ -1325,64 +1408,68 @@ public class TarkovScreen extends Screen {
                 g.renderItemDecorations(font, in, x + 1, y + 1);
             }
         }
-        Kit.blit(g, craft.result().isEmpty() ? "progress/arrow_empty" : "progress/arrow_full", 156 - 2, 76, 10, 15);
+        Kit.blit(g, craft.result().isEmpty() ? "progress/arrow_empty" : "progress/arrow_full", 192, 63, 22, 15);
         boolean resultHover = overResult(mx, my);
-        Kit.blit(g, craft.result().isEmpty() ? "slot/result" : "slot/result_ready", RESULT_X, RESULT_Y, 26, 26);
-        if (resultHover && !craft.result().isEmpty()) {
-            g.renderOutline(RESULT_X, RESULT_Y, 26, 26, Kit.GOLD_LIGHT);
-        }
-        if (!craft.result().isEmpty()) {
+        if (craft.result().isEmpty()) {
+            Kit.blit(g, "slot/result", RESULT_X, RESULT_Y, 26, 26);
+            // Faded icon of what the selected recipe makes, until the pattern matches.
+            if (recipe != null) {
+                ItemStack out = recipe.getResultItem(minecraft.level.registryAccess());
+                g.renderItem(out, RESULT_X + 5, RESULT_Y + 5);
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                Kit.blit(g, "slot/ghost_overlay", RESULT_X + 5, RESULT_Y + 5, 16, 16);
+                g.pose().popPose();
+            }
+        } else {
+            Kit.blit(g, "slot/result_ready", RESULT_X, RESULT_Y, 26, 26);
             g.renderItem(craft.result(), RESULT_X + 5, RESULT_Y + 5);
             g.renderItemDecorations(font, craft.result(), RESULT_X + 5, RESULT_Y + 5);
             if (resultHover) {
+                g.renderOutline(RESULT_X, RESULT_Y, 26, 26, Kit.GOLD_LIGHT);
                 tip = craft.result();
             }
         }
-        boolean clearHover = in(mx, my, RESULT_X, RESULT_Y + 29, 26, 10);
-        Kit.smallButton(g, font, "CLEAR", RESULT_X, RESULT_Y + 29, 26, 10, true, clearHover, false, 0.625f);
+        boolean clearHover = in(mx, my, CLEAR);
+        Kit.button(g, font, "CLEAR", CLEAR[0], CLEAR[1], CLEAR[2], CLEAR[3], true, clearHover, false);
         if (clearHover) {
             uiTip = "Put everything in the grid back";
         }
-
-        // Ingredients: have / need and where each one is.
-        Kit.blit(g, "panel/label", 98, 116, 100, 9);
-        small(g, "INGREDIENTS", 101, 117.5f, Kit.ASH, 0.75f);
+        // NEEDS: one row per ingredient, have / need in Moss, or Blood light with the missing icon when short.
+        small(g, "NEEDS", NEEDS_X, 42, Kit.ASH, 0.75f);
         if (recipe != null) {
-            int y = 128;
-            for (IngredientLine line : ingredientsOf(recipe)) {
-                if (y > 166) {
-                    break;
-                }
-                Kit.slot(g, 98, y, C, Kit.SlotState.NORMAL);
-                g.renderItem(line.display(), 99, y + 1);
+            List<IngredientLine> lines = ingredientsOf(recipe);
+            if (lines.size() > 3) {
+                small(g, "+" + (lines.size() - 3) + " MORE", NEEDS_X + 28, 42, Kit.ASH, 0.75f);
+            }
+            for (int i = 0; i < Math.min(3, lines.size()); i++) {
+                IngredientLine line = lines.get(i);
+                int y = 51 + i * 18;
+                Kit.slot(g, NEEDS_X, y, C, Kit.SlotState.NORMAL);
+                g.renderItem(line.display(), NEEDS_X + 1, y + 1);
                 int have = haveFor(line.ingredient());
                 boolean enough = have >= line.need();
-                small(g, font.plainSubstrByWidth(line.display().getHoverName().getString().toUpperCase(Locale.ROOT), 90), 119, y + 2, Kit.BONE, 0.75f);
-                small(g, where(line.ingredient()), 119, y + 10, Kit.ASH, 0.625f);
-                String hn = have + " / " + line.need();
-                int hw = (int) (font.width(hn) * 0.75f);
+                fitted(g, line.display().getHoverName().getString().toUpperCase(Locale.ROOT), NEEDS_X + 20, y + 2, Kit.BONE, 51, 0.75f);
+                String hn = have + "/" + line.need();
+                small(g, hn, NEEDS_X + 20, y + 10, enough ? Kit.MOSS : Kit.BLOOD_LIGHT, 0.75f);
                 if (!enough) {
-                    Kit.blit(g, "icon/hud/missing", 196 - hw - 11, y + 2, 9, 9);
+                    Kit.blit(g, "icon/hud/missing", NEEDS_X + 22 + (int) (font.width(hn) * 0.75f), y + 9, 9, 9);
                 }
-                small(g, hn, 196 - hw, y + 3, enough ? Kit.MOSS : Kit.BLOOD_LIGHT, 0.75f);
-                y += 18;
+                if (in(mx, my, NEEDS_X, y, C, C)) {
+                    tip = line.display();
+                }
             }
         }
-        small(g, "CLICK RESULT: 1   SHIFT: ALL", 98, 184, Kit.ASH, 0.625f);
-        boolean table = craft.table();
-        Kit.blit(g, table ? "icon/hud/gather_check" : "icon/hud/missing", 98, 194, 9, 9);
-        small(g, table ? (craft.inHideout() ? "HIDEOUT: 3X3" : "CRAFTING TABLE: 3X3") : "2X2 HERE: 3X3 AT A TABLE", 109, 195.5f, table ? Kit.MOSS : Kit.ASH, 0.625f);
-        if (ghostRecipe != null) {
-            boolean pinHover = in(mx, my, 98, 206, 58, 10);
-            Kit.smallButton(g, font, "PIN TO HUD", 98, 206, 58, 10, true, pinHover, false, 0.625f);
-            if (pinHover) {
-                uiTip = "Put this recipe's ingredients on your gather list";
-            }
+        // Hint line.
+        // Hint line under the grid, kept left of NEEDS: the recipe's name (cut if it must be), CLICK: 1, SHIFT: ALL.
+        String keys = "  CLICK: 1  SHIFT: ALL";
+        String hint = "PICK ONE FROM RECIPES";
+        if (recipe != null) {
+            String name = recipe.getResultItem(minecraft.level.registryAccess()).getHoverName().getString().toUpperCase(Locale.ROOT);
+            int room = (int) (118 / 0.625f) - font.width(keys);
+            hint = font.plainSubstrByWidth(name, room) + keys;
         }
-        if (!craft.inHideout()) {
-            small(g, "No hideout here: the Hideout Bench", 98, 222, Kit.GOLD_LIGHT, 0.625f);
-            small(g, "is in the book under its category.", 98, 229, Kit.GOLD_LIGHT, 0.625f);
-        }
+        small(g, hint, GX, 102.5f, Kit.ASH, font.width(hint) * 0.75f <= 118 ? 0.75f : 0.625f);
         return tip;
     }
 
@@ -1392,36 +1479,9 @@ public class TarkovScreen extends Screen {
         return holder != null && holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe r ? r : null;
     }
 
-    /** Where an ingredient is: the first place you have it. */
-    private String where(net.minecraft.world.item.crafting.Ingredient ing) {
-        TetrisNet.Sync s = ClientTetris.sync;
-        for (int i = 0; i < 9; i++) {
-            if (ing.test(minecraft.player.getInventory().items.get(i))) {
-                return "IN QUICK USE";
-            }
-        }
-        String[] names = {"IN POCKETS", "IN RIG", "IN BACKPACK", "IN POUCH"};
-        List<List<Placed>> lists = List.of(s.pockets(), s.rigItems(), s.backpackItems(), s.pouch());
-        for (int k = 0; k < lists.size(); k++) {
-            for (Placed p : lists.get(k)) {
-                if (ing.test(p.stack)) {
-                    return names[k];
-                }
-            }
-        }
-        for (TetrisNet.ContainerView c : s.containers()) {
-            for (Placed p : c.items()) {
-                if (ing.test(p.stack)) {
-                    return "IN STORAGE";
-                }
-            }
-        }
-        return "NOT CARRIED";
-    }
-
     // ------------------------------------------------------------------ the whole tab
 
-    private ItemStack renderInventory(GuiGraphics g, int mx, int my) {
+    private ItemStack renderInventory(GuiGraphics g, int mx, int my, int mouseX, int mouseY) {
         lastMx = mx;
         lastMy = my;
         TetrisNet.Sync s = ClientTetris.sync;
@@ -1433,47 +1493,46 @@ public class TarkovScreen extends Screen {
                 tip = sc.stack();
             }
         }
-
-        ItemStack left = craftMode ? renderCraftZone(g, mx, my) : renderEquipment(g, mx, my, hover);
+        ItemStack left = renderEquipment(g, mx, my, hover);
         if (!left.isEmpty()) {
             tip = left;
         }
+        ItemStack mid = renderCraftZone(g, mx, my);
+        if (!mid.isEmpty()) {
+            tip = mid;
+        }
 
-        // Carried zone: rig, pockets, backpack, each with its own item beside its grid.
-        int cxx = cx();
-        zone(g, cxx, ZONE_Y, 158, ZONE_H);
+        // Player inventory: rig, pockets and backpack, each with its own item beside its grid.
+        zone(g, PI, "PLAYER INVENTORY", null, Kit.BONE);
+        iconButton(g, "sort", 311, PI[1] + 3, 12, true, mx, my, "Sort your grids");
         colScroll = Math.max(0, Math.min(Math.max(0, colContent() - (COL_BOTTOM - COL_TOP)), colScroll));
-        g.enableScissor((int) (ox + cxx * scale), (int) (oy + COL_TOP * scale), (int) (ox + (cxx + 158) * scale), (int) (oy + COL_BOTTOM * scale));
-        boolean sortShown = false;
+        g.enableScissor((int) (ox + PI[0] * scale), (int) (oy + COL_TOP * scale), (int) Math.ceil(ox + (PI[0] + PI[2]) * scale),
+                (int) Math.ceil(oy + COL_BOTTOM * scale));
         for (ColSec sec : colSections()) {
             int y = sec.y - (int) colScroll;
-            Kit.blit(g, "panel/label", secX(), y, 150, 9);
-            small(g, sec.title, secX() + 3, y + 1.5f, sec.kind == 0 ? Kit.BLOOD_LIGHT : Kit.ASH, 0.75f);
+            int labelW = COL_RIGHT - sec.x - (sec.kind == 0 ? 32 : 0);
+            fitted(g, sec.title, sec.x, y + 1, sec.kind == 0 ? Kit.BLOOD_LIGHT : Kit.ASH, labelW, 0.75f);
             switch (sec.kind) {
                 case 0 -> {
-                    boolean over = in(mx, my, secX() + 150 - 28, y, 28, 9) && inCol(my);
-                    Kit.smallButton(g, font, "DROP", secX() + 150 - 28, y, 28, 9, true, over, false, 0.625f);
+                    boolean over = in(mx, my, COL_RIGHT - 28, y, 28, 9) && inCol(my);
+                    Kit.smallButton(g, font, "DROP", COL_RIGHT - 28, y, 28, 9, true, over, false, 0.625f);
                     if (over) {
                         uiTip = "Drop everything that has no room";
                     }
                     List<ItemStack> list = s.unsorted();
                     for (int i = 0; i < list.size(); i++) {
                         Loc loc = Loc.unsorted(i);
-                        slot(g, secX() + (i % 8) * C, y + 11 + (i / 8) * C, C, list.get(i), hover != null && hover.equals(loc), null);
+                        slot(g, sec.x + (i % UNSORTED_COLS) * C, y + 9 + (i / UNSORTED_COLS) * C, C, list.get(i), hover != null && hover.equals(loc), null);
                     }
                 }
                 case 1, 3 -> {
                     equipSlot(g, sec.kind == 1 ? 4 : 5, hover);
                     boolean none = sec.kind == 1 ? s.rig().isEmpty() : s.backpack().isEmpty();
                     if (none) {
-                        small(g, sec.kind == 1 ? "no rig" : "no backpack", secGridX(), y + 16, Kit.DISABLED, 0.75f);
+                        small(g, sec.kind == 1 ? "no rig" : "no backpack", sec.x + 23, y + 15, Kit.DISABLED, 0.75f);
                     }
                 }
                 default -> { }
-            }
-            if (sec.kind != 0 && !sortShown) {
-                sortShown = true;
-                iconButton(g, "sort", secX() + 150 - 10, y, 9, true, inCol(my) ? mx : -1, my, "Sort your grids");
             }
         }
         for (Box b : boxes()) {
@@ -1486,31 +1545,43 @@ public class TarkovScreen extends Screen {
         if (cmax > 0) {
             int span = COL_BOTTOM - COL_TOP;
             int barH = Math.max(10, (int) (span * (double) span / colContent()));
-            Kit.blit(g, "scroll/handle", cxx + 158 - 4, COL_TOP + (int) ((span - barH) * colScroll / cmax), 3, barH);
+            Kit.blit(g, "scroll/handle", COL_RIGHT - 3, COL_TOP + (int) ((span - barH) * colScroll / cmax), 4, barH);
         }
 
         renderStorage(g, mx, my);
 
-        // Quick-use bar, with the auto-refill toggles after it.
-        small(g, "QUICK USE", quX() - 40, 250, Kit.ASH, 0.75f);
+        // Hotbar in its ornate frame; the selected slot glows.
+        Kit.blit(g, "hud/hotbar_frame", HB[0], HB[1], HB[2], HB[3]);
         int selected = minecraft.player.getInventory().selected;
         for (int i = 0; i < 9; i++) {
-            int x = quX() + i * QU_STEP;
+            int x = HB_X + i * HB_STEP;
             boolean over = hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i));
-            slot(g, x, QU_Y, C, stackAt(Loc.hand(i)), over || i == selected, null);
-            Kit.blit(g, "slot/key_badge", x, QU_Y, 6, 7);
-            small(g, String.valueOf(i + 1), x + 1.5f, QU_Y + 1.5f, i == selected ? Kit.GOLD_LIGHT : Kit.BONE, 0.5f);
+            slot(g, x, HB_Y, C, stackAt(Loc.hand(i)), over, null);
+            if (i == selected) {
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 150);
+                Kit.blit(g, "slot/selected_glow", x - 2, HB_Y - 2, 22, 22);
+                g.pose().popPose();
+            }
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 250);
+            Kit.blit(g, "slot/key_badge", x, HB_Y, 6, 7);
+            small(g, String.valueOf(i + 1), x + 1.5f, HB_Y + 1.5f, i == selected ? Kit.GOLD_LIGHT : Kit.BONE, 0.5f);
+            g.pose().popPose();
         }
-        int tx = quX() + 9 * QU_STEP + 4;
-        iconButton(g, "refill", tx, QU_Y + 3, 12, true, mx, my, "Auto-refill the quick-use bar: " + (s.autoRefill() ? "ON" : "OFF"));
+        // Auto-refill toggles beside the frame.
+        iconButton(g, "refill", TOGGLE_X, TOGGLE_Y, 12, true, mx, my, "Auto-refill the hotbar: " + (s.autoRefill() ? "ON" : "OFF"));
         if (s.autoRefill()) {
-            g.renderOutline(tx - 1, QU_Y + 2, 14, 14, Kit.GOLD);
+            g.renderOutline(TOGGLE_X - 1, TOGGLE_Y - 1, 14, 14, Kit.GOLD);
         }
-        boolean overStash = in(mx, my, tx + 16, QU_Y + 3, 12, 12);
-        Kit.buttonBg(g, tx + 16, QU_Y + 3, 12, 12, true, overStash, s.refillFromStash());
-        Kit.blit(g, "icon/tab/stash", tx + 17, QU_Y + 4, 9, 9);
+        boolean overStash = in(mx, my, TOGGLE_X + 16, TOGGLE_Y, 12, 12);
+        Kit.buttonBg(g, TOGGLE_X + 16, TOGGLE_Y, 12, 12, true, overStash, s.refillFromStash());
+        Kit.blit(g, "icon/tab/stash", TOGGLE_X + 17, TOGGLE_Y + 1, 9, 9);
         if (overStash) {
-            uiTip = "Refill from the stash too: " + (s.refillFromStash() ? "ON" : "OFF");
+            uiTip = "Auto-refill from the stash too: " + (s.refillFromStash() ? "ON" : "OFF");
+        }
+        if (statsBesideHotbar()) {
+            renderStats(g, 30, 245, mx, my);
         }
 
         renderFilter(g, mx, my);
@@ -1518,19 +1589,23 @@ public class TarkovScreen extends Screen {
         return tip;
     }
 
-    /** True if a point is on one of the zones or the quick-use bar (a click anywhere else with something held drops it). */
+    /** True if a point is on a zone or the hotbar (a click anywhere else with something held drops it). */
     private boolean onPanel(double x, double y) {
-        return in(x, y, 4, ZONE_Y, craftMode ? 200 : 114, ZONE_H) || in(x, y, cx(), ZONE_Y, 158, ZONE_H) || in(x, y, sx(), ZONE_Y, sw(), ZONE_H)
-                || in(x, y, 0, 240, VW, 30) || y < 18;
+        for (int[] z : new int[][] {EQ, CR, PI, ST, HB}) {
+            if (in(x, y, z[0] - 3, z[1] - 3, z[2] + 6, z[3] + 6)) {
+                return true;
+            }
+        }
+        return in(x, y, TOGGLE_X, TOGGLE_Y, 28, 12) || y < 18;
     }
 
-    /** Clicks on the small controls: book, CAN MAKE NOW, CLEAR, PIN, storage header, tabs, search, toggles. */
+    /** Clicks on the small controls: RECIPES, the book, CLEAR, PIN, the stash header, tabs, search, toggles. */
     private boolean clickControls(double x, double y, int button) {
         TetrisNet.Sync s = ClientTetris.sync;
         List<TetrisNet.ContainerView> cs = s.containers();
         // Storage tabs (right-click renames).
         for (int[] t : storageTabs()) {
-            if (in(x, y, t[1], ZONE_Y + 33, t[2], 14)) {
+            if (in(x, y, t[1], STAB_Y, t[2], 14)) {
                 if (button == 1 && t[0] >= 0) {
                     renameIndex = t[0];
                     renameText = cs.get(t[0]).name();
@@ -1544,32 +1619,35 @@ public class TarkovScreen extends Screen {
         if (button != 0) {
             return false;
         }
-        storageSearchFocused = anyStorage() && in(x, y, sx() + 5, ZONE_Y + 18, sw() - 10, 12);
+        storageSearchFocused = anyStorage() && in(x, y, 339, 40, 130, 12);
         if (storageSearchFocused) {
             searchFocused = false;
             return true;
         }
-        if (craftMode) {
-            searchFocused = in(x, y, BOOK_X, 22, BOOK_W, 12);
+        if (in(x, y, RECIPES)) {
+            toggleBook();
+            return true;
+        }
+        if (ghostRecipe != null && in(x, y, PIN)) {
+            pinRecipe(ghostRecipe);
+            return true;
+        }
+        if (in(x, y, CLEAR)) {
+            dropHeld();
+            ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
+            return true;
+        }
+        if (bookOpen) {
+            searchFocused = in(x, y, BOOK_X, 40, BOOK_W + 2, 12);
             if (searchFocused) {
                 return true;
             }
-            if (in(x, y, BOOK_X, 37, BOOK_W, 10)) {
+            if (in(x, y, BOOK_X, 55, BOOK_W, 10)) {
                 canMakeOnly = !canMakeOnly;
                 bookScroll = 0;
                 return true;
             }
-            if (in(x, y, RESULT_X, RESULT_Y + 29, 26, 10)) {
-                dropHeld();
-                ClientPlayNetworking.send(new TetrisNet.Craft("#clear", 0));
-                return true;
-            }
-            if (ghostRecipe != null && in(x, y, 98, 206, 58, 10)) {
-                pinRecipe(ghostRecipe);
-                return true;
-            }
-            int bottom = ZONE_Y + ZONE_H - 3;
-            if (held.isEmpty() && in(x, y, BOOK_X, BOOK_TOP, BOOK_W, bottom - BOOK_TOP)) {
+            if (held.isEmpty() && in(x, y, BOOK_X, BOOK_TOP, BOOK_W, BOOK_BOTTOM - BOOK_TOP)) {
                 double at = y - BOOK_TOP + bookScroll;
                 for (BookRow r : bookRows()) {
                     if (at >= r.y && at < r.y + r.h) {
@@ -1577,7 +1655,7 @@ public class TarkovScreen extends Screen {
                             if (!COLLAPSED.remove(r.header)) {
                                 COLLAPSED.add(r.header);
                             }
-                        } else if (r.cell.known()) {
+                        } else if (r.cell.known() || r.cell == pinnedBench) {
                             String id = r.cell.holder().id().toString();
                             // Shows the pattern; nothing places items for the player (4.1).
                             ghostRecipe = id.equals(ghostRecipe) ? null : id;
@@ -1588,29 +1666,23 @@ public class TarkovScreen extends Screen {
                 return true;
             }
         }
-        int tx = quX() + 9 * QU_STEP + 4;
-        if (in(x, y, tx, QU_Y + 3, 12, 12)) {
+        if (in(x, y, TOGGLE_X, TOGGLE_Y, 12, 12)) {
             ClientPlayNetworking.send(new TetrisNet.Action(6));
             return true;
         }
-        if (in(x, y, tx + 16, QU_Y + 3, 12, 12)) {
+        if (in(x, y, TOGGLE_X + 16, TOGGLE_Y, 12, 12)) {
             ClientPlayNetworking.send(new TetrisNet.Action(7));
             return true;
         }
+        if (in(x, y, 311, PI[1] + 3, 12, 12)) {
+            ClientPlayNetworking.send(new TetrisNet.Action(0));
+            return true;
+        }
         if (inCol(y)) {
-            boolean sortDone = false;
             for (ColSec sec : colSections()) {
-                int sy = sec.y - (int) colScroll;
-                if (sec.kind == 0 && in(x, y, secX() + 150 - 28, sy, 28, 9)) {
+                if (sec.kind == 0 && in(x, y, COL_RIGHT - 28, sec.y - (int) colScroll, 28, 9)) {
                     ClientPlayNetworking.send(new TetrisNet.Action(2));
                     return true;
-                }
-                if (sec.kind != 0 && !sortDone) {
-                    sortDone = true;
-                    if (in(x, y, secX() + 150 - 10, sy, 9, 9)) {
-                        ClientPlayNetworking.send(new TetrisNet.Action(0));
-                        return true;
-                    }
                 }
             }
         }
@@ -1618,16 +1690,16 @@ public class TarkovScreen extends Screen {
             boolean hideout = s.stash();
             boolean chestTab = storageTab >= 0 || !hideout;
             int chest = storageTab >= 0 ? storageTab : 0;
-            int bx = sx() + sw() - 16;
-            if (in(x, y, bx, ZONE_Y + 3, 12, 12)) {
+            int by = ST[1] + 3;
+            if (in(x, y, stashButtonX(0), by, 12, 12)) {
                 if (chestTab && chest < cs.size()) {
                     filterOpen = filterOpen == chest ? -1 : chest;
-                    filterX = sx() + sw() - FILTER_W - 4;
+                    filterX = ST[0] + ST[2] - FILTER_W - 4;
                     filterY = ZONE_Y + 17;
                 }
                 return true;
             }
-            if (in(x, y, bx - 14, ZONE_Y + 3, 12, 12)) {
+            if (in(x, y, stashButtonX(1), by, 12, 12)) {
                 if (chestTab && chest < cs.size()) {
                     ClientPlayNetworking.send(new TetrisNet.ContainerAction(chest, 0, 0));
                 } else {
@@ -1635,13 +1707,7 @@ public class TarkovScreen extends Screen {
                 }
                 return true;
             }
-            if (!craftMode && in(x, y, bx - 28, ZONE_Y + 3, 12, 12)) {
-                if (hideout) {
-                    ClientPlayNetworking.send(new TetrisNet.Action(1));
-                }
-                return true;
-            }
-            if (!craftMode && in(x, y, bx - 42, ZONE_Y + 3, 12, 12)) {
+            if (in(x, y, stashButtonX(2), by, 12, 12)) {
                 if (chestTab && chest < cs.size()) {
                     ClientPlayNetworking.send(new TetrisNet.ContainerAction(chest, 1, 0));
                 } else {
@@ -1651,8 +1717,26 @@ public class TarkovScreen extends Screen {
                 }
                 return true;
             }
+            if (in(x, y, stashButtonX(3), by, 12, 12)) {
+                if (hideout) {
+                    ClientPlayNetworking.send(new TetrisNet.Action(1));
+                }
+                return true;
+            }
+            if (in(x, y, stashButtonX(4), by, 12, 12)) {
+                if (!cs.isEmpty()) {
+                    ClientPlayNetworking.send(new TetrisNet.Action(9));
+                }
+                return true;
+            }
         }
         return false;
+    }
+
+    private void toggleBook() {
+        bookOpen = !bookOpen;
+        searchFocused = false;
+        bookScroll = 0;
     }
 
     /** A click on the storage grid: pick a stack up, or put what you hold away (into the tab's chest, or by filters on ALL). */
@@ -1685,7 +1769,7 @@ public class TarkovScreen extends Screen {
         return true;
     }
 
-    /** The station row (top right, inside a hideout): kind, x, width. */
+    /** The station row (top right, inside a hideout): kind, x, width, index. */
     private List<Object[]> stationButtons() {
         List<Object[]> out = new ArrayList<>();
         if (ClientTarkov.raid.state() != 1) {
@@ -1716,59 +1800,9 @@ public class TarkovScreen extends Screen {
 
     // ================================================================== crafting
 
-    private List<TetrisNet.CraftEntry> filtered() {
-        String q = search.toLowerCase(Locale.ROOT);
-        List<TetrisNet.CraftEntry> out = new ArrayList<>();
-        for (TetrisNet.CraftEntry e : ClientTetris.craft.entries()) {
-            if (q.isEmpty() || e.result().getHoverName().getString().toLowerCase(Locale.ROOT).contains(q)) {
-                out.add(e);
-            }
-        }
-        return out;
-    }
-
-    /** A line in the CRAFT list: a category header (entry null) or a recipe. */
-    private record CraftRow(StorageCategory header, int count, TetrisNet.CraftEntry entry, int y, int h) {}
-
-    private static final int HEAD = 13;
-    /** Categories folded shut in the CRAFT list; kept while the game runs. */
+    /** Categories folded shut in the recipe book; kept while the game runs. */
     private static final java.util.Set<StorageCategory> COLLAPSED = java.util.EnumSet.noneOf(StorageCategory.class);
 
-    /**
-     * The CRAFT list grouped by category, with each row's offset from the top. Outside a hideout the Hideout Bench
-     * stays first, above the groups.
-     */
-    private List<CraftRow> craftRows() {
-        List<TetrisNet.CraftEntry> list = filtered();
-        List<CraftRow> rows = new ArrayList<>();
-        int y = 0;
-        String bench = com.cavmkii.seancraft.SeanCraft.id("hideout_bench").toString();
-        if (!ClientTetris.craft.inHideout() && !list.isEmpty() && list.get(0).id().equals(bench)) {
-            rows.add(new CraftRow(null, 0, list.remove(0), y, ROW));
-            y += ROW + 2;
-        }
-        java.util.Map<StorageCategory, List<TetrisNet.CraftEntry>> groups = new java.util.EnumMap<>(StorageCategory.class);
-        for (TetrisNet.CraftEntry e : list) {
-            groups.computeIfAbsent(StorageCategory.of(e.result()), k -> new ArrayList<>()).add(e);
-        }
-        for (var group : groups.entrySet()) {
-            rows.add(new CraftRow(group.getKey(), group.getValue().size(), null, y, HEAD));
-            y += HEAD;
-            // A search shows matches even in folded categories.
-            if (COLLAPSED.contains(group.getKey()) && search.isEmpty()) {
-                y += 2;
-                continue;
-            }
-            for (TetrisNet.CraftEntry e : group.getValue()) {
-                rows.add(new CraftRow(null, 0, e, y, ROW));
-                y += ROW;
-            }
-            y += 2;
-        }
-        return rows;
-    }
-
-    /** Puts a recipe's ingredients on the gather list. */
     /** Recipe whose pattern is drawn as a ghost in the CRAFTING grid, or null. */
     private String ghostRecipe;
 
@@ -1813,15 +1847,6 @@ public class TarkovScreen extends Screen {
         }
     }
 
-    private static final int LIST_W = 250;
-    private static final int SEARCH_X = 100;
-    /** INVENTORY sub-view: 0 the inventory with its crafting grid, 1 the recipe book (every recipe). */
-    private int craftView;
-    /** The recipe book view's own layout. */
-    private static final int PX = 262;
-    /** The crafting book (what you can make now) starts shut, like vanilla's recipe book. */
-    private static boolean listFolded = true;
-
     private int cellAt(double x, double y) {
         if (x < GX || x >= GX + 3 * GC || y < GRID_Y || y >= GRID_Y + 3 * GC) {
             return -1;
@@ -1833,50 +1858,9 @@ public class TarkovScreen extends Screen {
         return x >= RESULT_X && x < RESULT_X + 26 && y >= RESULT_Y && y < RESULT_Y + 26;
     }
 
-    private void subTabs(GuiGraphics g, int x0, int mx, int my) {
-        for (int v = 0; v < 2; v++) {
-            int bx = x0 + v * 48;
-            boolean active = craftView == v;
-            boolean over = mx >= bx && mx < bx + 44 && my >= 0 && my < 14;
-            Kit.button(g, font, v == 0 ? "CRAFT" : "RECIPES", bx, 0, 44, 14, true, over && !active, active);
-        }
-    }
-
-    private int subTabAt(int x0, double x, double y) {
-        for (int v = 0; v < 2; v++) {
-            if (x >= x0 + v * 48 && x < x0 + v * 48 + 44 && y >= 0 && y < 14) {
-                return v;
-            }
-        }
-        return -1;
-    }
-
-    private void searchBox(GuiGraphics g, int x, int y, int w, int h) {
-        Kit.blit(g, searchFocused ? "text_field/focused" : "text_field/normal", x, y, w, h);
-        String shown = search.isEmpty() && !searchFocused ? "Search..." : search + (searchFocused && ticks / 6 % 2 == 0 ? "_" : "");
-        g.drawString(font, font.plainSubstrByWidth(shown, w - 6, true), x + 4, y + (h - 8) / 2,
-                search.isEmpty() && !searchFocused ? Kit.ASH : Kit.BONE, false);
-    }
-
-
-    private ItemStack renderCrafting(GuiGraphics g, int mx, int my) {
-        if (craftView == 1) {
-            subTabs(g, 0, mx, my);
-            searchBox(g, SEARCH_X, 0, LIST_W - SEARCH_X, 14);
-            return renderRecipes(g, mx, my);
-        }
-        return renderInventory(g, mx, my);
-    }
-
-    // ================================================================== recipe book
-
     private ItemStack hoverStack = ItemStack.EMPTY;
-    private double recipeScroll;
-    private net.minecraft.resources.ResourceLocation selectedRecipe;
     private List<RecipeSection> recipeCache;
     private int recipeCacheTick = -1000;
-    private static final int RCELL = 18;
-    private static final int RCOLS = LIST_W / RCELL;
 
     private record RecipeCell(net.minecraft.world.item.crafting.RecipeHolder<net.minecraft.world.item.crafting.CraftingRecipe> holder,
             ItemStack result, boolean known) {}
@@ -1911,43 +1895,6 @@ public class TarkovScreen extends Screen {
         });
         recipeCache = out;
         return out;
-    }
-
-    private List<RecipeSection> visibleSections() {
-        String q = search.toLowerCase(Locale.ROOT);
-        if (q.isEmpty()) {
-            return recipeSections();
-        }
-        List<RecipeSection> out = new ArrayList<>();
-        for (RecipeSection sec : recipeSections()) {
-            List<RecipeCell> cells = new ArrayList<>();
-            for (RecipeCell c : sec.cells) {
-                if (c.known && c.result.getHoverName().getString().toLowerCase(Locale.ROOT).contains(q)) {
-                    cells.add(c);
-                }
-            }
-            if (!cells.isEmpty()) {
-                out.add(new RecipeSection(sec.category, cells));
-            }
-        }
-        return out;
-    }
-
-    private RecipeCell recipeAt(double x, double y) {
-        int top = 20 - (int) recipeScroll;
-        if (x < 0 || x >= RCOLS * RCELL || y < 20 || y >= H) {
-            return null;
-        }
-        for (RecipeSection sec : visibleSections()) {
-            int rows = (sec.cells.size() + RCOLS - 1) / RCOLS;
-            int gridTop = top + 11;
-            if (y >= gridTop && y < gridTop + rows * RCELL) {
-                int i = (int) ((y - gridTop) / RCELL) * RCOLS + (int) (x / RCELL);
-                return i < sec.cells.size() ? sec.cells.get(i) : null;
-            }
-            top = gridTop + rows * RCELL + 4;
-        }
-        return null;
     }
 
     /** What a recipe takes, merged: each line shows an item you have if any option matches, else the first option. */
@@ -1991,169 +1938,6 @@ public class TarkovScreen extends Screen {
         return n;
     }
 
-    private static final int REC_BTN_Y = 146;
-    private static final int TRACK_Y = 166;
-
-    private ItemStack renderRecipes(GuiGraphics g, int mx, int my) {
-        ItemStack tip = ItemStack.EMPTY;
-        List<RecipeSection> sections = visibleSections();
-        int total = 0;
-        for (RecipeSection sec : sections) {
-            total += 11 + ((sec.cells.size() + RCOLS - 1) / RCOLS) * RCELL + 4;
-        }
-        recipeScroll = Math.max(0, Math.min(Math.max(0, total - (H - 20)), recipeScroll));
-        RecipeCell hovered = recipeAt(mx, my);
-        g.enableScissor((int) ox, (int) (oy + 20 * scale), (int) (ox + LIST_W * scale), (int) (oy + H * scale));
-        int top = 20 - (int) recipeScroll;
-        for (RecipeSection sec : sections) {
-            int known = 0;
-            for (RecipeCell c : sec.cells) {
-                known += c.known ? 1 : 0;
-            }
-            g.drawString(font, sec.category.label.toUpperCase(Locale.ROOT) + "  " + known + "/" + sec.cells.size(), 0, top + 1, Kit.ASH, false);
-            int gridTop = top + 11;
-            for (int i = 0; i < sec.cells.size(); i++) {
-                RecipeCell c = sec.cells.get(i);
-                int x = (i % RCOLS) * RCELL;
-                int y = gridTop + (i / RCOLS) * RCELL;
-                if (y + RCELL < 20 || y > H) {
-                    continue;
-                }
-                boolean sel = c.known && c.holder.id().equals(selectedRecipe);
-                Kit.slot(g, x, y, RCELL, sel ? Kit.SlotState.SELECTED : c == hovered ? Kit.SlotState.HOVER : !c.known ? Kit.SlotState.LOCKED : Kit.SlotState.NORMAL);
-                if (c.known) {
-                    g.renderItem(c.result, x + 1, y + 1);
-                    if (c == hovered) {
-                        tip = c.result;
-                        hoverRecipe = c.holder.id().toString();
-                    }
-                } else {
-                    g.drawString(font, "?", x + 6, y + 5, Kit.DISABLED, false);
-                }
-            }
-            top = gridTop + ((sec.cells.size() + RCOLS - 1) / RCOLS) * RCELL + 4;
-        }
-        g.disableScissor();
-        if (hovered != null && !hovered.known) {
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 400);
-            Kit.hudPanel(g, mx + 6, my - 13, 44, 14);
-            g.drawString(font, "??????", mx + 9, my - 10, Kit.ASH, false);
-            g.pose().popPose();
-        }
-
-        // Selected recipe.
-        g.drawString(font, "RECIPE", PX, 2, Kit.ASH, false);
-        RecipeCell sel = null;
-        for (RecipeSection sec : recipeSections()) {
-            for (RecipeCell c : sec.cells) {
-                if (c.holder.id().equals(selectedRecipe)) {
-                    sel = c;
-                }
-            }
-        }
-        if (sel == null) {
-            g.drawWordWrap(font, Component.literal("Click a discovered recipe. You discover recipes by carrying one of their ingredients."),
-                    PX, 16, W - PX, Kit.ASH);
-        } else {
-            g.renderItem(sel.result, PX, 14);
-            g.renderItemDecorations(font, sel.result, PX, 14);
-            g.drawString(font, font.plainSubstrByWidth(sel.result.getHoverName().getString(), W - PX - 22), PX + 20, 18, Kit.BONE, false);
-            int ly = 36;
-            for (IngredientLine line : ingredientsOf(sel.holder.value())) {
-                if (ly > REC_BTN_Y - 12) {
-                    break;
-                }
-                int have = haveFor(line.ingredient);
-                g.pose().pushPose();
-                g.pose().translate(PX, ly - 1, 0);
-                g.pose().scale(0.625f, 0.625f, 1);
-                g.renderItem(line.display, 0, 0);
-                g.pose().popPose();
-                g.drawString(font, font.plainSubstrByWidth(line.display.getHoverName().getString(), W - PX - 50), PX + 13, ly, Kit.BONE, false);
-                String c = have + "/" + line.need;
-                g.drawString(font, c, W - font.width(c), ly, have >= line.need ? Kit.MOSS : Kit.BLOOD_LIGHT, false);
-                ly += 11;
-            }
-            boolean over = mx >= PX && mx < PX + 80 && my >= REC_BTN_Y && my < REC_BTN_Y + 14;
-            Kit.button(g, font, "PIN TO HUD", PX, REC_BTN_Y, 80, 14, true, over, false);
-        }
-
-        // Tracker.
-        g.drawString(font, "TRACKING", PX, TRACK_Y, Kit.ASH, false);
-        g.pose().pushPose();
-        g.pose().translate(PX + 52, TRACK_Y + 1, 0);
-        g.pose().scale(0.75f, 0.75f, 1);
-        g.drawString(font, "press T on any item to add", 0, 0, Kit.ASH, false);
-        g.pose().popPose();
-        List<ClientTracker.Entry> entries = ClientTracker.entries();
-        for (int i = 0; i < entries.size(); i++) {
-            ClientTracker.Entry e = entries.get(i);
-            int y = TRACK_Y + 11 + i * 9;
-            if (y > H - 8) {
-                break;
-            }
-            int have = ClientTracker.have(e);
-            g.pose().pushPose();
-            g.pose().translate(PX, y - 1, 0);
-            g.pose().scale(0.5f, 0.5f, 1);
-            g.renderItem(new ItemStack(e.item()), 0, 0);
-            g.pose().popPose();
-            g.pose().pushPose();
-            g.pose().translate(PX + 10, y, 0);
-            g.pose().scale(0.75f, 0.75f, 1);
-            g.drawString(font, font.plainSubstrByWidth(e.name(), 80), 0, 0, Kit.BONE, false);
-            String c = have + "/" + e.goal();
-            g.drawString(font, c, 112, 0, have >= e.goal() ? Kit.MOSS : Kit.BONE, false);
-            g.pose().popPose();
-            String[] marks = {"-", "+", "x"};
-            for (int b = 0; b < 3; b++) {
-                int bx = W - 30 + b * 10;
-                boolean over = mx >= bx && mx < bx + 9 && my >= y - 1 && my < y + 7;
-                Kit.buttonBg(g, bx, y - 1, 9, 8, true, over, false);
-                g.drawString(font, marks[b], bx + 2, y - 1, over ? Kit.GOLD_LIGHT : Kit.BONE, false);
-            }
-        }
-        return tip;
-    }
-
-    private boolean clickRecipes(double x, double y, int button) {
-        RecipeCell cell = recipeAt(x, y);
-        if (cell != null) {
-            if (cell.known) {
-                selectedRecipe = cell.holder.id();
-                // Discovered recipes show their ghost pattern in the grid.
-                ghostRecipe = selectedRecipe.toString();
-            }
-            return true;
-        }
-        if (selectedRecipe != null && y >= REC_BTN_Y && y < REC_BTN_Y + 14) {
-            if (x >= PX && x < PX + 80) {
-                pinRecipe(selectedRecipe.toString());
-                return true;
-            }
-        }
-        List<ClientTracker.Entry> entries = ClientTracker.entries();
-        for (int i = 0; i < entries.size(); i++) {
-            int ty = TRACK_Y + 11 + i * 9;
-            for (int b = 0; b < 3; b++) {
-                int bx = W - 30 + b * 10;
-                if (x >= bx && x < bx + 9 && y >= ty - 1 && y < ty + 7) {
-                    int step = hasShiftDown() ? 10 : 1;
-                    if (b == 0) {
-                        ClientTracker.change(i, -step);
-                    } else if (b == 1) {
-                        ClientTracker.change(i, step);
-                    } else {
-                        ClientTracker.remove(i);
-                    }
-                    return true;
-                }
-            }
-        }
-        return true;
-    }
-
     // ================================================================== skills
 
     // ================================================================== input
@@ -2192,18 +1976,6 @@ public class TarkovScreen extends Screen {
                 } else {
                     ClientPlayNetworking.send(new com.cavmkii.seancraft.tarkov.TarkovNet.OpenStation(StationTabs.stations.positions().get((int) st[3])));
                 }
-                return true;
-            }
-        }
-        if (tab == INVENTORY) {
-            int[] cr = craftToggle();
-            if (in(mouseX, mouseY, cr[0], cr[1], cr[2], cr[3])) {
-                dropHeld();
-                craftMode = !craftMode;
-                colScroll = 0;
-                storageScroll = 0;
-                searchFocused = false;
-                ClientPlayNetworking.send(new TetrisNet.Craft("", 0));
                 return true;
             }
         }
@@ -2377,7 +2149,7 @@ public class TarkovScreen extends Screen {
         if (clickControls(x, y, button)) {
             return true;
         }
-        if (craftMode && overResult(x, y)) {
+        if (overResult(x, y)) {
             if (!craft.result().isEmpty() && held.isEmpty()) {
                 ClientPlayNetworking.send(new TetrisNet.Craft("#grid", hasShiftDown() ? 64 : 1));
             }
@@ -2422,11 +2194,11 @@ public class TarkovScreen extends Screen {
         if (tab == INVENTORY) {
             double x = vx(mouseX);
             double y = vy(mouseY);
-            if (craftMode && in(x, y, BOOK_X, BOOK_TOP, BOOK_W + 4, ZONE_Y + ZONE_H - BOOK_TOP)) {
+            if (bookOpen && in(x, y, BOOK[0], BOOK[1], BOOK[2], BOOK[3])) {
                 bookScroll -= scrollY * BOOK_ROW;
-            } else if (in(x, y, cx(), ZONE_Y, 158, ZONE_H)) {
+            } else if (in(x, y, PI)) {
                 colScroll -= scrollY * 18;
-            } else if (in(x, y, sx(), ZONE_Y, sw(), ZONE_H)) {
+            } else if (in(x, y, ST)) {
                 storageScroll -= scrollY * 18;
             }
         }
@@ -2476,6 +2248,10 @@ public class TarkovScreen extends Screen {
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && !held.isEmpty()) {
             dropHeld();
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && tab == INVENTORY && bookOpen) {
+            toggleBook();
             return true;
         }
         if ((tab == GEAR || tab == CRAFTING) && keyCode == GLFW.GLFW_KEY_R && !held.isEmpty()) {

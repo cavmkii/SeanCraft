@@ -217,7 +217,7 @@ public final class Food {
             regen *= Rest.regenMultiplier(player);
             if (regen > 0 && player.getHealth() < player.getMaxHealth()) {
                 // heal() is on the 5x scale, and these numbers already are.
-                player.heal(regen / Damage.SCALE);
+                player.heal(regen / Damage.scale());
             }
             ServerPlayNetworking.send(player, new Sync(next));
         }

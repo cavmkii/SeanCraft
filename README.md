@@ -22,21 +22,21 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 |---|---|
 | E or J | Inventory screen (INVENTORY tab) |
 | H | Inventory screen, STATUS tab |
-| K | Inventory screen, SKILLS tab (passive web, level, attributes, skills) |
+| K | Inventory screen, CHARACTER tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
 | T (over an item, in the inventory screen) | Adds it to your gather list |
 
-The inventory screen has three tabs: INVENTORY, STATUS and SKILLS. INVENTORY is split into three zones: what you have on, what you carry, and what's stored.
-  - **Left (equipped):** your equipment in boxes around a body, the secure pouch (its grid is kept on death), and your load, health, stamina, and Rage or mana if your skills use them.
-  - **Middle (carried):** your rig, pockets and backpack, each with its own item beside its grid. It scrolls when it's taller than the screen. The sort icon on the first label sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
-  - **Right (stored):** the hideout's storage, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and filter, sort, STASH ALL and TAKE ALL icons. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
-  - **Bottom:** the quick-use bar (your hotbar) with number badges, then the auto-refill toggles.
-  - **CRAFT** (the button after the tabs) swaps the equipment zone for crafting and squeezes storage to 5 columns, so you can drag stuff in from your bags or storage. Right-clicking a crafting table opens it with CRAFT already on.
+The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY has everything on one screen:
+  - **Left (equipment):** your gear in boxes beside your actual character, who turns to follow the mouse. OFF is your off-hand, and MAIN shows whatever's in your selected hotbar slot. Under that, the secure pouch (its grid is kept on death), then your load and class, health, stamina, and Rage or mana if your skills use them. Hover the load for what it's costing you.
+  - **Middle top (crafting):** the crafting grid, always there. No mode to switch on. See Crafting below.
+  - **Middle bottom (player inventory):** your rig and pockets, with the backpack beside them, each with its own item next to its grid. A big backpack that won't fit beside them goes underneath, and the zone scrolls. The sort icon on the title sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
+  - **Right (stash):** the hideout's stash, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and REFILL STACKS, STASH ALL, TAKE ALL, sort and filter icons on its title. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
+  - **Bottom:** your hotbar in its own frame with number badges, the selected slot glowing, then the auto-refill toggles.
   - **Station row** (top right, in a hideout only): one button per station in that hideout. Click one to open it; the open one shows its name.
-  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip, and item tooltips add size, stack size, durability and weight. SKILLS is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip. Item tooltips go name, what it does, then use time, size and stack size, durability, part levels, weight, which module you need to craft it, and the key hints. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -148,7 +148,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
   - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
   - Each one after the first in a line takes the empty one below it in the centre of its pattern, so you're trading up, not starting over.
-- **Chests and barrels** open on the INVENTORY tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them.
+- **Chests and barrels** open on the INVENTORY tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them. REFILL STACKS tops up the part stacks you already carry (arrows, planks, bandages...) to full from the open chest, or from the whole stash in a hideout. It never hands you anything you weren't already carrying.
 - **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
 - **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
 - **Naming chests.** Click a chest's name to rename it, then hit Enter. The name shows up next to a picture of the block, so you can tell a chest from a barrel at a glance.
@@ -158,16 +158,16 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
 - **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
 - **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** Turn on CRAFT on the INVENTORY tab (or right-click a crafting table). The grid is 2x2 out in the world and 3x3 at a crafting table or in your hideout. On the left is the recipe book: search, a CAN MAKE NOW box, categories, and every recipe, with ?????? for ones you haven't found. Pick one and its pattern shows as faded icons in the grid, with an ingredient list under it: how many you have, how many you need, and where they are (quick use, pockets, storage...). There's no craft button and nothing fills the grid for you; you lay it out yourself and click the result.
-  - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory, and Shift-click the result to craft as many as you can. The same drag works on the hotbar.
-  - Click a category heading to fold it shut, or click it again to open it.
-  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out. The Hideout Bench and Weapon Bench books do the same. Have/need counts include your hotbar, grids and stash. PIN TO HUD puts the ingredients on your gather list.
-  - PIN TO HUD under the result (while a recipe is picked) puts its ingredients on your gather list.
+- **Crafting.** The grid sits at the top middle of the INVENTORY tab. It's 2x2 out in the world and 3x3 at a crafting table or in your hideout (the title says which). RECIPES opens the recipe book over the equipment side, so your bags and the stash stay in view while you drag stuff in: search, a CAN MAKE NOW box, folding categories, and every recipe, with ?????? for ones you haven't found. Right-clicking a crafting table opens the inventory with the book already open. RECIPES again, or Esc, closes it.
+  - Pick a recipe and its pattern shows as faded icons in the grid, with a faded result. NEEDS beside the result lists each ingredient with have / need, green when you've got enough, red with an X when you're short. There's no craft button and nothing fills the grid for you; you lay it out yourself and click the result for one, or Shift-click for as many as you can.
+  - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory. The same drag works on the hotbar. CLEAR puts everything in the grid back.
+  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out. The Hideout Bench and Weapon Bench books do the same. Have/need counts include your hotbar, grids and stash.
+  - The pin button next to RECIPES (while a recipe is picked) puts its ingredients on your gather list.
   - Anything left in the grid goes back when you close the screen.
-  - The recipe book shows every recipe, sorted by category. The ones you haven't found yet show up as ??????. You find a recipe by picking up one of its ingredients. Click a recipe to see what it needs and how much of it you have; it shows as a ghost in the grid so you can lay it out yourself. PIN TO HUD tracks the ingredients. Clicking a recipe in the crafting book does the same ghost.
+  - You find a recipe by picking up one of its ingredients. Recipes that need a 3x3 grid show a lock while you only have 2x2.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
-  - Outside a hideout, the tab tells you how to make a Hideout Bench and pins it to the top of the list.
-- **Gather list.** It's a to-do list for materials. Pin a recipe from CRAFT or RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
+  - Outside a hideout, the Hideout Bench is pinned to the top of the book.
+- **Gather list.** It's a to-do list for materials. Pin a recipe with the pin button by RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
 - **Ammo.** Bows and crossbows pull arrows from your rig, pockets or backpack.
 
 ### Health
@@ -312,7 +312,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   | | Divine Shield (30, 25 s) | Shield yourself or the player you're looking at (8 blocks) for 25% of max health for 6 s; no new bleeds or fractures while it holds | 30% / 8 s / knocks monsters back when it breaks |
   | | Judgment (35, 16 s) | 0.8 s cast, then a second later a pillar where you're aiming (up to 20 blocks): 2.5×power spirit in 3 blocks, double on anything under 25% health | 3× / radius 4 / kills anything but a boss under 15% |
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
-- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the SKILLS tab.
+- **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the CHARACTER tab.
 - **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
 - **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
 - **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.
@@ -401,6 +401,10 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Raid.HideoutSpacing` (500), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
   - `Raid.ThreatMinutes`: when each threat level starts (default `5,20,40,60`).
   - `Spawn.*`: number of spawn points, distance (1000), safe radius, restock time. A config still on the old 400 is moved to 1000.
+  - `Raid.PedestalClearance` (100), `Raid.NetherThreatStart` (20, the raid minute you start at in the Nether, Frontier and Far lands), `Raid.DistanceBands` (`1000,3000,6000`) and `Raid.DistanceCaps` (`4.0,2.5`, the most threat and distance together can multiply a monster's health and damage).
+  - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
+  - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
+  - `Boss.HealthPerPlayer` (85), `Boss.DamagePerPlayer` (10), `Boss.CooldownPerPlayer` (20), all percent per extra player, and `Boss.ScalingCap` (6 players).
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.

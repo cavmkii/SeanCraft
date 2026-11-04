@@ -132,7 +132,15 @@ public final class SeanCraftClient implements ClientModInitializer {
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             int ash = com.cavmkii.seancraft.client.ui.Kit.ASH & 0xFFFFFF;
             int[] size = com.cavmkii.seancraft.tetris.ItemSize.of(stack);
-            String line = "Size " + size[0] + "x" + size[1] + (stack.getMaxStackSize() > 1 ? "   Stacks to " + stack.getMaxStackSize() : "");
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            String line = "";
+            int use = mc.player == null ? 0 : stack.getUseDuration(mc.player);
+            if (use > 0 && use < 72000 && !(stack.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem)
+                    && !(stack.getItem() instanceof net.minecraft.world.item.ShieldItem)) {
+                float sec = use / 20f;
+                line = "Use " + (sec == Math.round(sec) ? String.valueOf(Math.round(sec)) : String.format("%.1f", sec)) + " s   ";
+            }
+            line += "Size " + size[0] + "x" + size[1] + (stack.getMaxStackSize() > 1 ? "   Stack " + stack.getMaxStackSize() : "");
             lines.add(Component.literal(line).withColor(ash));
             if (stack.isDamageableItem() && !type.isAdvanced()) {
                 lines.add(Component.literal("Durability " + (stack.getMaxDamage() - stack.getDamageValue()) + " / " + stack.getMaxDamage()).withColor(ash));
@@ -143,7 +151,14 @@ public final class SeanCraftClient implements ClientModInitializer {
                 String cls = w <= com.cavmkii.seancraft.combat.Load.LIGHT_WEAPON + 0.5 ? "Light" : w >= com.cavmkii.seancraft.combat.Load.HEAVY_WEAPON - 0.5 ? "Heavy" : "Medium";
                 lines.add(Component.literal(cls + " weapon: weighs " + String.format("%.1f", w)).withColor(ash));
             } else if (a > 0) {
-                lines.add(Component.literal("Armor: weighs " + String.format("%.1f", a)).withColor(ash));
+                var load = com.cavmkii.seancraft.client.combat.ClientCombat.load();
+                String share = load.capacity() > 0 ? String.format(" (%d%% of your load)", Math.round(a / load.capacity() * 100)) : "";
+                lines.add(Component.literal("Armor: weighs " + String.format("%.1f", a) + share).withColor(ash));
+            }
+            // The module level needed to craft it (Hideout Bench and module recipes).
+            String gate = moduleGate(stack);
+            if (gate != null) {
+                lines.add(Component.literal(gate + " to craft").withColor(ash));
             }
             if (net.minecraft.client.Minecraft.getInstance().screen instanceof com.cavmkii.seancraft.client.tarkov.TarkovScreen) {
                 lines.add(Component.literal("T: gather list   Shift: to storage").withColor(ash));
@@ -159,8 +174,25 @@ public final class SeanCraftClient implements ClientModInitializer {
                     || BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace().equals("seancraft")
                     && net.minecraft.client.resources.language.I18n.exists("item.seancraft." + BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath() + ".desc")) {
                 String key = "item.seancraft." + BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath() + ".desc";
-                lines.add(1, Component.translatable(key).withStyle(ChatFormatting.GRAY));
+                // What it does, in Bone (UI-SPEC tooltips).
+                lines.add(1, Component.translatable(key).withColor(com.cavmkii.seancraft.client.ui.Kit.BONE & 0xFFFFFF));
             }
         });
+    }
+
+    private static java.util.Map<net.minecraft.world.item.Item, String> gates;
+
+    /** "Medstation 1" for an item a module level unlocks, else null. */
+    private static String moduleGate(net.minecraft.world.item.ItemStack stack) {
+        if (gates == null) {
+            java.util.Map<net.minecraft.world.item.Item, String> map = new java.util.HashMap<>();
+            for (com.cavmkii.seancraft.tarkov.HideoutRecipe r : com.cavmkii.seancraft.tarkov.HideoutRecipe.ALL) {
+                if (r.gate() != null && r.gateLevel() > 0) {
+                    map.putIfAbsent(r.result().get().getItem(), r.gate().label + " " + r.gateLevel());
+                }
+            }
+            gates = map;
+        }
+        return gates.get(stack.getItem());
     }
 }

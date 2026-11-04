@@ -22,7 +22,6 @@ public final class PlayerData {
     public static final int SLOTS = 4;
     public static final int ULTIMATE_SLOT = 3;
     /** Attribute points each level grants, split by use (6.4). */
-    public static final int ATTR_PER_LEVEL = 2;
     public static final int MAX_RANK = 4;
     /** The web's layout version; characters from an older layout get their points back once. */
     static final int WEB_VERSION = 2;
@@ -129,7 +128,7 @@ public final class PlayerData {
                         share.merge(skill.attr, skillXp.getOrDefault(skill, 0.0), Double::sum);
                     }
                 }
-                split(share, ATTR_PER_LEVEL * (level - 1.0), null);
+                split(share, com.cavmkii.seancraft.Cfg.attributePointsPerLevel * (level - 1.0), null);
             }
             webVersion = WEB_VERSION;
         }

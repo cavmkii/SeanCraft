@@ -21,20 +21,25 @@ import net.minecraft.world.item.Items;
  */
 public final class Load {
     public enum Tier {
-        LIGHT("LIGHT", 0, Combat.ROLL_IFRAME_TICKS),
-        MEDIUM("MEDIUM", -0.05, Combat.ROLL_IFRAME_TICKS),
-        HEAVY("HEAVY", -0.15, Combat.ROLL_IFRAME_TICKS / 2),
-        OVERLOADED("OVERLOADED", -0.15, 0);
+        LIGHT("LIGHT", 0, 0),
+        MEDIUM("MEDIUM", -0.05, 0),
+        HEAVY("HEAVY", -0.15, 1),
+        OVERLOADED("OVERLOADED", -0.15, -1);
 
         public final String label;
         public final double walk;
-        /** Roll invulnerability in ticks (9.6.3); 0 means no roll at all. */
-        public final int rollTicks;
+        /** Which Combat.RollIframeTicks entry applies: 0 light or medium load, 1 heavy, -1 no roll. */
+        private final int rollEntry;
 
-        Tier(String label, double walk, int rollTicks) {
+        Tier(String label, double walk, int rollEntry) {
             this.label = label;
             this.walk = walk;
-            this.rollTicks = rollTicks;
+            this.rollEntry = rollEntry;
+        }
+
+        /** Roll invulnerability in ticks (9.6.3); 0 means no roll at all. */
+        public int rollTicks() {
+            return rollEntry < 0 ? 0 : com.cavmkii.seancraft.Cfg.rollIframeTicks[rollEntry];
         }
     }
 

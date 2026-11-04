@@ -11,12 +11,12 @@ Fabric 1.21.1 mod. Package `com.cavmkii.seancraft`, mod id `seancraft`. The GitH
 - The user is a skeptical expert. Say what you tested in game, what you didn't, and where you deviated from a spec. Keep it short and plain.
 
 ## Layout
-- `client/tarkov/TarkovScreen.java`: the inventory screen (INVENTORY / STATUS / SKILLS).
-  - INVENTORY is a 480x270 virtual canvas with three zones: equipment, carried and storage.
-  - The CRAFT toggle (`craftMode`) swaps the equipment zone for crafting. `Open(3)` (`CRAFT_MODE`) opens it with crafting on.
+- `client/tarkov/TarkovScreen.java`: the inventory screen (INVENTORY / STATUS / CHARACTER).
+  - INVENTORY is a 480x270 virtual canvas laid out to UI-SPEC inventory v5: equipment (EQ), crafting (CR), player inventory (PI), stash (ST) and the hotbar frame (HB). The zone rectangles are constants at the top of the INVENTORY layout section.
+  - Crafting is always on screen. RECIPES (`bookOpen`) draws the recipe book over the equipment zone. `Open(3)` (`CRAFT_MODE`) opens it with the book open, for a crafting table.
   - The station row sits at top right inside a hideout.
 - `tetris/Tetris.java`: the server side of the grids.
-  - Server messages are `TetrisNet.Move`, `QuickMove`, `Action(n)` and `ContainerAction`.
+  - Server messages are `TetrisNet.Move`, `QuickMove`, `Action(n)` and `ContainerAction`. `Action(9)` is REFILL STACKS.
   - `Loc.container(i, -2, 0)` puts something away into container i; i = -1 means route it by the chest filters.
 - `client/ui/Kit.java`: the GUI kit (sprites under `assets/seancraft/textures/gui/sprites`, palette constants).
 - `tarkov/Stations.java` and `client/tarkov/StationTabs.java`: hideout stations.

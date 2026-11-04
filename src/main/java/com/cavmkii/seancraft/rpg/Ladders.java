@@ -26,9 +26,6 @@ import net.minecraft.world.item.ItemStack;
  * weapon, "u:mace" for a weapon unlocked by crossing over, and "on:AGI" for a line joined that way.
  */
 public final class Ladders {
-    public static final double RUNG_2 = 5000;
-    public static final double RUNG_3 = 25000;
-    public static final double CROSSOVER = 1000;
     /** Progress syncs to the client each time it passes a multiple of this, and on every unlock. */
     private static final double SYNC_STEP = 250;
 
@@ -137,10 +134,10 @@ public final class Ladders {
         if (!onLine(d, line)) {
             return 0;
         }
-        if (progress(d, line, 1) < RUNG_2) {
+        if (progress(d, line, 1) < com.cavmkii.seancraft.Cfg.ladderDamage[1]) {
             return 1;
         }
-        return progress(d, line, 2) < RUNG_3 ? 2 : 3;
+        return progress(d, line, 2) < com.cavmkii.seancraft.Cfg.ladderDamage[2] ? 2 : 3;
     }
 
     /** True if the player can craft this weapon family (keys off the ladders are always craftable). */
@@ -181,7 +178,7 @@ public final class Ladders {
         int own = line(d.origin.attr);
         for (int l = 0; l < LINES.length; l++) {
             if (rungs[l] > 1 && onLine(d, l) && rung(d, LINES[l]) == rungs[l] - 1) {
-                double need = rungs[l] == 2 ? RUNG_2 : RUNG_3;
+                double need = rungs[l] == 2 ? com.cavmkii.seancraft.Cfg.ladderDamage[1] : com.cavmkii.seancraft.Cfg.ladderDamage[2];
                 return String.format("%,d / %,d damage with %s rung %d weapons", Math.round(progress(d, l, rungs[l] - 1)), Math.round(need),
                         LINES[l].name(), rungs[l] - 1);
             }
@@ -189,7 +186,7 @@ public final class Ladders {
         if (rungs[own] > 0) {
             return "Climb the " + LINES[own].name() + " ladder to rung " + rungs[own];
         }
-        return String.format("%,d / %,d damage with a found %s", Math.round(d.ladder.getOrDefault("x:" + key, 0.0)), Math.round(CROSSOVER),
+        return String.format("%,d / %,d damage with a found %s", Math.round(d.ladder.getOrDefault("x:" + key, 0.0)), Math.round(com.cavmkii.seancraft.Cfg.ladderDamage[0]),
                 key);
     }
 
@@ -212,7 +209,7 @@ public final class Ladders {
         } else if (rungs[line(d.origin.attr)] == 0) {
             // A weapon from another line.
             sync |= add(d, "x:" + key, amount);
-            if (d.ladder.get("x:" + key) >= CROSSOVER) {
+            if (d.ladder.get("x:" + key) >= com.cavmkii.seancraft.Cfg.ladderDamage[0]) {
                 d.ladder.put("u:" + key, 1.0);
                 for (int l = 0; l < LINES.length; l++) {
                     if (rungs[l] > 0) {
