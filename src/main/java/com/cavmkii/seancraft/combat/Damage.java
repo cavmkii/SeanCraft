@@ -48,10 +48,22 @@ import net.minecraft.resources.ResourceKey;
  * body part; mobs use their armor value through the same formula.
  */
 public final class Damage {
+    /** Damage, healing and mob health are this times vanilla (Combat.DamageScale, 5 by default). */
+    public static float scale() {
+        return (float) com.cavmkii.seancraft.Cfg.damageScale;
+    }
+
+    static float armorK() {
+        return (float) com.cavmkii.seancraft.Cfg.armorK;
+    }
+
+    static float resistK() {
+        return (float) com.cavmkii.seancraft.Cfg.resistK;
+    }
+
     /** Damage, healing and mob health are all 5x vanilla; player health is 300 (5.1). */
-    public static final float SCALE = 5;
-    public static final double PLAYER_BASE_HEALTH = 300;
-    static final float ARMOR_K = 20;
+    // The scale (Combat.DamageScale), base health (Combat.HealthBase) and the K in the armor and resistance
+    // formulas (Combat.ArmorK, Combat.ResistK) are in Cfg.
     static final float PIERCE_IGNORES = 0.25f;
     /** Enchantments as pipeline terms (9.7.1): increased damage per level, spirit share per level, armor ignored per level. */
     static final float SHARPNESS_INCREASED = 0.10f;
@@ -149,24 +161,30 @@ public final class Damage {
             return;
         }
         float fraction = mob.getHealth() / Math.max(1, mob.getMaxHealth());
-        max.addOrReplacePermanentModifier(new AttributeModifier(HEALTH_SCALE, SCALE - 1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+        max.addOrReplacePermanentModifier(new AttributeModifier(HEALTH_SCALE, scale() - 1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         mob.setHealth(mob.getMaxHealth() * fraction);
     }
 
-    /** Players start from 300 max health. The first time, keep how hurt they were rather than leaving them at 20. */
+    /** Players start from Combat.HealthBase (300) max health, keeping how hurt they were when it changes. */
     static void playerHealth(ServerPlayer player) {
         AttributeInstance max = player.getAttribute(Attributes.MAX_HEALTH);
-        if (max == null || max.getModifier(BASE_HEALTH) != null) {
+        if (max == null) {
+            return;
+        }
+        // Combat.HealthBase can change on /seancraft reload, so the modifier follows it.
+        double amount = com.cavmkii.seancraft.Cfg.healthBase - max.getBaseValue();
+        AttributeModifier had = max.getModifier(BASE_HEALTH);
+        if (had != null && had.amount() == amount) {
             return;
         }
         float fraction = player.getHealth() / Math.max(1, player.getMaxHealth());
-        max.addPermanentModifier(new AttributeModifier(BASE_HEALTH, PLAYER_BASE_HEALTH - max.getBaseValue(), AttributeModifier.Operation.ADD_VALUE));
+        max.addOrReplacePermanentModifier(new AttributeModifier(BASE_HEALTH, amount, AttributeModifier.Operation.ADD_VALUE));
         player.setHealth(player.getMaxHealth() * fraction);
     }
 
     /** Healing is on the same scale as damage. */
     public static float heal(float amount) {
-        return amount * SCALE;
+        return amount * scale();
     }
 
     // ================================================================== the pipeline
@@ -183,7 +201,7 @@ public final class Damage {
         // Boss attacks are written on SeanCraft's scale already (8.4.4).
         com.cavmkii.seancraft.boss.BossEntity boss = source.getEntity() instanceof com.cavmkii.seancraft.boss.BossEntity b ? b : null;
         if (boss == null) {
-            amount *= SCALE;
+            amount *= scale();
         }
         if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return amount;
@@ -216,10 +234,10 @@ public final class Damage {
             if (type.physical() && armor > 0) {
                 float pen = breach(source) + (arrowHas(source, BODKIN_TAG) ? BODKIN_PENETRATION : arrowHas(source, BROADHEAD_TAG) ? BROADHEAD_PENETRATION : 0);
                 float x = Traits.effectiveArmor(armor, type == Type.PIERCE, Traits.family(source), pen);
-                dealt *= ARMOR_K / (x + ARMOR_K);
+                dealt *= armorK() / (x + armorK());
             }
             if (type.elemental() && victim instanceof ServerPlayer player) {
-                dealt *= ARMOR_K / (elementPoints(player, type) + ARMOR_K);
+                dealt *= resistK() / (elementPoints(player, type) + resistK());
             }
             total += dealt;
             if (type == Type.BLUNT) {
@@ -232,7 +250,7 @@ public final class Damage {
         if (victim instanceof ServerPlayer player) {
             float points = sourcePoints(player, source);
             if (points > 0) {
-                total *= ARMOR_K / (points + ARMOR_K);
+                total *= resistK() / (points + resistK());
             }
         }
         com.cavmkii.seancraft.boss.Trophies.afterHit(victim, source, total);

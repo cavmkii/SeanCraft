@@ -28,13 +28,9 @@ public final class Combat {
     public static final float ROLL_COST = 20;
     /** Exhausted players get sprint and rolls back once the bar is this full again. */
     public static final float RECOVER_FRACTION = 0.25f;
-    static final float REGEN_PER_SECOND = 25;
     /** Sprinting is the one part of vanilla hunger left, paid in stamina (design doc 11). */
     static final float SPRINT_PER_SECOND = 8;
     static final int REGEN_PAUSE_TICKS = 20;
-    public static final int ROLL_IFRAME_TICKS = 8;
-    /** Combat Roll's recharge, cut from its 4 seconds so stamina is the real limit (9.6.3). */
-    static final float ROLL_RECHARGE_SECONDS = 0.75f;
 
     private static final Map<UUID, State> STATE = new HashMap<>();
 
@@ -66,7 +62,7 @@ public final class Combat {
     }
 
     /** Rolls cost stamina, not hunger, and get no invulnerability from Combat Roll: SeanCraft applies its own. */
-    private static void configureRoll() {
+    public static void configureRoll() {
         ServerConfig config = CombatRollMod.config;
         if (config == null) {
             return;
@@ -74,7 +70,7 @@ public final class Combat {
         config.exhaust_on_roll = 0;
         config.food_level_required = 0;
         config.invulnerable_ticks_upon_roll = 0;
-        config.roll_cooldown = ROLL_RECHARGE_SECONDS;
+        config.roll_cooldown = (float) com.cavmkii.seancraft.Cfg.rollRechargeSeconds;
     }
 
     /**
@@ -163,7 +159,7 @@ public final class Combat {
         if (player.isSprinting() && !player.isCreative() && !player.isPassenger()) {
             spend(player, s, data, SPRINT_PER_SECOND / 20f);
         } else if (player.serverLevel().getGameTime() >= s.regenPausedUntil) {
-            data.stamina = Math.min(max, data.stamina + REGEN_PER_SECOND * com.cavmkii.seancraft.food.Rest.staminaRegenMultiplier(player) / 20f);
+            data.stamina = Math.min(max, data.stamina + (float) com.cavmkii.seancraft.Cfg.staminaRegen * com.cavmkii.seancraft.food.Rest.staminaRegenMultiplier(player) / 20f);
         }
         data.stamina = Math.min(max, data.stamina);
         if (s.exhausted) {
@@ -191,7 +187,7 @@ public final class Combat {
     public static boolean rollDodges(ServerPlayer player, DamageSource source) {
         State s = STATE.get(player.getUUID());
         // The window follows equip load: 8 ticks, 4 under Heavy load (9.6.3).
-        if (s == null || player.serverLevel().getGameTime() - s.rollStart >= Math.max(s.load.rollTicks, 1) || s.load.rollTicks == 0) {
+        if (s == null || player.serverLevel().getGameTime() - s.rollStart >= Math.max(s.load.rollTicks(), 1) || s.load.rollTicks() == 0) {
             return false;
         }
         boolean attack = source.getEntity() != null || source.getDirectEntity() != null;

@@ -1194,6 +1194,48 @@ public final class Tetris {
         rt(player).dirty = true;
     }
 
+    /**
+     * REFILL STACKS (3.4): tops up the partial stacks you carry (hotbar, pockets, rig, backpack, pouch) to full from
+     * the open container or, in a hideout, the whole stash. Never adds an item you aren't already carrying.
+     */
+    private static void refillStacks(ServerPlayer player, InvData data) {
+        List<Shown> shown = containers(player);
+        if (shown.isEmpty()) {
+            return;
+        }
+        List<ItemStack> mine = new ArrayList<>();
+        Inventory inv = player.getInventory();
+        for (int i = 0; i < Inventory.getSelectionSize(); i++) {
+            mine.add(inv.items.get(i));
+        }
+        for (GridId id : GridId.values()) {
+            for (Placed p : data.list(id)) {
+                mine.add(p.stack);
+            }
+        }
+        for (ItemStack stack : mine) {
+            if (stack.isEmpty() || !stack.isStackable() || stack.getCount() >= stack.getMaxStackSize()) {
+                continue;
+            }
+            for (Shown c : shown) {
+                Container box = c.container();
+                for (int slot = 0; slot < box.getContainerSize() && stack.getCount() < stack.getMaxStackSize(); slot++) {
+                    ItemStack there = box.getItem(slot);
+                    if (there.isEmpty() || !ItemStack.isSameItemSameComponents(there, stack)) {
+                        continue;
+                    }
+                    int n = Math.min(there.getCount(), stack.getMaxStackSize() - stack.getCount());
+                    there.shrink(n);
+                    stack.grow(n);
+                    if (there.isEmpty()) {
+                        box.setItem(slot, ItemStack.EMPTY);
+                    }
+                    box.setChanged();
+                }
+            }
+        }
+    }
+
     static void action(ServerPlayer player, int action) {
         Runtime rt = rt(player);
         InvData data = data(player);
@@ -1238,6 +1280,7 @@ public final class Tetris {
             case 3 -> rt.container = null;
             case 4 -> rt.open = true;
             case 8 -> organize(player);
+            case 9 -> refillStacks(player, data);
             case 6 -> data.autoRefill = !data.autoRefill;
             case 7 -> data.refillFromStash = !data.refillFromStash;
             case 5 -> {

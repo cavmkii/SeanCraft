@@ -72,7 +72,9 @@ public final class Hazards {
     /** Below Y 0, a spot at least this lit is a lit tunnel or cavern, not a pit. */
     static final int LIT = 8;
     /** Frozen biomes only count as hazards this far out; frozen and jagged peaks count anywhere. */
-    static final double FROZEN_FAR = Distance.FAR_LANDS.from;
+    static double frozenFar() {
+        return Distance.FAR_LANDS.from();
+    }
     static final int HIGH_PEAKS_Y = 120;
 
     public static final MobEffect WARMTH_EFFECT = new MobEffect(MobEffectCategory.BENEFICIAL, 0xE8743B) {};
@@ -136,7 +138,7 @@ public final class Hazards {
         } else if (biome.is(Biomes.DESERT)) {
             hazard = Hazard.HEAT;
         } else if (biome.is(Biomes.FROZEN_PEAKS) || biome.is(Biomes.JAGGED_PEAKS) && pos.getY() >= HIGH_PEAKS_Y
-                || frozen(biome) && Distance.blocksFromSpawn(level, player.position()) >= FROZEN_FAR) {
+                || frozen(biome) && Distance.blocksFromSpawn(level, player.position()) >= frozenFar()) {
             hazard = Hazard.COLD;
         }
         if (hazard != null && BossSites.nearSite(level, player.position(), 32)) {

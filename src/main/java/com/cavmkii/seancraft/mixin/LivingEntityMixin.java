@@ -79,7 +79,7 @@ public abstract class LivingEntityMixin {
     @Inject(method = "getDamageAfterArmorAbsorb", at = @At("HEAD"), cancellable = true)
     private void seancraft$noVanillaArmor(DamageSource source, float amount, CallbackInfoReturnable<Float> cir) {
         if (!source.is(DamageTypeTags.BYPASSES_ARMOR)) {
-            hurtArmor(source, amount / Damage.SCALE);
+            hurtArmor(source, amount / Damage.scale());
         }
         cir.setReturnValue(amount);
     }

@@ -73,7 +73,9 @@ public final class SkillEffects {
 
     static final double STAFF_SP = 35;
     /** Bow damage of a full draw before the bow's parts (an arrow's 2 at speed 3, on the 9.5 scale). */
-    static final double FULL_DRAW = 2 * 3 * Damage.SCALE;
+    static double fullDraw() {
+        return 2 * 3 * Damage.scale();
+    }
 
     private static final ResourceLocation BERSERK_SPEED = SeanCraft.id("berserk");
     private static final ResourceLocation WHIRL_SLOW = SeanCraft.id("whirlwind");
@@ -224,7 +226,7 @@ public final class SkillEffects {
 
     /** W: the held weapon's damage on the 9.5 scale. */
     static double weapon(ServerPlayer player) {
-        return player.getAttributeValue(Attributes.ATTACK_DAMAGE) * Damage.SCALE;
+        return player.getAttributeValue(Attributes.ATTACK_DAMAGE) * Damage.scale();
     }
 
     /** SP: the staff bolt's 35 times the held crystal's factor; 0 without a wand or staff. */
@@ -248,7 +250,7 @@ public final class SkillEffects {
     static double fullDraw(ServerPlayer player) {
         ItemStack bow = player.getMainHandItem();
         double f = com.cavmkii.seancraft.parts.Parts.modular(bow) ? Math.max(0.05, 1 + com.cavmkii.seancraft.parts.Parts.totals(bow).damage) : 1;
-        return FULL_DRAW * f;
+        return fullDraw() * f;
     }
 
     static boolean boss(LivingEntity e) {
@@ -550,7 +552,7 @@ public final class SkillEffects {
                 float each = (float) (pw * (r >= 4 ? 0.9 : 0.7));
                 float bleedShare = r >= 3 ? 0.45f : 0.3f;
                 for (int i = 0; i < knives; i++) {
-                    SkillProjectile knife = SkillProjectile.bolt(level, player, new ItemStack(Items.IRON_SWORD), each / Damage.SCALE, 0, Damage.Type.SLASH);
+                    SkillProjectile knife = SkillProjectile.bolt(level, player, new ItemStack(Items.IRON_SWORD), each / Damage.scale(), 0, Damage.Type.SLASH);
                     knife.onHit = e -> {
                         if (e.getRandom().nextFloat() < 0.5f) {
                             bleed(player, e, each * bleedShare, 4);
@@ -573,8 +575,8 @@ public final class SkillEffects {
                     if (!player.isAlive()) {
                         return;
                     }
-                    SkillProjectile ball = SkillProjectile.bolt(level, player, new ItemStack(Items.FIRE_CHARGE), blast / Damage.SCALE, radius, Damage.Type.FIRE);
-                    ball.direct = direct / Damage.SCALE;
+                    SkillProjectile ball = SkillProjectile.bolt(level, player, new ItemStack(Items.FIRE_CHARGE), blast / Damage.scale(), radius, Damage.Type.FIRE);
+                    ball.direct = direct / Damage.scale();
                     if (r >= 3) {
                         ball.onImpact = at -> ZONES.add(new Zone(Kind.BURN, level, at, radius, 60, player.getUUID(), r, blast * 0.25f));
                     }

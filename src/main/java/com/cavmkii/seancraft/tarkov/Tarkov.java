@@ -238,7 +238,7 @@ public final class Tarkov {
         }
 
         // The Frontier, the Far lands and the Nether start at threat level 2 (2.3.1).
-        long headStart = (long) (Distance.HEAD_START_MINUTES * 1200);
+        long headStart = (long) (com.cavmkii.seancraft.Cfg.netherThreatStart * 1200);
         if ((band.headStart || level.dimension() == Level.NETHER) && Cfg.raidHostility && now - rt.raidStart < headStart) {
             rt.raidStart = now - headStart;
         }
@@ -366,8 +366,8 @@ public final class Tarkov {
      */
     private static void scale(Mob mob, int stars, Distance band) {
         mob.addTag(BAND_TAG + band.ordinal());
-        double healthBonus = Math.min(band.health + stars, Distance.MAX_HEALTH_MULTIPLIER - 1);
-        double damageBonus = Math.min(band.damage + stars * 0.5, Distance.MAX_DAMAGE_MULTIPLIER - 1);
+        double healthBonus = Math.min(band.health + stars, Cfg.distanceCaps[0] - 1);
+        double damageBonus = Math.min(band.damage + stars * 0.5, Cfg.distanceCaps[1] - 1);
         AttributeInstance health = mob.getAttribute(Attributes.MAX_HEALTH);
         if (health != null && healthBonus > 0) {
             health.addOrReplacePermanentModifier(new AttributeModifier(SeanCraft.id("elite_health"), healthBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));

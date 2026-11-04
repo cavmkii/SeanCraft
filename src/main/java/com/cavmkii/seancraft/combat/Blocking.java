@@ -104,7 +104,7 @@ public final class Blocking {
         }
         float share = blockShare(player, shield) * com.cavmkii.seancraft.parts.Wear.factor(shield);
         float blocked = amount * share;
-        float cost = blocked * com.cavmkii.seancraft.combat.Damage.SCALE / 2;
+        float cost = blocked * com.cavmkii.seancraft.combat.Damage.scale() / 2;
         PlayerData data = Rpg.data(player);
         shield.hurtAndBreak(Math.max(1, (int) blocked), player, player.getUsedItemHand() == net.minecraft.world.InteractionHand.MAIN_HAND
                 ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);

@@ -238,10 +238,10 @@ public final class Rpg {
             data.level++;
             levelled = true;
             // The level's attribute points, split by what you trained during it (6.4).
-            data.split(data.levelProgress, PlayerData.ATTR_PER_LEVEL, data.origin);
+            data.split(data.levelProgress, com.cavmkii.seancraft.Cfg.attributePointsPerLevel, data.origin);
             data.levelProgress.clear();
             String extra = data.level == Specialization.LEVEL ? " You can choose a specialization once you have a tier 1 trophy." : "";
-            toast(player, "Level " + data.level, "+1 web point, +" + PlayerData.ATTR_PER_LEVEL + " attribute points." + extra);
+            toast(player, "Level " + data.level, "+1 web point, +" + com.cavmkii.seancraft.Cfg.attributePointsPerLevel + " attribute points." + extra);
         }
         if (data.level >= PlayerData.MAX_LEVEL) {
             data.xp = 0;

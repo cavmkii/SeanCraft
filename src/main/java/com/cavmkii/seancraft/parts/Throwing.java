@@ -53,7 +53,7 @@ public final class Throwing {
         }
         Family family = Family.stock(stack).family();
         ItemStack thrown = stack.copyWithCount(1);
-        ThrownWeapon entity = new ThrownWeapon(player.level(), sp, thrown, thrownBase(family) * factor(stack) / com.cavmkii.seancraft.combat.Damage.SCALE,
+        ThrownWeapon entity = new ThrownWeapon(player.level(), sp, thrown, thrownBase(family) * factor(stack) / com.cavmkii.seancraft.combat.Damage.scale(),
                 family == Family.BOOMERANG);
         float speed = family == Family.THROWING_KNIFE ? 2.4f : family == Family.BOOMERANG ? 1.8f : 2.0f;
         entity.shootFromRotation(player, player.getXRot(), player.getYRot(), 0, speed, 1f);

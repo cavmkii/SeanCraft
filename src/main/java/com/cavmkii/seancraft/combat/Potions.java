@@ -43,7 +43,7 @@ public final class Potions {
             return 0;
         }
         Long at = DRUNK.getOrDefault(player.getUUID(), Map.of()).get(key(stack));
-        return at == null ? 0 : Math.max(0, at + COOLDOWN_TICKS - player.level().getGameTime());
+        return at == null ? 0 : Math.max(0, at + (long) (com.cavmkii.seancraft.Cfg.potionCooldownMinutes * 1200) - player.level().getGameTime());
     }
 
     public static void drank(LivingEntity entity, ItemStack stack) {

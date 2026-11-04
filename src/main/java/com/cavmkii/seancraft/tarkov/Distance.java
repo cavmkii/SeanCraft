@@ -16,14 +16,11 @@ public enum Distance {
     FRONTIER("Frontier", 3000, 0.50, 0.30, 0.50, true),
     FAR_LANDS("Far lands", 6000, 1.00, 0.50, 1.00, true);
 
-    /** Threat and distance bonuses add, and together never pass these (2.3.2). */
-    public static final double MAX_HEALTH_MULTIPLIER = 4;
-    public static final double MAX_DAMAGE_MULTIPLIER = 2.5;
-    /** Raid minute a raid starts at in the Frontier, the Far lands and the Nether: threat level 2. */
-    public static final double HEAD_START_MINUTES = 20;
+    // Threat and distance caps (2.3.2), the head start (2.3.1) and the band edges are in Cfg (Raid.DistanceCaps,
+    // Raid.NetherThreatStart, Raid.DistanceBands).
 
     public final String label;
-    public final double from;
+    private final double defaultFrom;
     public final double health;
     public final double damage;
     public final double rewards;
@@ -31,11 +28,16 @@ public enum Distance {
 
     Distance(String label, double from, double health, double damage, double rewards, boolean headStart) {
         this.label = label;
-        this.from = from;
+        this.defaultFrom = from;
         this.health = health;
         this.damage = damage;
         this.rewards = rewards;
         this.headStart = headStart;
+    }
+
+    /** Where this band starts, in blocks from world spawn (Raid.DistanceBands). */
+    public double from() {
+        return ordinal() == 0 ? 0 : ordinal() - 1 < Cfg.distanceBands.length ? Cfg.distanceBands[ordinal() - 1] : defaultFrom;
     }
 
     public static double blocksFromSpawn(ServerLevel level, Vec3 pos) {
@@ -53,7 +55,7 @@ public enum Distance {
         double d = blocksFromSpawn(level, pos);
         Distance band = HEARTLAND;
         for (Distance b : values()) {
-            if (d >= b.from) {
+            if (d >= b.from()) {
                 band = b;
             }
         }

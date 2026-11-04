@@ -59,7 +59,6 @@ public abstract class BossEntity extends PathfinderMob {
     static final int TARGET_SWITCH_TICKS = 300;
     static final int MAX_IDLE_TICKS = 60;
     static final int TRANSITION_TICKS = 60;
-    static final int MAX_SCALED_PLAYERS = 6;
 
     protected BlockPos center = BlockPos.ZERO;
     private boolean started;
@@ -161,11 +160,11 @@ public abstract class BossEntity extends PathfinderMob {
 
     /** The boss's whole health pool, with +85% per extra player who has stood in the ring (8.4.6). */
     float totalHealth() {
-        return def().health() * (1 + 0.85f * (maxPlayers - 1));
+        return def().health() * (1 + (float) (com.cavmkii.seancraft.Cfg.bossHealthPerPlayer / 100) * (maxPlayers - 1));
     }
 
     float damageMultiplier() {
-        return 1 + 0.1f * (maxPlayers - 1);
+        return 1 + (float) (com.cavmkii.seancraft.Cfg.bossDamagePerPlayer / 100) * (maxPlayers - 1);
     }
 
     /** Health on the boss's own scale, for its numbers. */
@@ -277,7 +276,7 @@ public abstract class BossEntity extends PathfinderMob {
         ServerLevel level = (ServerLevel) level();
         long now = level.getGameTime();
         List<ServerPlayer> players = playersInRing();
-        maxPlayers = Math.max(maxPlayers, Math.min(MAX_SCALED_PLAYERS, players.size()));
+        maxPlayers = Math.max(maxPlayers, Math.min(com.cavmkii.seancraft.Cfg.bossScalingCap, players.size()));
         updateBar(level);
 
         if (players.isEmpty()) {
@@ -501,7 +500,7 @@ public abstract class BossEntity extends PathfinderMob {
         beforeLast = last;
         last = attack.id();
         // More players, more attacks: cooldowns shrink, wind-ups and recovery don't (8.4.6).
-        cooldownUntil.put(attack.id(), now + Math.round(attack.cooldown() / (1 + 0.2f * (maxPlayers - 1))));
+        cooldownUntil.put(attack.id(), now + Math.round(attack.cooldown() / (1 + (float) (com.cavmkii.seancraft.Cfg.bossCooldownPerPlayer / 100) * (maxPlayers - 1))));
         aim = target.position();
         getNavigation().stop();
         setState(State.WINDUP);

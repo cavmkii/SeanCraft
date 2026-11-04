@@ -184,7 +184,7 @@ final class Ultimates {
     static void typed(ServerPlayer player, LivingEntity target, float amount, Damage.Type type) {
         Damage.forced(Map.of(type, 1f));
         try {
-            SkillEffects.damage(player, target, amount / Damage.SCALE);
+            SkillEffects.damage(player, target, amount / Damage.scale());
         } finally {
             Damage.forced(null);
         }
@@ -233,7 +233,7 @@ final class Ultimates {
                     // Rank 3: lightning and frost at once.
                     Damage.forced(Map.of(Damage.Type.LIGHTNING, 0.6f, Damage.Type.FROST, 0.6f));
                     try {
-                        SkillEffects.damage(player, e, rt.cataclysmPower / Damage.SCALE);
+                        SkillEffects.damage(player, e, rt.cataclysmPower / Damage.scale());
                     } finally {
                         Damage.forced(null);
                     }

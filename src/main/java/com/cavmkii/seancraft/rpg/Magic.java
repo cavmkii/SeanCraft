@@ -103,7 +103,7 @@ public final class Magic {
         });
         // A staff's heavy attack is a charged orb that bursts (9.4.1).
         float radius = staff && heavy ? 2.5f : 0;
-        SkillProjectile bolt = SkillProjectile.bolt(player.level(), player, look, damage / Damage.SCALE, radius, element);
+        SkillProjectile bolt = SkillProjectile.bolt(player.level(), player, look, damage / Damage.scale(), radius, element);
         bolt.spell = true;
         bolt.shootFromRotation(player, player.getXRot(), player.getYRot(), 0, staff ? 1.6f : 2.2f, 0.5f);
         player.level().addFreshEntity(bolt);
