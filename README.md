@@ -127,7 +127,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A Resting chip counts down while you wait.
   - Rested gives +50% health regen, +100% stamina regen and +50% skill XP.
   - It lasts 8 minutes, plus 1 minute for each point of comfort.
-  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built in the hideout you're in.
+  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built in the hideout you're in, plus 1 or 2 if the land around is Good or Remnant (see Ecology).
   - It works away from a hideout too, like at a FOB table, but there's usually less comfort out there.
 
 ### Inventory
@@ -329,6 +329,24 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - **Cold:** frozen biomes out in the Far lands (not the snowy taiga), and the frozen and jagged peaks anywhere. Potion: Warmth, brewed from an awkward potion and a magma block. Its key is also from a tier 2 boss.
   - Boss arenas never have a hazard, so every dungeon can be reached.
 
+### Ecology
+
+The world keeps track of its wildlife and soil, even where nobody is. It's split into patches 64 blocks across, and each one holds numbers: how much grass there is, how many rabbits, mice and foxes, bats, crop pests, and the soil's nitrogen, phosphorus, organic matter and moisture. The animals you see are a sample of those numbers, and the numbers keep running while you're away (a patch catches up on up to 30 days when it loads again). This is phase 1 of the design (the grassland loop). Water and fish, monster pressure, villages, disease and beavers come later.
+
+- **Rabbits and foxes.** Rabbits eat grass and breed fast; foxes eat rabbits, and switch to mice when rabbits get scarce, which is what stops them eating every rabbit. Numbers swing but settle. Killing one or breeding one changes its patch. You'll see a handful near you, more where there are more. Ours fade out when you leave.
+- **Soil.** Every crop stage takes nitrogen and phosphorus from the patch, so a field farmed hard yields less each harvest. Ripe wheat, carrots, potatoes and beetroot drop more or less of their crop depending on the soil (seeds aren't affected), and poor soil also slows growth. Bone meal and bat guano go into the soil and feed it over the next few days, not instantly. Wild grass and trees soak up any surplus.
+- **Pests.** Wheat gets aphids, worse on big wheat fields. Bats eat them, and how many bats a patch has depends on caves and trees nearby, so a field beside a bat cave is protected. You'll see specks over badly hit wheat.
+  - **Insecticide** (Workshop 1: fermented spider eye, poisonous potato, glass bottle; makes 2) knocks the aphids down, but it kills the bats too, and the aphids come back faster than the bats do. Spray the same patch again and again and they build resistance.
+  - **Bat guano** drops under roosting bats. It's a fast fertilizer.
+- **Soil kit** (Hideout Bench: iron nugget over glass bottle over paper). Use it on the ground to read the patch: nitrogen, phosphorus, organic matter, moisture, what's holding a crop back there, and the patch's ecosystem quality with what's dragging it down.
+- **Ecosystem quality** runs 0 to 100: Degraded, Weedy, Fair, Good, Remnant. It's built from how many kinds of plants there are and how picky they are (each plant has a score: grass and dandelions 0, lily of the valley 6, the prairie plants 5 to 9), threats nearby (cropland, roads, buildings, livestock pens, villages), and soil.
+  - **Prairie plants:** big bluestem, compass plant, butterfly milkweed, pale purple coneflower, rattlesnake master and leadplant. Remnant prairie patches of them generate in plains, savannas and meadows; that's where the seed comes from. Big bluestem builds soil, and leadplant adds nitrogen.
+  - Prairie needs fire or grazing every so often. Go 40 days without either and the prairie plants die back to grass. Disturb it more often than every 5 days and they won't spread. In between, they slowly spread into the grass around them.
+  - Too much nitrogen also kills them off and drags quality down.
+  - A Good patch nearby makes nearby crops yield up to 15% more (Remnant: 25%) and slows pests, holds more rabbits, and adds 1 comfort to a hideout beside it (Remnant: 2).
+- **Seasons.** With [Serene Seasons](https://modrinth.com/mod/serene-seasons) installed (it's optional), rabbits breed in spring and summer, aphids peak in summer and die back in winter, and prairie plants only spread in spring and summer.
+- Inside a hideout, nothing turns to dirt from overgrazing and the prairie plants don't die back, but the soil and animals still run.
+
 ### Bosses
 
 - **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
@@ -404,6 +422,8 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Raid.PedestalClearance` (100), `Raid.NetherThreatStart` (20, the raid minute you start at in the Nether, Frontier and Far lands), `Raid.DistanceBands` (`1000,3000,6000`) and `Raid.DistanceCaps` (`4.0,2.5`, the most threat and distance together can multiply a monster's health and damage).
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
   - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
+  - `Ecology.*`: `Enabled`, `PatchChunks` (4, patch size in chunks; changing it starts the model over), `TickBudgetMs` (2), `DayScale` (1; raise it to speed everything up), `CatchUpMaxDays` (30), `QualityZ` and `QualityK` (2.5, 0.5).
+  - Every ecology number (breeding rates, fox hunting, soil, pests, plant scores) is in `data/seancraft/ecology/params.json`, and a datapack can override it.
   - `Boss.HealthPerPlayer` (85), `Boss.DamagePerPlayer` (10), `Boss.CooldownPerPlayer` (20), all percent per extra player, and `Boss.ScalingCap` (6 players).
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
@@ -411,10 +431,12 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `/seancraft spawnpoints respread` (op) moves the spawn points other than world spawn out to `Spawn.Distance`, for worlds made before the change. New shelters get built; the old ones stay as plain buildings and stop restocking.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op). `/character learn <player> <SKILL> <rank> <slot>` learns an active skill at a rank and puts it in slot 0-2, skipping the web. `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
+  - `/seancraft eco patch` shows everything about the patch you're in; `/seancraft eco step <days>` runs it forward; `/seancraft eco set <field> <value>` sets one number (like `nitrogen` or `pest`) for testing (all op).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with
 
+- **Serene Seasons:** optional. With it, the ecology follows its seasons (see Ecology).
 - **FallingTree:** trees you chop go into your grids, and axes made from parts work with it.
 - **Better Combat and Combat Roll:** required (see Combat).
 - **Grappling Hook Mod:** needs Forge Config API Port too. Hooks go to your hotbar, and using them trains bows & crossbows.

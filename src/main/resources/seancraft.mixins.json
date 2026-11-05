@@ -5,6 +5,9 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "PlayerEnchantDamageMixin",
+    "EcoBreedMixin",
+    "EcoCropMixin",
+    "EcoFireMixin",
     "AbstractArrowAccessor",
     "BetterCombatSwingMixin",
     "BrewedPotionTriggerMixin",

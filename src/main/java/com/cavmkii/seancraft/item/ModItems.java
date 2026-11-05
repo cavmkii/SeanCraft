@@ -67,6 +67,7 @@ public final class ModItems {
                         output.accept(com.cavmkii.seancraft.rpg.RpgContent.ORB_OF_REGRET);
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_BENCH_ITEM);
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.FOB_TABLE_ITEM);
+                        com.cavmkii.seancraft.ecology.EcoContent.ITEMS.forEach(output::accept);
                         output.accept(ModItems.FIRE_ARROW);
                         output.accept(ModItems.BROADHEAD_ARROW);
                         output.accept(ModItems.BODKIN_ARROW);
