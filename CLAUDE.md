@@ -20,6 +20,8 @@ Fabric 1.21.1 mod. Package `com.cavmkii.seancraft`, mod id `seancraft`. The GitH
   - `Loc.container(i, -2, 0)` puts something away into container i; i = -1 means route it by the chest filters.
 - `client/ui/Kit.java`: the GUI kit (sprites under `assets/seancraft/textures/gui/sprites`, palette constants).
 - `tarkov/Stations.java` and `client/tarkov/StationTabs.java`: hideout stations.
+- `ecology/`: design doc 17, phase 1 (the grassland loop). `Ecology` holds patch storage (`EcoData`, one saved file per dimension), the tick budget, sampling, crop hooks and the wildlife sampler; `Model` is the population and soil equations; `Quality` the 0-100 score; `Params` the tuning, overridable from `data/seancraft/ecology/params.json`. Debug with `/seancraft eco patch|step|set`.
+  - Serene Seasons is read by reflection (`Seasons`); it and GlitchCore are `modLocalRuntime` only.
 - UI spec: the user supplies it in zip packs (UI-SPEC.md plus mock-ups). It isn't in the repo.
 
 ## Building and testing

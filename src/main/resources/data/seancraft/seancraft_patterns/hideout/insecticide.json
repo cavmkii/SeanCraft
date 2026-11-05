@@ -1,0 +1,22 @@
+{
+ "station": "hideout",
+ "category": "Tools",
+ "pattern": [
+  "F",
+  "S",
+  "B"
+ ],
+ "key": {
+  "F": "minecraft:fermented_spider_eye",
+  "S": "minecraft:poisonous_potato",
+  "B": "minecraft:glass_bottle"
+ },
+ "result": {
+  "id": "seancraft:insecticide",
+  "count": 2
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 1
+ }
+}

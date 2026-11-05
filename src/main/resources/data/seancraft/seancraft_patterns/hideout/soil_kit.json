@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Tools",
+ "pattern": [
+  "N",
+  "B",
+  "P"
+ ],
+ "key": {
+  "N": "minecraft:iron_nugget",
+  "B": "minecraft:glass_bottle",
+  "P": "minecraft:paper"
+ },
+ "result": {
+  "id": "seancraft:soil_kit",
+  "count": 1
+ }
+}

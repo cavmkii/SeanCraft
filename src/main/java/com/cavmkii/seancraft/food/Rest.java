@@ -182,6 +182,8 @@ public final class Rest {
             plants |= block instanceof FlowerPotBlock || block instanceof FlowerBlock || state.is(BlockTags.FLOWERS);
         }
         int comfort = (fire ? 1 : 0) + (bed ? 1 : 0) + (carpet ? 1 : 0) + (banner ? 1 : 0) + (table ? 1 : 0) + (plants ? 1 : 0);
+        // Nature (12, 17.16.2): a Good patch nearby adds 1, a Remnant 2.
+        comfort += com.cavmkii.seancraft.ecology.Ecology.comfortBonus(level, at);
         Hideouts.Hideout home = Hideouts.at(level, Vec3.atCenterOf(at));
         if (home != null) {
             for (Module module : Module.values()) {

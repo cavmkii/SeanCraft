@@ -46,6 +46,7 @@ public final class SeanCraft implements ModInitializer {
         com.cavmkii.seancraft.combat.Damage.init();
         com.cavmkii.seancraft.food.Food.init();
         com.cavmkii.seancraft.food.Rest.init();
+        com.cavmkii.seancraft.ecology.Ecology.init();
         com.cavmkii.seancraft.boss.BossContent.init();
         com.cavmkii.seancraft.hazard.Hazards.init();
         com.cavmkii.seancraft.compat.GrappleCompat.init();
@@ -66,6 +67,7 @@ public final class SeanCraft implements ModInitializer {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             GoblinCommands.register(dispatcher);
             Rpg.registerCommands(dispatcher);
+            com.cavmkii.seancraft.ecology.Ecology.registerCommands(dispatcher);
         });
 
         // Saying the phrase: normal chat, and /say or /me from a player.

@@ -55,3 +55,7 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 **Bosses:** `mark_totem`, `trophy_old_salt`, `marks_reel` (blocks: `summoning_pedestal`, `trophy_rack`)
 
 **Blocks** (as items): `hideout_bench`, `weapon_bench`, `altar_of_regret`, `workshop`, `medstation`, `perimeter`, `intel`. These show the block model in your inventory now, and a PNG replaces that with a flat icon.
+
+**Ecology:** `soil_kit`, `insecticide`, `bat_guano`
+
+**Prairie plants** are blocks drawn as crosses, like flowers, so their art goes in `src/main/resources/assets/seancraft/textures/block/<id>.png` (16x16, transparent background): `big_bluestem`, `compass_plant`, `butterfly_milkweed`, `pale_purple_coneflower`, `rattlesnake_master`, `leadplant`. The ones there now are rough stand-ins; replace them with the same names.

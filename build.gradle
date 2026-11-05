@@ -28,6 +28,14 @@ dependencies {
     modImplementation "maven.modrinth:cloth-config:${project.cloth_config_version}"
     // Better Combat ships this inside its jar; the dev run doesn't unpack nested jars, so it needs it directly.
     modLocalRuntime "maven.modrinth:tiny-config:3.1.0-fabric"
+    // Serene Seasons (design doc 17.10) is optional: SeanCraft reads its calendar by reflection. In the dev run so the
+    // seasons hook can be tested; not shipped or required.
+    modLocalRuntime "maven.modrinth:serene-seasons:q34wStJM"
+    modLocalRuntime "maven.modrinth:glitchcore:sux8kYHe"
+    // GlitchCore's nested libraries, which the dev run doesn't unpack.
+    localRuntime "net.jodah:typetools:0.6.3"
+    localRuntime "com.electronwill.night-config:core:3.6.7"
+    localRuntime "com.electronwill.night-config:toml:3.6.7"
 }
 
 processResources {

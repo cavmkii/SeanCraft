@@ -32,6 +32,9 @@ public final class SeanCraftClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // Prairie plants are cross-model cutouts, like flowers.
+        com.cavmkii.seancraft.ecology.EcoContent.PLANTS.values().forEach(block ->
+                net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(block, net.minecraft.client.renderer.RenderType.cutout()));
         EntityRendererRegistry.register(ModEntities.JOE, ctx -> new GoblinRenderer<>(ctx, JOE_GREEN));
         EntityRendererRegistry.register(ModEntities.BABY_COMMANDO, ctx -> new GoblinRenderer<>(ctx, BABY_GREEN));
         EntityRendererRegistry.register(ModEntities.BABY_GRENADIER, ctx -> new GoblinRenderer<>(ctx, BABY_GREEN));

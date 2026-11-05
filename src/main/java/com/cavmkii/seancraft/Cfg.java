@@ -137,6 +137,15 @@ public final class Cfg {
     public static double bossCooldownPerPlayer = 20;
     public static int bossScalingCap = 6;
 
+    // Ecology (17)
+    public static boolean ecoEnabled = true;
+    public static int ecoPatchChunks = 4;
+    public static double ecoTickBudgetMs = 2;
+    public static double ecoDayScale = 1;
+    public static double ecoCatchUpMaxDays = 30;
+    public static double ecoQualityZ = 2.5;
+    public static double ecoQualityK = 0.5;
+
     // Fight
     public static double fightTriggerRange = 35;
     public static double fightSeconds = 45;
@@ -253,6 +262,13 @@ public final class Cfg {
         d("Boss", "DamagePerPlayer", "Percent boss damage added for each extra player.", v -> bossDamagePerPlayer = v, () -> bossDamagePerPlayer);
         d("Boss", "CooldownPerPlayer", "Percent added to a boss's attack rate for each extra player.", v -> bossCooldownPerPlayer = v, () -> bossCooldownPerPlayer);
         i("Boss", "ScalingCap", "Most players a boss scales for.", v -> bossScalingCap = Math.max(1, v), () -> bossScalingCap);
+        b("Ecology", "Enabled", "Turns the population and soil model on (design doc 17).", v -> ecoEnabled = v, () -> ecoEnabled);
+        i("Ecology", "PatchChunks", "Patch size in chunks per side. Changing it starts the model over.", v -> ecoPatchChunks = Math.max(1, v), () -> ecoPatchChunks);
+        d("Ecology", "TickBudgetMs", "Server time per tick for patch updates, in milliseconds.", v -> ecoTickBudgetMs = v, () -> ecoTickBudgetMs);
+        d("Ecology", "DayScale", "Ecological days per in-game day; raise it to speed everything up.", v -> ecoDayScale = v, () -> ecoDayScale);
+        d("Ecology", "CatchUpMaxDays", "Longest absence a patch integrates when it reloads, in ecological days.", v -> ecoCatchUpMaxDays = v, () -> ecoCatchUpMaxDays);
+        d("Ecology", "QualityZ", "Shape of the threat curve in habitat quality (z).", v -> ecoQualityZ = v, () -> ecoQualityZ);
+        d("Ecology", "QualityK", "Half-saturation of the threat curve in habitat quality (k).", v -> ecoQualityK = v, () -> ecoQualityK);
 
         d("Fight", "TriggerRange", "Joe and Sean start fighting when this close (blocks).", v -> fightTriggerRange = v, () -> fightTriggerRange);
         d("Fight", "DurationSeconds", "Length of a fight.", v -> fightSeconds = v, () -> fightSeconds);
