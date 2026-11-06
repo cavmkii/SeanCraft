@@ -138,6 +138,10 @@ public final class ClientTracker {
         }
     }
 
+    public static void clear() {
+        send(new ArrayList<>());
+    }
+
     /** How many you carry (hotbar, off-hand and grids). */
     public static int have(Entry e) {
         int n = 0;
@@ -166,6 +170,13 @@ public final class ClientTracker {
         int y = 9 + top;
         Kit.hudPanel(g, 6, 6 + top, 136, 13 + list.size() * 12);
         Kit.text(g, mc.font, "GATHER", x, y, Kit.GOLD_LIGHT);
+        // Where to change it: the GATHER LIST button in the inventory.
+        String hint = "EDIT: INVENTORY > GATHER LIST";
+        g.pose().pushPose();
+        g.pose().translate(x + 126 - mc.font.width(hint) * 0.5f, y + 2, 0);
+        g.pose().scale(0.5f, 0.5f, 1);
+        g.drawString(mc.font, hint, 0, 0, Kit.ASH, false);
+        g.pose().popPose();
         y += 11;
         for (Entry e : list) {
             int have = have(e);

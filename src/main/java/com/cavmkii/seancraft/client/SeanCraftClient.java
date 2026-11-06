@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.component.DyedItemColor;
+import java.util.List;
 
 public final class SeanCraftClient implements ClientModInitializer {
     private static String partEffects(com.cavmkii.seancraft.parts.PartDef def, int level) {
@@ -164,9 +165,15 @@ public final class SeanCraftClient implements ClientModInitializer {
                 lines.add(Component.literal(gate + " to craft").withColor(ash));
             }
             if (net.minecraft.client.Minecraft.getInstance().screen instanceof com.cavmkii.seancraft.client.tarkov.TarkovScreen) {
-                lines.add(Component.literal("T: gather list   Shift: to storage").withColor(ash));
+                lines.add(Component.literal("T: gather list   Shift-click: to storage").withColor(ash));
             }
         });
+
+        // Compact tooltips: the name and one short line; hold Shift for everything. Runs after every other listener,
+        // other mods' included, so nothing is added back after it.
+        net.minecraft.resources.ResourceLocation compact = com.cavmkii.seancraft.SeanCraft.id("compact_tooltips");
+        ItemTooltipCallback.EVENT.addPhaseOrdering(net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE, compact);
+        ItemTooltipCallback.EVENT.register(compact, (stack, context, type, lines) -> compactTooltip(lines));
 
         // Merch and the bonnet are dyed leather; tint the base layer of their icons.
         ColorProviderRegistry.ITEM.register((stack, tintIndex) -> tintIndex > 0 ? -1 : DyedItemColor.getOrDefault(stack, -1),
@@ -197,5 +204,44 @@ public final class SeanCraftClient implements ClientModInitializer {
             gates = map;
         }
         return gates.get(stack.getItem());
+    }
+
+    /** Colours a tooltip summary is taken from, in order: our description (Bone), food and part lines (gold), stats. */
+    private static final int[] SUMMARY_COLORS = {0xD9CBB0, 0xFFAA00, 0x00AA00, 0x5555FF};
+
+    /** Without Shift: the name, one short line, and a hint that there's more. */
+    private static void compactTooltip(List<Component> lines) {
+        if (lines.size() <= 2 || net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+            return;
+        }
+        Component title = lines.get(0);
+        Component summary = null;
+        for (int color : SUMMARY_COLORS) {
+            for (int i = 1; i < lines.size() && summary == null; i++) {
+                net.minecraft.network.chat.TextColor c = lines.get(i).getStyle().getColor();
+                if (c != null && c.getValue() == color && !lines.get(i).getString().isBlank()) {
+                    summary = Component.literal(shorten(lines.get(i).getString().trim())).withColor(color);
+                }
+            }
+            if (summary != null) {
+                break;
+            }
+        }
+        lines.clear();
+        lines.add(title);
+        if (summary != null) {
+            lines.add(summary);
+        }
+        boolean inventory = net.minecraft.client.Minecraft.getInstance().screen instanceof com.cavmkii.seancraft.client.tarkov.TarkovScreen;
+        lines.add(Component.literal(inventory ? "Shift: details   T: gather list" : "Shift: details").withColor(0x5A5048));
+    }
+
+    /** The first sentence, cut to a short line. */
+    private static String shorten(String text) {
+        int stop = text.indexOf(". ");
+        if (stop > 0) {
+            text = text.substring(0, stop + 1);
+        }
+        return text.length() > 46 ? text.substring(0, 44).trim() + "..." : text;
     }
 }

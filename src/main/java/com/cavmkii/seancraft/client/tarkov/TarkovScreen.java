@@ -165,7 +165,7 @@ public class TarkovScreen extends Screen {
     private List<Box> boxes() {
         TetrisNet.Sync s = ClientTetris.sync;
         List<Box> out = new ArrayList<>();
-        if (!bookOpen) {
+        if (!covered()) {
             out.add(new Box(GridId.POUCH, POUCH_GRID_X, pouchY(), s.pouchW(), s.pouchH(), s.pouch()));
         }
         for (ColSec sec : colSections()) {
@@ -184,7 +184,7 @@ public class TarkovScreen extends Screen {
     /** x, y, size of an equipment slot: in its box, or (rig, backpack) beside its grid; null if hidden. */
     private int[] equipRect(int slot) {
         if (EQUIP_BOX[slot] != null) {
-            return bookOpen ? null : new int[] {EQUIP_BOX[slot][0] + 7, EQUIP_BOX[slot][1] + 10, C};
+            return covered() ? null : new int[] {EQUIP_BOX[slot][0] + 7, EQUIP_BOX[slot][1] + 10, C};
         }
         for (ColSec sec : colSections()) {
             if (slot == 4 && sec.kind() == 1 || slot == 5 && sec.kind() == 3) {
@@ -734,6 +734,16 @@ public class TarkovScreen extends Screen {
 
     /** RECIPES: the recipe book over the equipment zone. */
     private boolean bookOpen;
+    /** GATHER LIST: the gather list over the equipment zone. */
+    private boolean gatherOpen;
+    private static final int[] GATHER_BUTTON = {8, 245, 126, 14};
+    private static final int GATHER_TOP = 56;
+    private static final int GATHER_ROW = 26;
+
+    /** True while the book or the gather list covers the equipment zone. */
+    private boolean covered() {
+        return bookOpen || gatherOpen;
+    }
     /** The station this screen was opened from (crafting table), shown widened in the station row; null for none. */
     private String openStation;
     private static boolean canMakeOnly;
@@ -1071,6 +1081,9 @@ public class TarkovScreen extends Screen {
         if (bookOpen) {
             return renderBook(g, mx, my);
         }
+        if (gatherOpen) {
+            return renderGather(g, mx, my);
+        }
         drawPlayer(g, mx, my);
         for (int slot = 0; slot < 7; slot++) {
             if (EQUIP_BOX[slot] == null) {
@@ -1280,6 +1293,77 @@ public class TarkovScreen extends Screen {
             }
         }
         return out;
+    }
+
+    /** The gather list over the equipment zone: each line with how many you carry, -, + and a remove button. */
+    private ItemStack renderGather(GuiGraphics g, int mx, int my) {
+        ItemStack tip = ItemStack.EMPTY;
+        g.fill(BOOK[0], BOOK[1], BOOK[0] + BOOK[2], BOOK[1] + BOOK[3], Kit.VOID);
+        Kit.text(g, font, "GATHER LIST", BOOK_X + 1, 27, Kit.GOLD_LIGHT);
+        g.fill(BOOK_X, 36, BOOK_X + BOOK_W + 2, 37, Kit.GOLD_DARK);
+        small(g, "T over any item adds it,", BOOK_X, 40, Kit.ASH, 0.625f);
+        small(g, "T again takes it off.", BOOK_X, 47, Kit.ASH, 0.625f);
+        List<ClientTracker.Entry> list = ClientTracker.entries();
+        if (list.isEmpty()) {
+            g.drawWordWrap(font, Component.literal("Nothing on it. Pin a recipe, press T over an item, or TRACK a module."),
+                    BOOK_X, GATHER_TOP + 2, BOOK_W, Kit.ASH);
+            return tip;
+        }
+        String[] icons = {"minus", "plus", "close"};
+        String[] tips = {"Want fewer (Shift: 10 fewer)", "Want more (Shift: 10 more)", "Take it off the list"};
+        for (int i = 0; i < list.size(); i++) {
+            ClientTracker.Entry e = list.get(i);
+            int y = GATHER_TOP + i * GATHER_ROW;
+            int have = ClientTracker.have(e);
+            boolean done = have >= e.goal();
+            Kit.blit(g, "list/row", BOOK_X, y, BOOK_W + 2, GATHER_ROW - 2);
+            ItemStack icon = new ItemStack(e.item());
+            g.renderItem(icon, BOOK_X + 2, y + 3);
+            if (in(mx, my, BOOK_X + 2, y + 3, 16, 16)) {
+                tip = icon;
+            }
+            small(g, font.plainSubstrByWidth(e.name(), (int) ((BOOK_W - 22) / 0.75f)), BOOK_X + 21, y + 3, done ? Kit.MOSS : Kit.BONE, 0.75f);
+            small(g, Math.min(have, 9999) + " / " + e.goal() + (done ? "  DONE" : ""), BOOK_X + 21, y + 13, done ? Kit.MOSS : Kit.ASH, 0.75f);
+            for (int b = 0; b < 3; b++) {
+                iconButton(g, icons[b], gatherButtonX(b), y + 10, 12, true, mx, my, tips[b]);
+            }
+        }
+        boolean clearOver = in(mx, my, BOOK_X, 216, BOOK_W + 2, 13);
+        Kit.button(g, font, "CLEAR ALL", BOOK_X, 216, BOOK_W + 2, 13, true, clearOver, false);
+        if (clearOver) {
+            uiTip = "Take everything off the gather list";
+        }
+        return tip;
+    }
+
+    private static int gatherButtonX(int b) {
+        return BOOK_X + BOOK_W - 40 + b * 14;
+    }
+
+    private boolean clickGather(double x, double y) {
+        List<ClientTracker.Entry> list = ClientTracker.entries();
+        for (int i = 0; i < list.size(); i++) {
+            int ry = GATHER_TOP + i * GATHER_ROW;
+            for (int b = 0; b < 3; b++) {
+                if (in(x, y, gatherButtonX(b), ry + 10, 12, 12)) {
+                    int step = hasShiftDown() ? 10 : 1;
+                    if (b == 0) {
+                        ClientTracker.change(i, -step);
+                    } else if (b == 1) {
+                        ClientTracker.change(i, step);
+                    } else {
+                        ClientTracker.remove(i);
+                    }
+                    return true;
+                }
+            }
+        }
+        if (!list.isEmpty() && in(x, y, BOOK_X, 216, BOOK_W + 2, 13)) {
+            ClientTracker.clear();
+            return true;
+        }
+        // Anywhere else on the panel does nothing.
+        return in(x, y, BOOK[0], BOOK[1], BOOK[2], BOOK[3]);
     }
 
     /** The recipe book over the equipment zone: search, CAN MAKE NOW, folding categories and recipe rows. */
@@ -1580,8 +1664,15 @@ public class TarkovScreen extends Screen {
         if (overStash) {
             uiTip = "Auto-refill from the stash too: " + (s.refillFromStash() ? "ON" : "OFF");
         }
+        // GATHER LIST: under the equipment zone, opens the list over it.
+        int n = ClientTracker.entries().size();
+        boolean gatherOver = in(mx, my, GATHER_BUTTON);
+        Kit.button(g, font, "GATHER LIST (" + n + ")", GATHER_BUTTON[0], GATHER_BUTTON[1], GATHER_BUTTON[2], GATHER_BUTTON[3], true, gatherOver, gatherOpen);
+        if (gatherOver) {
+            uiTip = gatherOpen ? "Close the gather list" : "Your gather list: change amounts or take things off";
+        }
         if (statsBesideHotbar()) {
-            renderStats(g, 30, 245, mx, my);
+            renderStats(g, 372, 245, mx, my);
         }
 
         renderFilter(g, mx, my);
@@ -1596,7 +1687,7 @@ public class TarkovScreen extends Screen {
                 return true;
             }
         }
-        return in(x, y, TOGGLE_X, TOGGLE_Y, 28, 12) || y < 18;
+        return in(x, y, TOGGLE_X, TOGGLE_Y, 28, 12) || in(x, y, GATHER_BUTTON) || y < 18;
     }
 
     /** Clicks on the small controls: RECIPES, the book, CLEAR, PIN, the stash header, tabs, search, toggles. */
@@ -1626,6 +1717,13 @@ public class TarkovScreen extends Screen {
         }
         if (in(x, y, RECIPES)) {
             toggleBook();
+            return true;
+        }
+        if (in(x, y, GATHER_BUTTON)) {
+            toggleGather();
+            return true;
+        }
+        if (gatherOpen && clickGather(x, y)) {
             return true;
         }
         if (ghostRecipe != null && in(x, y, PIN)) {
@@ -1733,8 +1831,15 @@ public class TarkovScreen extends Screen {
         return false;
     }
 
+    private void toggleGather() {
+        gatherOpen = !gatherOpen;
+        bookOpen = false;
+        searchFocused = false;
+    }
+
     private void toggleBook() {
         bookOpen = !bookOpen;
+        gatherOpen = false;
         searchFocused = false;
         bookScroll = 0;
     }
@@ -2208,7 +2313,14 @@ public class TarkovScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_T && renameIndex < 0 && !searchFocused && !storageSearchFocused && !hoverStack.isEmpty()) {
-            // T on any item: track it (a stack's worth, or one if it doesn't stack).
+            // T on any item: track it (a stack's worth, or one if it doesn't stack); T again takes it off.
+            List<ClientTracker.Entry> list = ClientTracker.entries();
+            for (int i = 0; i < list.size(); i++) {
+                if (list.get(i).tag() == null && list.get(i).item() == hoverStack.getItem()) {
+                    ClientTracker.remove(i);
+                    return true;
+                }
+            }
             ClientTracker.add(hoverStack.getItem(), hoverStack.getMaxStackSize() > 1 ? hoverStack.getMaxStackSize() : 1);
             return true;
         }
@@ -2252,6 +2364,10 @@ public class TarkovScreen extends Screen {
         }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && tab == INVENTORY && bookOpen) {
             toggleBook();
+            return true;
+        }
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE && tab == INVENTORY && gatherOpen) {
+            toggleGather();
             return true;
         }
         if ((tab == GEAR || tab == CRAFTING) && keyCode == GLFW.GLFW_KEY_R && !held.isEmpty()) {

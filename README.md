@@ -27,16 +27,17 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | V | Ultimate (once you have a specialization) |
 | R | Dodge roll (Combat Roll) |
 | Y | Trophy power |
-| T (over an item, in the inventory screen) | Adds it to your gather list |
+| T (over an item, in the inventory screen) | Adds it to your gather list, or takes it off if it's already there |
+| Shift (over an item) | Full tooltip |
 
 The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY has everything on one screen:
   - **Left (equipment):** your gear in boxes beside your actual character, who turns to follow the mouse. OFF is your off-hand, and MAIN shows whatever's in your selected hotbar slot. Under that, the secure pouch (its grid is kept on death), then your load and class, health, stamina, and Rage or mana if your skills use them. Hover the load for what it's costing you.
   - **Middle top (crafting):** the crafting grid, always there. No mode to switch on. See Crafting below.
   - **Middle bottom (player inventory):** your rig and pockets, with the backpack beside them, each with its own item next to its grid. A big backpack that won't fit beside them goes underneath, and the zone scrolls. The sort icon on the title sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
   - **Right (stash):** the hideout's stash, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and REFILL STACKS, STASH ALL, TAKE ALL, sort and filter icons on its title. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
-  - **Bottom:** your hotbar in its own frame with number badges, the selected slot glowing, then the auto-refill toggles.
+  - **Bottom:** your hotbar in its own frame with number badges, the selected slot glowing, then the auto-refill toggles. Bottom left is the **GATHER LIST** button (see Gather list).
   - **Station row** (top right, in a hideout only): one button per station in that hideout. Click one to open it; the open one shows its name.
-  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip. Item tooltips go name, what it does, then use time, size and stack size, durability, part levels, weight, which module you need to craft it, and the key hints. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip. Item tooltips are short: the name and one line (what it does, or its damage). Hold **Shift** for the full thing: use time, size and stack size, durability, part levels, weight, which module you need to craft it, and the key hints. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
@@ -167,7 +168,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - You find a recipe by picking up one of its ingredients. Recipes that need a 3x3 grid show a lock while you only have 2x2.
   - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
   - Outside a hideout, the Hideout Bench is pinned to the top of the book.
-- **Gather list.** It's a to-do list for materials. Pin a recipe with the pin button by RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T, and set how many you want with the - and + buttons (Shift does steps of 10). While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
+- **Gather list.** It's a to-do list for materials. Pin a recipe with the pin button by RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T. To change it, hit **GATHER LIST** at the bottom left of the inventory: each line has - and + (Shift does steps of 10) and an X to take it off, and there's CLEAR ALL. Pressing T again over something that's already on the list takes it off too. While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
 - **Ammo.** Bows and crossbows pull arrows from your rig, pockets or backpack.
 
 ### Health
