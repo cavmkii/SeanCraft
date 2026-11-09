@@ -550,7 +550,7 @@ public final class Tarkov {
                 note = "Needs " + next.needs().label + " " + next.needsLevel();
             } else {
                 status = TarkovNet.Entry.READY;
-                note = "Build level " + (current + 1) + " (" + buildSeconds(h, next) + "s)";
+                note = "Build level " + (current + 1);
             }
             entries.add(new TarkovNet.Entry(TarkovNet.Entry.MODULE, module.name(), title, "Next: " + next.effect(), icon, status, note, costs, progress));
         }
@@ -584,11 +584,6 @@ public final class Tarkov {
         String station = focus != null ? Stations.moduleKind(focus) : Stations.HIDEOUT;
         ServerPlayNetworking.send(player, new TarkovNet.HideoutView(pos, (int) h.radius(), summary, entries, station));
         Stations.send(player);
-    }
-
-    private static int buildSeconds(Hideouts.Hideout h, Module.Level level) {
-        // The Workshop speeds up building, as it does crafting in TarkoValheim.
-        return (int) Math.max(5, level.buildSeconds() * (1 - 0.25 * h.level(Module.WORKSHOP)));
     }
 
     private static void hideoutAction(ServerPlayer player, BlockPos pos, int kind, String id) {
@@ -626,12 +621,15 @@ public final class Tarkov {
             if (!complete || h.building >= 0 || next.needs() != null && h.level(next.needs()) < next.needsLevel()) {
                 return;
             }
+            // No build timer: the level is done the moment everything's in.
             h.given[module.ordinal()] = null;
-            long now = level.getGameTime();
-            h.building = module.ordinal();
-            h.buildStarted = now;
-            h.buildDone = now + buildSeconds(h, next) * 20L;
+            h.levels[module.ordinal()]++;
             Hideouts.get(level).setDirty();
+            for (ServerPlayer p : level.players()) {
+                if (h.contains(p.position())) {
+                    p.sendSystemMessage(Component.literal(module.label + " is now level " + h.level(module) + ".").withStyle(ChatFormatting.GOLD));
+                }
+            }
         } else if (kind == TarkovNet.Entry.RECIPE) {
             HideoutRecipe recipe = HideoutRecipe.byId(id);
             if (recipe == null || recipe.gate() != null && h.level(recipe.gate()) < recipe.gateLevel()

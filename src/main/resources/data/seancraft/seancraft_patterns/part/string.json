@@ -1,0 +1,9 @@
+{
+ "station": "part",
+ "part": "string",
+ "pattern": [
+  "T",
+  "T",
+  "T"
+ ]
+}

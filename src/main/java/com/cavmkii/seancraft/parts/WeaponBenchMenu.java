@@ -48,6 +48,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             case SPEAR, PIKE -> new int[][] {{109, 20}, {109, 60}, {109, 94}};
             // Limbs arc on the right, grip in the middle, string on the left.
             case BOW -> new int[][] {{124, 22}, {128, 58}, {92, 58}};
+            // Taller: limbs high on the arc, grip in the middle, string on the left.
+            case LONGBOW -> new int[][] {{124, 18}, {130, 58}, {88, 58}};
             // Limbs across the top, stock down the middle, string between the limb tips.
             case CROSSBOW -> new int[][] {{109, 22}, {109, 78}, {109, 46}};
             // Handle in the middle, rim at the top edge, straps below.
@@ -80,7 +82,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
 
     /** What the bench can build from scratch: every part-built family (4.4). */
     public static final Family[] BUILDABLE = {Family.SWORD, Family.AXE, Family.DAGGER, Family.MACE, Family.WARHAMMER,
-            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.CROSSBOW, Family.SHIELD, Family.BUCKLER, Family.TOWER_SHIELD, Family.THROWING_KNIFE, Family.JAVELIN, Family.BOOMERANG, Family.WAND, Family.STAFF,
+            Family.GREATSWORD, Family.HALBERD, Family.SPEAR, Family.PIKE, Family.BOW, Family.LONGBOW, Family.CROSSBOW, Family.SHIELD, Family.BUCKLER, Family.TOWER_SHIELD, Family.THROWING_KNIFE, Family.JAVELIN, Family.BOOMERANG, Family.WAND, Family.STAFF,
             Family.HELMET, Family.CHEST, Family.LEGS, Family.BOOTS};
     public static final int ASSEMBLE_BUTTON = 200;
     public static final int PICK_BUTTON = 100;
@@ -292,10 +294,11 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
                 // The blade, head or plates pick the item; the other parts can be any material.
                 metal = part.def.tier();
             }
-            map.put(slot, new Parts.Installed(part.def, Parts.level(stack), Parts.infusion(stack)));
+            map.put(slot, Parts.of(stack));
         }
         net.minecraft.world.item.Item result = switch (family) {
             case BOW -> net.minecraft.world.item.Items.BOW;
+            case LONGBOW -> WeaponItems.LONGBOW;
             case CROSSBOW -> net.minecraft.world.item.Items.CROSSBOW;
             case SHIELD -> net.minecraft.world.item.Items.SHIELD;
             case BUCKLER -> WeaponItems.BUCKLER;
@@ -388,7 +391,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             PartSlot slot = slotFor(i);
             ItemStack stack = parts.getItem(i);
             if (slot != null && stack.getItem() instanceof PartItem part) {
-                map.put(slot, new Parts.Installed(part.def, Parts.level(stack), Parts.infusion(stack)));
+                map.put(slot, Parts.of(stack));
             }
         }
         Parts.setInstalled(weapon(), map);

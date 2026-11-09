@@ -18,6 +18,9 @@ public record PartDef(String id, PartKind kind, int tier) {
     public static final String[] WOOD_LABELS = {"Plank", "Log", "Bone", "Blaze rod", "Breeze rod"};
     public static final String[] HIDES = {"string", "leather", "rabbit", "membrane", "scute"};
     public static final String[] HIDE_LABELS = {"String", "Leather", "Rabbit hide", "Membrane", "Scute"};
+    /** Bowstrings, weakest to strongest. */
+    public static final String[] STRINGS = {"string", "rawhide", "sinew", "silk", "membrane"};
+    public static final String[] STRING_LABELS = {"String", "Rawhide", "Sinew", "Silk", "Membrane"};
     /** Crystals, weakest to strongest; their factor runs 0.85 to 1.35 like the metals (4.4.1). */
     public static final String[] GEMS = {"quartz", "lapis", "amethyst", "prismarine", "echo"};
     public static final String[] GEM_LABELS = {"Quartz", "Lapis", "Amethyst", "Prismarine", "Echo"};
@@ -32,6 +35,7 @@ public record PartDef(String id, PartKind kind, int tier) {
                     case WOOD -> WOODS[t - 1];
                     case HIDE -> HIDES[t - 1];
                     case GEM -> GEMS[t - 1];
+                    case STRING -> STRINGS[t - 1];
                 };
                 ALL.add(new PartDef(kind.name().toLowerCase() + "_" + material, kind, t));
             }
@@ -62,6 +66,7 @@ public record PartDef(String id, PartKind kind, int tier) {
             case WOOD -> WOOD_LABELS[tier - 1];
             case HIDE -> HIDE_LABELS[tier - 1];
             case GEM -> GEM_LABELS[tier - 1];
+            case STRING -> STRING_LABELS[tier - 1];
         };
     }
 
@@ -76,6 +81,7 @@ public record PartDef(String id, PartKind kind, int tier) {
             case WOOD -> new Item[] {Items.OAK_PLANKS, Items.OAK_LOG, Items.BONE, Items.BLAZE_ROD, Items.BREEZE_ROD}[tier - 1];
             case HIDE -> new Item[] {Items.STRING, Items.LEATHER, Items.RABBIT_HIDE, Items.PHANTOM_MEMBRANE, Items.ARMADILLO_SCUTE}[tier - 1];
             case GEM -> new Item[] {Items.QUARTZ, Items.LAPIS_LAZULI, Items.AMETHYST_SHARD, Items.PRISMARINE_SHARD, Items.ECHO_SHARD}[tier - 1];
+            case STRING -> new Item[] {Items.STRING, Items.LEATHER, Items.RABBIT_HIDE, Items.COBWEB, Items.PHANTOM_MEMBRANE}[tier - 1];
         };
     }
 
@@ -90,14 +96,14 @@ public record PartDef(String id, PartKind kind, int tier) {
         }
         int n = switch (kind) {
             case KNIFE_BLADE -> 1;
-            case AXE_HEAD, MACE_HEAD, LIMBS, HAFT, PADDING -> 3;
+            case AXE_HEAD, MACE_HEAD, LIMBS, HAFT, PADDING, STRING -> 3;
             case LONG_BLADE, HALBERD_HEAD -> 4;
             default -> 2;
         };
         Cost main = switch (kind.material) {
             case METAL -> Cost.of(material(), n);
             case WOOD -> tier == 1 ? Cost.planks(n) : tier == 2 ? Cost.logs(n) : Cost.of(material(), n);
-            case HIDE, GEM -> Cost.of(material(), n);
+            case HIDE, GEM, STRING -> Cost.of(material(), n);
         };
         return kind == PartKind.GUARD ? List.of(main, Cost.of(Items.STICK, 1)) : List.of(main);
     }
@@ -113,8 +119,13 @@ public record PartDef(String id, PartKind kind, int tier) {
 
     // Stats (fractions), by kind.
     public float damage(int level) {
-        // Each level above 1 adds 6% (9.5.1, step 1).
-        return kind.slot == PartSlot.HEAD ? at(0.06f * tier, 0.06f, level) : 0;
+        // Each level above 1 adds 6% (9.5.1, step 1). A better string throws a little harder.
+        return kind.slot == PartSlot.HEAD ? at(0.06f * tier, 0.06f, level) : kind == PartKind.STRING ? at(0.02f * tier, 0.01f, level) : 0;
+    }
+
+    /** Draw (or crossbow reload) speed: positive = faster. The string sets most of it; wood species add to it. */
+    public float draw(int level) {
+        return kind == PartKind.STRING ? at(0.05f * tier, 0.02f, level) : 0;
     }
 
     public float durability(int level) {

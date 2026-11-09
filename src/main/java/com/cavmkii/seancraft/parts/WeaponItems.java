@@ -82,7 +82,12 @@ public final class WeaponItems {
             new PartWeapon(Family.BOOMERANG, Tiers.WOOD, new Item.Properties().durability(180).attributes(attributes(12, 1.4f))
                     .component(BetterCombatDataComponents.WEAPON_PRESET_ID, ResourceLocation.parse("bettercombat:dagger"))));
 
+    /** The longbow: a bow in vanilla's eyes (arrows, enchantments), slower to draw and faster arrows (Bows mixin). */
+    public static final Item LONGBOW = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("longbow"),
+            new net.minecraft.world.item.BowItem(new Item.Properties().durability(480)));
+
     static {
+        Family.stock(LONGBOW, new Family.Stock(Family.LONGBOW, 1, 1, 1));
         Family.stock(BOOMERANG, new Family.Stock(Family.BOOMERANG, 1, 1, 1));
         Family.stock(BUCKLER, new Family.Stock(Family.BUCKLER, 2, 2, 1));
         Family.stock(TOWER_SHIELD, new Family.Stock(Family.TOWER_SHIELD, 2, 2, 2));

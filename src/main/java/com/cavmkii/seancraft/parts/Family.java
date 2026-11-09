@@ -18,7 +18,10 @@ public enum Family {
     HALBERD(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.HALBERD_HEAD, PartKind.HAFT),
     SPEAR(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.SPEARHEAD, PartKind.HAFT),
     PIKE(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.SPEARHEAD, PartKind.HAFT),
+    /** The vanilla bow, called the shortbow: quick to draw. */
     BOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
+    /** Slower to draw, arrows fly faster (so hit harder) and further. */
+    LONGBOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     CROSSBOW(List.of(PartSlot.HEAD, PartSlot.HANDLE, PartSlot.WRAP), PartKind.LIMBS),
     SHIELD(List.of(PartSlot.HANDLE, PartSlot.GUARD, PartSlot.WRAP), null),
     /** The Blademaster's buckler (9.4.6): light, 60% block, a wider parry window. */
@@ -52,6 +55,16 @@ public enum Family {
         this.grip = grip;
     }
 
+    /** Bows and crossbows: a string in the wrap slot, and draw speed instead of swing speed. */
+    public boolean ranged() {
+        return this == BOW || this == LONGBOW || this == CROSSBOW;
+    }
+
+    /** Base draw (or reload) pace against vanilla's: the longbow takes half again as long. */
+    public float drawPace() {
+        return this == LONGBOW ? 0.67f : 1;
+    }
+
     public boolean magic() {
         return this == WAND || this == STAFF;
     }
@@ -81,6 +94,7 @@ public enum Family {
             case HEAD -> part.kind() == head;
             case HANDLE -> part.kind() == grip;
             case GUARD -> part.kind() == (magic() ? PartKind.FOCUS : PartKind.GUARD);
+            case WRAP -> part.kind() == (ranged() ? PartKind.STRING : PartKind.WRAP);
             default -> true;
         };
     }
@@ -97,7 +111,7 @@ public enum Family {
             case GUARD -> magic() ? PartKind.FOCUS : PartKind.GUARD;
             case PLATE -> PartKind.PLATE;
             case PADDING -> PartKind.PADDING;
-            case WRAP -> PartKind.WRAP;
+            case WRAP -> ranged() ? PartKind.STRING : PartKind.WRAP;
         };
         return part == null || flavor.equalsIgnoreCase(part.label) ? flavor : flavor + " (" + part.label.toLowerCase(java.util.Locale.ROOT) + ")";
     }
@@ -110,7 +124,7 @@ public enum Family {
             case GUARD -> shield() ? "Rim" : magic() ? "Focus" : "Guard";
             case PLATE -> this == HELMET ? "Shell" : this == LEGS ? "Greaves" : "Plates";
             case PADDING -> this == HELMET ? "Liner" : "Padding";
-            case WRAP -> this == BOW || this == CROSSBOW ? "String" : shield() || armor() ? "Straps" : "Wrap";
+            case WRAP -> ranged() ? "String" : shield() || armor() ? "Straps" : "Wrap";
         };
     }
 
@@ -125,7 +139,7 @@ public enum Family {
                     case PLATE -> PartDef.of(PartKind.PLATE, metal);
                     case HANDLE -> PartDef.of(family.grip, wood);
                     case PADDING -> PartDef.of(PartKind.PADDING, hide);
-                    case WRAP -> PartDef.of(PartKind.WRAP, hide);
+                    case WRAP -> PartDef.of(family.ranged() ? PartKind.STRING : PartKind.WRAP, hide);
                 };
                 map.put(slot, def);
             }

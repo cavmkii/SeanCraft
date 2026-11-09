@@ -13,6 +13,8 @@
     "SafeGroundSpawnMixin",
     "AbstractArrowAccessor",
     "BetterCombatSwingMixin",
+    "BowDrawMixin",
+    "CrossbowReloadMixin",
     "BrewedPotionTriggerMixin",
     "ContainerNameAccessor",
     "CraftingMenuMixin",
