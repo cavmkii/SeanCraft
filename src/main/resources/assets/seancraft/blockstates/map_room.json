@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/map_room"
+    },
+    "facing=east": {
+      "model": "seancraft:block/map_room",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/map_room",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/map_room",
+      "y": 270
+    }
+  }
+}

@@ -1,1 +1,6 @@
-{ "values": ["seancraft:hideout_bench"] }
+{
+ "values": [
+  "seancraft:home_bench",
+  "seancraft:storehouse"
+ ]
+}

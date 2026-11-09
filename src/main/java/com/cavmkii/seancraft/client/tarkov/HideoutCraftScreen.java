@@ -25,7 +25,7 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
     private static final int BOOK_W = 62;
     private static final int ROW = 10;
     private static final int ROWS = 10;
-    private static final List<String> ORDER = List.of("Rigs", "Backpacks", "Pouches", "Meds", "Arrows", "Stations", "Modules", "Totems");
+    private static final List<String> ORDER = List.of("Meds", "Arrows", "Stations", "Modules", "Totems");
 
     private int scroll;
     private Pattern ghost;
@@ -183,14 +183,14 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
                         .withStyle(ChatFormatting.GRAY));
             }
             if (!menu.allowed(p)) {
-                lines.add(Component.literal("Needs " + gateText(p) + " in this hideout").withStyle(ChatFormatting.RED));
+                lines.add(Component.literal("Needs " + gateText(p) + " at this home base").withStyle(ChatFormatting.RED));
             }
             lines.add(Component.literal("Click: keep in grid").withStyle(ChatFormatting.DARK_GRAY));
             g.renderTooltip(font, lines, java.util.Optional.of(RecipeGridTooltip.Data.of(p.ghost(), p::example)), mouseX, mouseY);
         }
         if (menu.gated() && mouseX >= leftPos + HideoutCraftMenu.RESULT_X - 5 && mouseX < leftPos + HideoutCraftMenu.RESULT_X + 21
                 && mouseY >= topPos + HideoutCraftMenu.RESULT_Y - 5 && mouseY < topPos + HideoutCraftMenu.RESULT_Y + 21) {
-            g.renderTooltip(font, Component.literal("This hideout's module isn't high enough yet"), mouseX, mouseY);
+            g.renderTooltip(font, Component.literal("This home base's module isn't high enough yet"), mouseX, mouseY);
         }
     }
 

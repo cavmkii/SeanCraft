@@ -1,9 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
-import com.cavmkii.seancraft.tetris.GearItem;
 import com.cavmkii.seancraft.tetris.Grid;
-import com.cavmkii.seancraft.tetris.GridId;
-import com.cavmkii.seancraft.tetris.InvData;
 import com.cavmkii.seancraft.tetris.ItemSize;
 import com.cavmkii.seancraft.tetris.Loc;
 import com.cavmkii.seancraft.tetris.Placed;
@@ -159,60 +156,27 @@ public class TarkovScreen extends Screen {
 
     // ================================================================== layout
 
-    private record Box(GridId id, int x, int y, int w, int h, List<Placed> items) {}
-
-    /** The grids on screen: the pouch (unless the recipe book covers it), then rig, pockets and backpack, scrolled. */
-    private List<Box> boxes() {
-        TetrisNet.Sync s = ClientTetris.sync;
-        List<Box> out = new ArrayList<>();
-        if (!covered()) {
-            out.add(new Box(GridId.POUCH, POUCH_GRID_X, pouchY(), s.pouchW(), s.pouchH(), s.pouch()));
-        }
-        for (ColSec sec : colSections()) {
-            int gy = sec.y() + 9 - (int) colScroll;
-            if (sec.kind() == 1 && s.rig().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.RIG, sec.x() + 21, gy, g.spec.gridWidth, g.spec.gridHeight, s.rigItems()));
-            } else if (sec.kind() == 2) {
-                out.add(new Box(GridId.POCKETS, sec.x(), gy, InvData.POCKET_W, InvData.POCKET_H, s.pockets()));
-            } else if (sec.kind() == 3 && s.backpack().getItem() instanceof GearItem g) {
-                out.add(new Box(GridId.BACKPACK, sec.x() + 21, gy, g.spec.gridWidth, g.spec.gridHeight, s.backpackItems()));
-            }
-        }
-        return out;
-    }
-
-    /** x, y, size of an equipment slot: in its box, or (rig, backpack) beside its grid; null if hidden. */
+    /** x, y, size of an equipment slot in its box; null if the book or gather list covers it. */
     private int[] equipRect(int slot) {
-        if (EQUIP_BOX[slot] != null) {
-            return covered() ? null : new int[] {EQUIP_BOX[slot][0] + 7, EQUIP_BOX[slot][1] + 10, C};
+        if (slot < 0 || slot >= EQUIP_BOX.length || EQUIP_BOX[slot] == null) {
+            return null;
         }
-        for (ColSec sec : colSections()) {
-            if (slot == 4 && sec.kind() == 1 || slot == 5 && sec.kind() == 3) {
-                return new int[] {sec.x(), sec.y() + 9 - (int) colScroll, C};
-            }
-        }
-        return null;
+        return covered() ? null : new int[] {EQUIP_BOX[slot][0] + 7, EQUIP_BOX[slot][1] + 10, C};
     }
 
     /** Outlines shown in empty equipment slots (ghost/*). */
     private static final String[] EQUIP_GHOSTS = {"helmet", "chestplate", "leggings", "boots", "rig", "backpack", "offhand"};
 
-    /** A grid on screen: top-left, size in cells, and its items. */
-    private record GridRef(int x, int y, int w, int h, List<Placed> items) {}
-
-    /** The grid a GRID location belongs to. */
-    private GridRef gridFor(Loc loc) {
-        if (loc == null) {
-            return null;
-        }
-        if (loc.kind() == Loc.GRID) {
-            Box b = box(GridId.values()[loc.a()]);
-            return b == null ? null : new GridRef(b.x, b.y, b.w, b.h, b.items);
-        }
-        return null;
+    /** Top-left of a main inventory slot (9-35) in the PLAYER INVENTORY zone. */
+    private static int invX(int slot) {
+        return INV_X + ((slot - 9) % 9) * C;
     }
 
-    /** What's under a point (virtual coords) on the INVENTORY tab. For grids it's the cell. */
+    private static int invY(int slot) {
+        return INV_Y + ((slot - 9) / 9) * C;
+    }
+
+    /** What's under a point (virtual coords) on the INVENTORY tab. */
     private Loc locAt(double x, double y) {
         if (tab != INVENTORY) {
             return null;
@@ -223,10 +187,7 @@ public class TarkovScreen extends Screen {
         }
         for (int slot = 0; slot < 7; slot++) {
             int[] r = equipRect(slot);
-            if (r == null || (slot == 4 || slot == 5) && !inCol(y)) {
-                continue;
-            }
-            if (in(x, y, r[0], r[1], r[2], r[2])) {
+            if (r != null && in(x, y, r[0], r[1], r[2], r[2])) {
                 return Loc.equip(slot);
             }
         }
@@ -235,41 +196,13 @@ public class TarkovScreen extends Screen {
                 return Loc.hand(i);
             }
         }
-        for (Box b : boxes()) {
-            if (b.id != GridId.POUCH && !inCol(y)) {
-                continue;
-            }
-            if (x >= b.x && x < b.x + b.w * C && y >= b.y && y < b.y + b.h * C) {
-                return Loc.grid(b.id, (int) ((x - b.x) / C), (int) ((y - b.y) / C));
-            }
-        }
-        if (inCol(y)) {
-            for (ColSec sec : colSections()) {
-                if (sec.kind() != 0) {
-                    continue;
-                }
-                int top = sec.y() + 9 - (int) colScroll;
-                int n = ClientTetris.sync.unsorted().size();
-                if (x >= sec.x() && x < sec.x() + UNSORTED_COLS * C && y >= top) {
-                    int i = (int) ((y - top) / C) * UNSORTED_COLS + (int) ((x - sec.x()) / C);
-                    if (i >= 0 && i < n && y < top + ((n + UNSORTED_COLS - 1) / UNSORTED_COLS) * C) {
-                        return Loc.unsorted(i);
-                    }
-                }
-            }
+        if (in(x, y, INV_X, INV_Y, 9 * C, 3 * C)) {
+            return Loc.hand(9 + (int) ((y - INV_Y) / C) * 9 + (int) ((x - INV_X) / C));
         }
         return null;
     }
 
-    private Box box(GridId id) {
-        for (Box b : boxes()) {
-            if (b.id == id) {
-                return b;
-            }
-        }
-        return null;
-    }
-
+    /** The container entry at a CONTAINER location, or null. */
     private Placed placedAt(Loc loc) {
         if (loc != null && loc.kind() == Loc.CONTAINER && loc.b() >= 0) {
             List<TetrisNet.ContainerView> cs = ClientTetris.sync.containers();
@@ -279,8 +212,7 @@ public class TarkovScreen extends Screen {
             TetrisNet.ContainerView c = cs.get(loc.a());
             return new Grid(c.width(), c.height(), c.items()).at(loc.b(), loc.c());
         }
-        GridRef r = gridFor(loc);
-        return r == null ? null : new Grid(r.w, r.h, r.items).at(loc.b(), loc.c());
+        return null;
     }
 
     private ItemStack stackAt(Loc loc) {
@@ -292,15 +224,10 @@ public class TarkovScreen extends Screen {
         return switch (loc.kind()) {
             case Loc.HAND -> inv.items.get(loc.a());
             case Loc.EQUIP -> switch (loc.a()) {
-                case 4 -> s.rig();
-                case 5 -> s.backpack();
+                case 4, 5 -> ItemStack.EMPTY;
                 case 6 -> inv.offhand.get(0);
                 default -> inv.armor.get(3 - loc.a());
             };
-            case Loc.GRID -> {
-                Placed p = placedAt(loc);
-                yield p == null ? ItemStack.EMPTY : p.stack;
-            }
             case Loc.CONTAINER -> {
                 if (loc.b() >= 0) {
                     Placed p = placedAt(loc);
@@ -313,7 +240,6 @@ public class TarkovScreen extends Screen {
                 int i = c.overflowSlots().indexOf(loc.c());
                 yield i < 0 ? ItemStack.EMPTY : c.overflow().get(i);
             }
-            case Loc.UNSORTED -> loc.a() < s.unsorted().size() ? s.unsorted().get(loc.a()) : ItemStack.EMPTY;
             case Loc.CRAFT -> loc.a() < ClientTetris.craft.grid().size() ? ClientTetris.craft.grid().get(loc.a()) : ItemStack.EMPTY;
             default -> ItemStack.EMPTY;
         };
@@ -421,8 +347,8 @@ public class TarkovScreen extends Screen {
             }
             right = Math.min(right, x - 6);
         }
-        if (ClientTarkov.raid.state() == 1) {
-            String t = "HIDEOUT";
+        if (ClientTarkov.place.home()) {
+            String t = "HOME";
             int rx = right - font.width(t);
             // Only when no station is open (the open station's button names where you are).
             if (openStation == null && rx - 11 >= tabsEnd) {
@@ -473,38 +399,24 @@ public class TarkovScreen extends Screen {
     private int lastMy;
 
 
-    private void renderGrid(GuiGraphics g, Box b) {
-        renderGrid(g, new GridRef(b.x, b.y, b.w, b.h, b.items));
-    }
-
-    private void renderGrid(GuiGraphics g, GridRef b) {
-        boolean arrows = !held.isEmpty() && held.is(net.minecraft.tags.ItemTags.ARROWS) && arrowSource(b);
-        for (int cy = 0; cy < b.h; cy++) {
-            for (int cx = 0; cx < b.w; cx++) {
-                int x = b.x + cx * C;
-                int y = b.y + cy * C;
-                boolean over = lastMx >= x && lastMx < x + C && lastMy >= y && lastMy < y + C;
-                // While arrows are held, the grids a bow draws from get the green rim (3.3).
-                Kit.slot(g, x, y, C, arrows ? Kit.SlotState.ARROW_SOURCE : over ? Kit.SlotState.HOVER : Kit.SlotState.NORMAL);
-            }
+    /**
+     * The stack a held bow or crossbow will shoot next (3.3), outlined in green: vanilla's own choice (off-hand, then
+     * the hotbar, then the inventory). Null when no bow is held or there's nothing to shoot.
+     */
+    private ItemStack nextArrow() {
+        // The held bow or crossbow, else the first one carried: the arrows it would draw (C.5).
+        ItemStack bow = minecraft.player.getMainHandItem();
+        if (!(bow.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem)) {
+            bow = minecraft.player.getOffhandItem();
         }
-        Placed source = heldFrom != null && heldCount == 0 ? placedAt(heldFrom) : null;
-        for (Placed p : b.items) {
-            if (p == source) {
-                continue;
-            }
-            drawPlaced(g, p.stack, b.x + p.x * C, b.y + p.y * C, p.width(), p.height(), p.rotated, 0);
+        for (int i = 0; i < 36 && !(bow.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem); i++) {
+            bow = minecraft.player.getInventory().getItem(i);
         }
-    }
-
-    /** Bows draw arrows from the pockets, rig and backpack (not the pouch or open containers). */
-    private boolean arrowSource(GridRef r) {
-        for (Box b : boxes()) {
-            if (b.x() == r.x() && b.y() == r.y()) {
-                return b.id() != GridId.POUCH;
-            }
+        if (!(bow.getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem)) {
+            return null;
         }
-        return false;
+        ItemStack ammo = minecraft.player.getProjectile(bow);
+        return ammo.isEmpty() ? null : ammo;
     }
 
     private void drawPlaced(GuiGraphics g, ItemStack stack, int px, int py, int w, int h, boolean rotated, int bg) {
@@ -550,8 +462,6 @@ public class TarkovScreen extends Screen {
             case 0, 1, 2, 3 -> minecraft.player.getEquipmentSlotForItem(stack) == new net.minecraft.world.entity.EquipmentSlot[] {
                     net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
                     net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}[slot];
-            case 4 -> stack.getItem() instanceof GearItem g && g.spec.kind == com.cavmkii.seancraft.tetris.GearSpec.Kind.RIG;
-            case 5 -> stack.getItem() instanceof GearItem g && g.spec.kind == com.cavmkii.seancraft.tetris.GearSpec.Kind.BACKPACK;
             default -> false;
         };
     }
@@ -634,42 +544,10 @@ public class TarkovScreen extends Screen {
             return;
         }
         ItemStack shown = heldCount > 0 ? held.copyWithCount(heldCount) : held;
-        if (gridFor(hover) == null) {
-            // Off the grids, carry a plain icon so it doesn't hide the slot underneath.
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 300);
-            g.renderItem(shown, mx - 8, my - 8);
-            g.renderItemDecorations(font, shown, mx - 8, my - 8);
-            g.pose().popPose();
-            return;
-        }
-        int[] size = ItemSize.of(held);
-        int w = heldRot ? size[1] : size[0];
-        int h = heldRot ? size[0] : size[1];
-        // Over a grid the held item snaps to the cells it would land in, so it and the highlight always line up.
-        int drawX = mx - 9;
-        int drawY = my - 9;
-        if (gridFor(hover) != null) {
-            GridRef b = gridFor(hover);
-            if (b != null) {
-                Placed self = heldCount == 0 ? placedAt(heldFrom) : null;
-                Placed there = new Grid(b.w, b.h, b.items).at(hover.b(), hover.c());
-                boolean merge = there != null && there != self && ItemStack.isSameItemSameComponents(there.stack, held);
-                boolean ok = merge || new Grid(b.w, b.h, b.items).fits(w, h, hover.b(), hover.c(), self);
-                int gx = b.x + hover.b() * C;
-                int gy = b.y + hover.c() * C;
-                g.pose().pushPose();
-                g.pose().translate(0, 0, 150);
-                g.fill(gx, gy, gx + (merge ? there.width() : w) * C - 1, gy + (merge ? there.height() : h) * C - 1, ok ? 0x60B08A3E : 0x608E1F1F);
-                g.pose().popPose();
-                drawX = merge ? b.x + there.x * C : gx;
-                drawY = merge ? b.y + there.y * C : gy;
-            }
-        }
         g.pose().pushPose();
         g.pose().translate(0, 0, 300);
-        // See-through, so the highlight and the cells under it still show.
-        drawPlaced(g, shown, drawX, drawY, w, h, heldRot && size[0] != size[1], 0x400E0C0B, false);
+        g.renderItem(shown, mx - 8, my - 8);
+        g.renderItemDecorations(font, shown, mx - 8, my - 8);
         g.pose().popPose();
     }
 
@@ -695,13 +573,9 @@ public class TarkovScreen extends Screen {
     private static final int MAIN_Y = 123;
     /** The player model's box. */
     private static final int[] MODEL = {44, 49, 40, 84};
-    private static final int POUCH_GRID_X = 34;
-    // Player inventory: content from y 135, clipped and scrolled between COL_TOP and COL_BOTTOM.
-    private static final int COL_TOP = 133;
-    private static final int COL_BOTTOM = 233;
-    private static final int COL_LEFT = 130;
-    private static final int COL_RIGHT = 326;
-    private static final int UNSORTED_COLS = 10;
+    // Player inventory: vanilla's 27 main slots, 9 x 3, centred in the zone.
+    private static final int INV_X = 145;
+    private static final int INV_Y = 141;
     // Crafting.
     private static final int GX = 132;
     private static final int GRID_Y = 43;
@@ -747,7 +621,6 @@ public class TarkovScreen extends Screen {
     /** The station this screen was opened from (crafting table), shown widened in the station row; null for none. */
     private String openStation;
     private static boolean canMakeOnly;
-    private double colScroll;
     private double storageScroll;
     private double bookScroll;
     /** Storage tab: -1 for ALL, else a container index. */
@@ -757,26 +630,12 @@ public class TarkovScreen extends Screen {
     /** Tooltip for whatever small control is under the mouse this frame. */
     private String uiTip;
 
-    private int pouchY() {
-        // A three-row pouch starts right under its title so it stays inside the zone.
-        return ClientTetris.sync.pouchH() > 2 ? 181 : 183;
-    }
-
-    /** True when the stats can't sit under a tall pouch and move beside the hotbar instead. */
-    private boolean statsBesideHotbar() {
-        return ClientTetris.sync.pouchH() > 2;
-    }
-
     private static boolean in(double x, double y, int rx, int ry, int w, int h) {
         return x >= rx && x < rx + w && y >= ry && y < ry + h;
     }
 
     private static boolean in(double x, double y, int[] r) {
         return in(x, y, r[0], r[1], r[2], r[3]);
-    }
-
-    private static boolean inCol(double y) {
-        return y >= COL_TOP && y < COL_BOTTOM;
     }
 
     /** A zone: the ornate iron frame with rust trim 3 px outside its bounds, and a title bar with an optional icon. */
@@ -819,49 +678,6 @@ public class TarkovScreen extends Screen {
         if (over && tip != null) {
             uiTip = tip;
         }
-    }
-
-    // ------------------------------------------------------------------ player inventory (carried)
-
-    /** One of the player inventory's sections: 0 unsorted, 1 rig, 2 pockets, 3 backpack. y is before scrolling. */
-    private record ColSec(int kind, String title, int x, int y, int h) {}
-
-    /**
-     * Rig and pockets down the left, the backpack to their right when it fits (inventory v5), otherwise under the
-     * pockets; the whole thing scrolls inside the zone. Anything with no room sits on top as UNSORTED.
-     */
-    private List<ColSec> colSections() {
-        TetrisNet.Sync s = ClientTetris.sync;
-        List<ColSec> out = new ArrayList<>();
-        int y = COL_TOP + 2;
-        if (!s.unsorted().isEmpty()) {
-            int h = 9 + ((s.unsorted().size() + UNSORTED_COLS - 1) / UNSORTED_COLS) * C;
-            out.add(new ColSec(0, "UNSORTED (NO ROOM)", COL_LEFT, y, h));
-            y += h + 5;
-        }
-        int rigW = s.rig().getItem() instanceof GearItem g ? g.spec.gridWidth : 0;
-        int rigH = s.rig().getItem() instanceof GearItem g ? g.spec.gridHeight : 0;
-        String rig = s.rig().isEmpty() ? "RIG" : s.rig().getHoverName().getString().toUpperCase(Locale.ROOT) + "  " + rigW + "X" + rigH;
-        int rigBlock = 9 + Math.max(1, rigH) * C;
-        out.add(new ColSec(1, rig, COL_LEFT, y, rigBlock));
-        int py = y + rigBlock + 5;
-        out.add(new ColSec(2, "POCKETS  " + InvData.POCKET_W + "X" + InvData.POCKET_H, COL_LEFT, py, 9 + InvData.POCKET_H * C));
-        int leftBottom = py + 9 + InvData.POCKET_H * C;
-        int packW = s.backpack().getItem() instanceof GearItem g ? g.spec.gridWidth : 0;
-        int packH = s.backpack().getItem() instanceof GearItem g ? g.spec.gridHeight : 0;
-        String pack = s.backpack().isEmpty() ? "BACKPACK" : s.backpack().getHoverName().getString().toUpperCase(Locale.ROOT) + "  " + packW + "X" + packH;
-        int bx = Math.max(228, COL_LEFT + 21 + rigW * C + 5);
-        boolean beside = bx + 21 + Math.max(1, packW) * C <= COL_RIGHT;
-        out.add(new ColSec(3, pack, beside ? bx : COL_LEFT, beside ? y : leftBottom + 5, 9 + Math.max(1, packH) * C));
-        return out;
-    }
-
-    private int colContent() {
-        int bottom = COL_TOP;
-        for (ColSec sec : colSections()) {
-            bottom = Math.max(bottom, sec.y + sec.h);
-        }
-        return bottom + 2 - COL_TOP;
     }
 
     // ------------------------------------------------------------------ stash
@@ -967,7 +783,7 @@ public class TarkovScreen extends Screen {
         Kit.blit(g, "icon/tab/stash", ST[0] + 6, ST[1] + 5, 9, 9);
         if (!anyStorage()) {
             Kit.text(g, font, title, ST[0] + 18, ST[1] + 6, Kit.BONE);
-            g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. Inside a hideout, the stash shows here."),
+            g.drawWordWrap(font, Component.literal("Open a chest or barrel to see it here. At your home base, the stash shows here once you build a Storehouse."),
                     ST[0] + 6, ST[1] + 24, ST[2] - 12, Kit.ASH);
             return;
         }
@@ -980,16 +796,20 @@ public class TarkovScreen extends Screen {
         boolean chestTab = storageTab >= 0 || !hideout;
         int fi = storageTab >= 0 ? storageTab : 0;
         int by = ST[1] + 3;
-        iconButton(g, "filter", stashButtonX(0), by, 12, chestTab, mx, my, chestTab ? "Filter: what this chest takes" : "Pick a chest's tab to set its filter");
+        boolean sh2 = s.storehouse() >= 2;
+        iconButton(g, "filter", stashButtonX(0), by, 12, chestTab && sh2, mx, my, !sh2 ? "Filters need a Storehouse level 2"
+                : chestTab ? "Filter: what this chest takes" : "Pick a chest's tab to set its filter");
         if (chestTab && fi < cs.size() && cs.get(fi).filter() != StorageCategory.ALL) {
             g.renderOutline(stashButtonX(0) - 1, by - 1, 14, 14, Kit.GOLD);
         }
-        iconButton(g, "sort", stashButtonX(1), by, 12, true, mx, my, chestTab ? "Sort this chest" : "Organize: merge and sort across the stash");
+        iconButton(g, "sort", stashButtonX(1), by, 12, chestTab || sh2, mx, my, chestTab ? "Sort this chest"
+                : sh2 ? "Organize: merge and sort across the stash" : "Organize needs a Storehouse level 2");
         iconButton(g, "take_all", stashButtonX(2), by, 12, !cs.isEmpty(), mx, my, chestTab ? "Take all from this chest" : "Take all from every chest");
         iconButton(g, "stash_all", stashButtonX(3), by, 12, hideout, mx, my,
-                hideout ? "Stash all: your pockets, rig and backpack" : "Stash all: inside a hideout only");
-        iconButton(g, "refill", stashButtonX(4), by, 12, !cs.isEmpty(), mx, my,
-                "Refill stacks: top up the partial stacks you carry from " + (hideout ? "the stash" : "this container"));
+                hideout ? "Stash all: your main inventory (not the hotbar)" : "Stash all: at your home base only");
+        boolean refillOk = !cs.isEmpty() && (!hideout || sh2);
+        iconButton(g, "refill", stashButtonX(4), by, 12, refillOk, mx, my, hideout && !sh2 ? "Refill from the stash needs a Storehouse level 2"
+                : "Refill stacks: top up the partial stacks you carry from " + (hideout ? "the stash" : "this container"));
         // Search field.
         int fy = 40;
         Kit.blit(g, storageSearchFocused ? "text_field/focused" : "text_field/normal", 339, fy, 130, 12);
@@ -1064,17 +884,6 @@ public class TarkovScreen extends Screen {
 
     // ------------------------------------------------------------------ equipment
 
-    /** The secure pouch's own item, from its size. */
-    private static ItemStack pouchItem() {
-        for (com.cavmkii.seancraft.tarkov.SecureTier t : com.cavmkii.seancraft.tarkov.SecureTier.values()) {
-            if (t.width == ClientTetris.sync.pouchW() && t.height == ClientTetris.sync.pouchH()) {
-                return new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
-                        com.cavmkii.seancraft.SeanCraft.id("secure_" + t.name().toLowerCase(Locale.ROOT))));
-            }
-        }
-        return ItemStack.EMPTY;
-    }
-
     private ItemStack renderEquipment(GuiGraphics g, int mx, int my, Loc hover) {
         ItemStack tip = ItemStack.EMPTY;
         zone(g, EQ, "EQUIPMENT", null, Kit.BONE);
@@ -1104,24 +913,7 @@ public class TarkovScreen extends Screen {
                 uiTip = "Main hand: your selected hotbar slot";
             }
         }
-        // Secure pouch, kept on death.
-        ItemStack pi = pouchItem();
-        titleBar(g, 9, 168, 106, "SECURE  KEPT", null, Kit.GOLD);
-        int py = pouchY();
-        Kit.slot(g, 12, py, C, Kit.SlotState.NORMAL);
-        if (!pi.isEmpty()) {
-            g.renderItem(pi, 13, py + 1);
-            if (in(mx, my, 12, py, C, C)) {
-                tip = pi;
-            }
-        }
-        Box pouch = box(GridId.POUCH);
-        if (pouch != null) {
-            renderGrid(g, pouch);
-        }
-        if (!statsBesideHotbar()) {
-            renderStats(g, 11, 217, mx, my);
-        }
+        renderStats(g, 11, 176, mx, my);
         return tip;
     }
 
@@ -1439,11 +1231,11 @@ public class TarkovScreen extends Screen {
         ItemStack tip = ItemStack.EMPTY;
         zone(g, CR, "CRAFTING", "icon/tab/crafting", Kit.BONE);
         boolean table = craft.table();
-        String where = table ? (craft.inHideout() ? "3X3  HIDEOUT" : "3X3  TABLE") : "2X2";
+        String where = table ? (craft.inHideout() ? "3X3  HOME" : "3X3  TABLE") : "2X2";
         small(g, where, CR[0] + 18 + font.width("CRAFTING") + 6, CR[1] + 7, table ? Kit.MOSS : Kit.ASH, 0.75f);
         if (in(mx, my, CR[0] + 18 + font.width("CRAFTING") + 6, CR[1] + 4, 50, 10)) {
-            uiTip = table ? "3x3 grid: " + (craft.inHideout() ? "you're in a hideout" : "a crafting table is close")
-                    : "2x2 grid: 3x3 needs a crafting table within 6 blocks, or a hideout";
+            uiTip = table ? "3x3 grid: " + (craft.inHideout() ? "you're at your home base" : "a crafting table is close")
+                    : "2x2 grid: 3x3 needs a crafting table within 6 blocks, or your home base";
         }
         boolean recipesOver = in(mx, my, RECIPES);
         Kit.blit(g, recipesOver || bookOpen ? "button_small/recipes_hover" : "button_small/recipes_normal", RECIPES[0], RECIPES[1], RECIPES[2], RECIPES[3]);
@@ -1586,51 +1378,21 @@ public class TarkovScreen extends Screen {
             tip = mid;
         }
 
-        // Player inventory: rig, pockets and backpack, each with its own item beside its grid.
+        // Player inventory: vanilla's 27 main slots (3.1).
         zone(g, PI, "PLAYER INVENTORY", null, Kit.BONE);
-        iconButton(g, "sort", 311, PI[1] + 3, 12, true, mx, my, "Sort your grids");
-        colScroll = Math.max(0, Math.min(Math.max(0, colContent() - (COL_BOTTOM - COL_TOP)), colScroll));
-        g.enableScissor((int) (ox + PI[0] * scale), (int) (oy + COL_TOP * scale), (int) Math.ceil(ox + (PI[0] + PI[2]) * scale),
-                (int) Math.ceil(oy + COL_BOTTOM * scale));
-        for (ColSec sec : colSections()) {
-            int y = sec.y - (int) colScroll;
-            int labelW = COL_RIGHT - sec.x - (sec.kind == 0 ? 32 : 0);
-            fitted(g, sec.title, sec.x, y + 1, sec.kind == 0 ? Kit.BLOOD_LIGHT : Kit.ASH, labelW, 0.75f);
-            switch (sec.kind) {
-                case 0 -> {
-                    boolean over = in(mx, my, COL_RIGHT - 28, y, 28, 9) && inCol(my);
-                    Kit.smallButton(g, font, "DROP", COL_RIGHT - 28, y, 28, 9, true, over, false, 0.625f);
-                    if (over) {
-                        uiTip = "Drop everything that has no room";
-                    }
-                    List<ItemStack> list = s.unsorted();
-                    for (int i = 0; i < list.size(); i++) {
-                        Loc loc = Loc.unsorted(i);
-                        slot(g, sec.x + (i % UNSORTED_COLS) * C, y + 9 + (i / UNSORTED_COLS) * C, C, list.get(i), hover != null && hover.equals(loc), null);
-                    }
-                }
-                case 1, 3 -> {
-                    equipSlot(g, sec.kind == 1 ? 4 : 5, hover);
-                    boolean none = sec.kind == 1 ? s.rig().isEmpty() : s.backpack().isEmpty();
-                    if (none) {
-                        small(g, sec.kind == 1 ? "no rig" : "no backpack", sec.x + 23, y + 15, Kit.DISABLED, 0.75f);
-                    }
-                }
-                default -> { }
+        iconButton(g, "sort", 311, PI[1] + 3, 12, true, mx, my, "Sort your inventory");
+        ItemStack next = nextArrow();
+        for (int i = 9; i < 36; i++) {
+            int x = invX(i);
+            int y = invY(i);
+            Loc loc = Loc.hand(i);
+            ItemStack stack = stackAt(loc);
+            slot(g, x, y, C, stack, hover != null && hover.equals(loc) || dragging(loc), null);
+            if (next != null && stack == next) {
+                arrowOutline(g, x, y);
             }
         }
-        for (Box b : boxes()) {
-            if (b.id() != GridId.POUCH) {
-                renderGrid(g, b);
-            }
-        }
-        g.disableScissor();
-        double cmax = colContent() - (COL_BOTTOM - COL_TOP);
-        if (cmax > 0) {
-            int span = COL_BOTTOM - COL_TOP;
-            int barH = Math.max(10, (int) (span * (double) span / colContent()));
-            Kit.blit(g, "scroll/handle", COL_RIGHT - 3, COL_TOP + (int) ((span - barH) * colScroll / cmax), 4, barH);
-        }
+        small(g, "SHIFT-CLICK: TO STORAGE, OR BETWEEN HOTBAR AND INVENTORY", INV_X, INV_Y + 3 * C + 5, Kit.ASH, 0.5f);
 
         renderStorage(g, mx, my);
 
@@ -1641,6 +1403,9 @@ public class TarkovScreen extends Screen {
             int x = HB_X + i * HB_STEP;
             boolean over = hover != null && hover.equals(Loc.hand(i)) || dragging(Loc.hand(i));
             slot(g, x, HB_Y, C, stackAt(Loc.hand(i)), over, null);
+            if (next != null && stackAt(Loc.hand(i)) == next) {
+                arrowOutline(g, x, HB_Y);
+            }
             if (i == selected) {
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 150);
@@ -1671,13 +1436,18 @@ public class TarkovScreen extends Screen {
         if (gatherOver) {
             uiTip = gatherOpen ? "Close the gather list" : "Your gather list: change amounts or take things off";
         }
-        if (statsBesideHotbar()) {
-            renderStats(g, 372, 245, mx, my);
-        }
-
         renderFilter(g, mx, my);
         renderHeld(g, mx, my, hover);
         return tip;
+    }
+
+    /** The green rim on the stack a bow or crossbow shoots next (C.2: green outlines where arrows come from). */
+    private void arrowOutline(GuiGraphics g, int x, int y) {
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 160);
+        g.renderOutline(x, y, C, C, Kit.GREEN);
+        g.renderOutline(x + 1, y + 1, C - 2, C - 2, Kit.GREEN);
+        g.pose().popPose();
     }
 
     /** True if a point is on a zone or the hotbar (a click anywhere else with something held drops it). */
@@ -1776,21 +1546,13 @@ public class TarkovScreen extends Screen {
             ClientPlayNetworking.send(new TetrisNet.Action(0));
             return true;
         }
-        if (inCol(y)) {
-            for (ColSec sec : colSections()) {
-                if (sec.kind == 0 && in(x, y, COL_RIGHT - 28, sec.y - (int) colScroll, 28, 9)) {
-                    ClientPlayNetworking.send(new TetrisNet.Action(2));
-                    return true;
-                }
-            }
-        }
         if (anyStorage()) {
             boolean hideout = s.stash();
             boolean chestTab = storageTab >= 0 || !hideout;
             int chest = storageTab >= 0 ? storageTab : 0;
             int by = ST[1] + 3;
             if (in(x, y, stashButtonX(0), by, 12, 12)) {
-                if (chestTab && chest < cs.size()) {
+                if (chestTab && chest < cs.size() && s.storehouse() >= 2) {
                     filterOpen = filterOpen == chest ? -1 : chest;
                     filterX = ST[0] + ST[2] - FILTER_W - 4;
                     filterY = ZONE_Y + 17;
@@ -1800,7 +1562,7 @@ public class TarkovScreen extends Screen {
             if (in(x, y, stashButtonX(1), by, 12, 12)) {
                 if (chestTab && chest < cs.size()) {
                     ClientPlayNetworking.send(new TetrisNet.ContainerAction(chest, 0, 0));
-                } else {
+                } else if (s.storehouse() >= 2) {
                     ClientPlayNetworking.send(new TetrisNet.Action(8));
                 }
                 return true;
@@ -1822,7 +1584,7 @@ public class TarkovScreen extends Screen {
                 return true;
             }
             if (in(x, y, stashButtonX(4), by, 12, 12)) {
-                if (!cs.isEmpty()) {
+                if (!cs.isEmpty() && (!hideout || s.storehouse() >= 2)) {
                     ClientPlayNetworking.send(new TetrisNet.Action(9));
                 }
                 return true;
@@ -1877,7 +1639,7 @@ public class TarkovScreen extends Screen {
     /** The station row (top right, inside a hideout): kind, x, width, index. */
     private List<Object[]> stationButtons() {
         List<Object[]> out = new ArrayList<>();
-        if (ClientTarkov.raid.state() != 1) {
+        if (!ClientTarkov.place.home()) {
             return out;
         }
         List<String> kinds = StationTabs.stations.kinds();
@@ -1898,7 +1660,8 @@ public class TarkovScreen extends Screen {
             case "hideout" -> "icon/tab/hideout";
             case "crafting_table" -> "icon/tab/crafting";
             case "weapon_bench" -> "icon/station/weapon_bench";
-            case "module_intel" -> "icon/station/intel_center";
+            case "module_map_room" -> "icon/station/intel_center";
+            case "module_storehouse" -> "icon/tab/stash";
             default -> kind.startsWith("module_") ? "icon/station/" + kind.substring(7) : "icon/tab/hideout";
         };
     }
@@ -2145,7 +1908,7 @@ public class TarkovScreen extends Screen {
             return true;
         }
         Placed p = placedAt(loc);
-        heldFrom = p == null ? loc : loc.kind() == Loc.GRID ? Loc.grid(GridId.values()[loc.a()], p.x, p.y) : Loc.container(loc.a(), p.x, p.y);
+        heldFrom = p == null ? loc : Loc.container(loc.a(), p.x, p.y);
         held = stack;
         heldRot = p != null && p.rotated;
         // Right-click picks up half (the bigger half), like vanilla.
@@ -2223,7 +1986,7 @@ public class TarkovScreen extends Screen {
                 // A whole stack onto a full hotbar or gear slot swaps; the bumped item lands where this one was
                 // and ends up on the cursor, like vanilla.
                 boolean swap = heldCount == 0 && (loc.kind() == Loc.HAND || loc.kind() == Loc.EQUIP || loc.kind() == Loc.CRAFT) && !there.isEmpty()
-                        && !ItemStack.isSameItemSameComponents(there, held) && heldFrom.kind() != Loc.UNSORTED
+                        && !ItemStack.isSameItemSameComponents(there, held)
                         && !(heldFrom.kind() == Loc.CONTAINER && heldFrom.b() < 0);
                 ClientPlayNetworking.send(new TetrisNet.Move(heldFrom, loc, heldRot, heldCount));
                 if (swap) {
@@ -2301,8 +2064,6 @@ public class TarkovScreen extends Screen {
             double y = vy(mouseY);
             if (bookOpen && in(x, y, BOOK[0], BOOK[1], BOOK[2], BOOK[3])) {
                 bookScroll -= scrollY * BOOK_ROW;
-            } else if (in(x, y, PI)) {
-                colScroll -= scrollY * 18;
             } else if (in(x, y, ST)) {
                 storageScroll -= scrollY * 18;
             }

@@ -20,18 +20,17 @@ public final class TarkovContent {
             .initializer(TarkovData::new)
             .buildAndRegister(SeanCraft.id("tarkov"));
 
-    public static final Block HIDEOUT_BENCH = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("hideout_bench"),
+    /** The Home Bench (2.4). The Java names still say hideout. */
+    public static final Block HIDEOUT_BENCH = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("home_bench"),
             new HideoutBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD)));
-    public static final Item HIDEOUT_BENCH_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("hideout_bench"),
+    public static final Item HIDEOUT_BENCH_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("home_bench"),
             new HideoutBenchItem(HIDEOUT_BENCH, new Item.Properties()));
-    public static final Block RECOVERY_CRATE = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("recovery_crate"),
-            new RecoveryCrateBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2f).sound(SoundType.WOOD)));
-    public static final Item RECOVERY_CRATE_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("recovery_crate"),
-            new net.minecraft.world.item.BlockItem(RECOVERY_CRATE, new Item.Properties()));
-    public static final Block FOB_TABLE = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("fob_table"),
-            new FobTableBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2f).sound(SoundType.WOOD)));
-    public static final Item FOB_TABLE_ITEM = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("fob_table"),
-            new FobTableBlock.Item(FOB_TABLE, new Item.Properties()));
+    /** A camp (2.5): placed from its kit, packs back into it. */
+    public static final Block CAMP = Registry.register(BuiltInRegistries.BLOCK, SeanCraft.id("camp"),
+            new CampBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(1f).sound(SoundType.WOOL).noOcclusion()
+                    .lightLevel(state -> 13)));
+    public static final Item CAMP_KIT = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("camp_kit"),
+            new CampBlock.Kit(CAMP, new Item.Properties().stacksTo(1)));
 
     /** A module block's level, carried while it's picked up (2.5). */
     public static final net.minecraft.core.component.DataComponentType<Integer> MODULE_LEVEL = Registry.register(
@@ -51,12 +50,6 @@ public final class TarkovContent {
         }
     }
 
-    /** The first pouch as an item (4.8): crafted, then put in the centre of the Beta pattern. */
-    public static final Item SECURE_ALPHA = secure("secure_alpha", SecureTier.ALPHA);
-    public static final Item SECURE_BETA = secure("secure_beta", SecureTier.BETA);
-    public static final Item SECURE_GAMMA = secure("secure_gamma", SecureTier.GAMMA);
-    public static final Item SECURE_KAPPA = secure("secure_kappa", SecureTier.KAPPA);
-
     public static final Item ANTIDOTE = Registry.register(BuiltInRegistries.ITEM, SeanCraft.id("antidote"),
             new AntidoteItem(new Item.Properties().stacksTo(8)));
 
@@ -71,13 +64,8 @@ public final class TarkovContent {
 
     private TarkovContent() {}
 
-    private static Item secure(String name, SecureTier tier) {
-        return Registry.register(BuiltInRegistries.ITEM, SeanCraft.id(name),
-                new SecureItem(tier, new Item.Properties().stacksTo(1).rarity(tier == SecureTier.KAPPA ? Rarity.EPIC : Rarity.RARE)));
-    }
-
     public static final net.minecraft.world.inventory.MenuType<HideoutCraftMenu> HIDEOUT_CRAFT_MENU = Registry.register(BuiltInRegistries.MENU,
-            SeanCraft.id("hideout_bench"), new net.minecraft.world.inventory.MenuType<>(HideoutCraftMenu::new,
+            SeanCraft.id("home_bench"), new net.minecraft.world.inventory.MenuType<>(HideoutCraftMenu::new,
                     net.minecraft.world.flag.FeatureFlags.VANILLA_SET));
 
     static void init() {

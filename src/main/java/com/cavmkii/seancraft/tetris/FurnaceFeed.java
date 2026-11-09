@@ -67,7 +67,8 @@ public final class FurnaceFeed {
     private static List<ItemStack> stash(ServerPlayer player, List<Container> touched) {
         List<ItemStack> out = new ArrayList<>();
         Hideouts.Hideout home = Hideouts.at(player.serverLevel(), player.position());
-        if (home != null) {
+        // The stash at every station comes with Storehouse 3 (2.4.1).
+        if (home != null && home.level(com.cavmkii.seancraft.tarkov.Module.STOREHOUSE) >= 3) {
             for (Container c : Stash.containers(player.serverLevel(), home)) {
                 touched.add(c);
                 for (int i = 0; i < c.getContainerSize(); i++) {
@@ -99,7 +100,7 @@ public final class FurnaceFeed {
         for (ItemStack s : stash(player, new ArrayList<>())) {
             sort(player, menu, s, fuelStash, smeltStash);
         }
-        boolean home = Hideouts.at(player.serverLevel(), player.position()) != null;
+        boolean home = Tetris.storehouse(player) >= 3;
         int hash = java.util.Objects.hash(home, hash(fuelYou), hash(fuelStash), hash(smeltYou), hash(smeltStash));
         Integer last = SENT.get(player.getUUID());
         if (!force && last != null && last == hash) {

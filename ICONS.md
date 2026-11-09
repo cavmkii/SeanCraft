@@ -17,7 +17,6 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 - Keep a 1px margin so the icon doesn't touch the edges, and give it a darker outline so it reads on both dark and light slots.
 - Light from the top-left, like vanilla items.
 - Material colors help: copper is orange, iron light grey, gold yellow, diamond cyan, netherite dark grey/purple.
-- Items that are bigger in the grid (the 2x2 Surgery Case, the 2x1 Surgical Kit, rigs, backpacks) still use a 16x16 icon. It just gets drawn bigger.
 - Animated textures (a tall PNG plus a `.png.mcmeta` file) work too.
 
 ## Item IDs
@@ -42,19 +41,16 @@ Items without a PNG keep their stand-in, so you can add them one at a time.
 **Meds:** `bandage`, `tourniquet`, `splint`, `painkillers`, `field_kit`, `surgical_kit`, `surgery_case`, `antidote`
 
 **Gear:**
-- **Rigs:** `rig_scav`, `rig_chest`, `rig_carrier`, `rig_assault`
-- **Backpacks:** `pack_sling`, `pack_scav`, `pack_pilgrim`, `pack_expedition`
-- **Secure pouches:** `secure_beta`, `secure_gamma`, `secure_kappa`
 
 **Joe and Sean:** `soda`, `merch`, `glock`, `restraining_order`, `diddy_oil`, `sixty_seven`, `baby_bonnet`
 
 **Character:** `orb_of_regret`
 
-**Raid:** `fire_arrow` (blocks: `fob_table`)
+**Out in the world:** `fire_arrow`, `camp_kit` (the placed `camp` block still borrows the old FOB table model)
 
 **Bosses:** `mark_totem`, `trophy_old_salt`, `marks_reel` (blocks: `summoning_pedestal`, `trophy_rack`)
 
-**Blocks** (as items): `hideout_bench`, `weapon_bench`, `altar_of_regret`, `workshop`, `medstation`, `perimeter`, `intel`. These show the block model in your inventory now, and a PNG replaces that with a flat icon.
+**Blocks** (as items): `home_bench`, `weapon_bench`, `altar_of_regret`, `workshop`, `medstation`, `perimeter`, `map_room`, `storehouse` (the Storehouse borrows the Workshop model for now). These show the block model in your inventory now, and a PNG replaces that with a flat icon.
 
 **Ecology:** `soil_kit`, `insecticide`, `bat_guano`
 

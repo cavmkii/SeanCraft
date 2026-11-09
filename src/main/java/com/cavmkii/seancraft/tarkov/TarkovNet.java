@@ -16,22 +16,28 @@ public final class TarkovNet {
         return new CustomPacketPayload.Type<>(SeanCraft.id(name));
     }
 
-    /** Server to client once a second: 0 unknown, 1 hideout, 2 raid, 3 spawn safe zone; raid time, threat, seconds to next threat (-1 none). */
-    /** {@code band} is a {@link Distance} ordinal; {@code fobLeft} the raid's FOB seconds left, or -1 outside a raid. */
-    public record RaidState(int state, int raidSeconds, int threat, int nextThreat, int band, int fobLeft, boolean fobPaused)
-            implements CustomPacketPayload {
-        public static final Type<RaidState> TYPE = payloadType("raid_state");
-        public static final StreamCodec<FriendlyByteBuf, RaidState> CODEC = StreamCodec.of((buf, p) -> {
-            buf.writeVarInt(p.state);
-            buf.writeVarInt(p.raidSeconds);
-            buf.writeVarInt(p.threat);
-            buf.writeVarInt(p.nextThreat + 1);
+    /** Server to client once a second: where the player is (home, spawn, camp or the open world) and their distance band. */
+    public record PlaceState(int place, int band) implements CustomPacketPayload {
+        public static final int UNKNOWN = 0;
+        public static final int HOME = 1;
+        public static final int OPEN = 2;
+        public static final int SPAWN = 3;
+        public static final int CAMP = 4;
+        public static final Type<PlaceState> TYPE = payloadType("place_state");
+        public static final StreamCodec<FriendlyByteBuf, PlaceState> CODEC = StreamCodec.of((buf, p) -> {
+            buf.writeVarInt(p.place);
             buf.writeVarInt(p.band);
-            buf.writeVarInt(p.fobLeft + 1);
-            buf.writeBoolean(p.fobPaused);
-        }, buf -> new RaidState(buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt() - 1, buf.readVarInt(),
-                buf.readVarInt() - 1, buf.readBoolean()));
-        @Override public Type<RaidState> type() { return TYPE; }
+        }, buf -> new PlaceState(buf.readVarInt(), buf.readVarInt()));
+        @Override public Type<PlaceState> type() { return TYPE; }
+
+        public boolean home() {
+            return place == HOME;
+        }
+
+        /** Safe ground: no hostile spawns. */
+        public boolean safe() {
+            return place == HOME || place == SPAWN || place == CAMP;
+        }
     }
 
     /**
@@ -236,7 +242,7 @@ public final class TarkovNet {
         PayloadTypeRegistry.playS2C().register(Banner.TYPE, Banner.CODEC);
         PayloadTypeRegistry.playC2S().register(TreatPart.TYPE, TreatPart.CODEC);
         PayloadTypeRegistry.playC2S().register(CureEffect.TYPE, CureEffect.CODEC);
-        PayloadTypeRegistry.playS2C().register(RaidState.TYPE, RaidState.CODEC);
+        PayloadTypeRegistry.playS2C().register(PlaceState.TYPE, PlaceState.CODEC);
         PayloadTypeRegistry.playS2C().register(HideoutView.TYPE, HideoutView.CODEC);
         PayloadTypeRegistry.playC2S().register(HideoutAction.TYPE, HideoutAction.CODEC);
         PayloadTypeRegistry.playS2C().register(StationList.TYPE, StationList.CODEC);

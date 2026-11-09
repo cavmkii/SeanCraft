@@ -1,7 +1,7 @@
 {
   "name": "Mark",
   "tier": 1,
-  "home": { "biomes": ["#minecraft:is_beach", "#minecraft:is_river"], "style": "beach" },
+  "home": { "biomes": ["#c:is_beach", "#c:is_river"], "style": "beach" },
   "health": 2000,
   "resist": { "slash": 1.5 },
   "phases": [

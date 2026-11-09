@@ -70,23 +70,16 @@ public final class TetrisNet {
         }
     }
 
-    /** Server to client: the whole Tetris inventory and whatever container or stash is in reach. */
-    public record Sync(ItemStack rig, ItemStack backpack, List<Placed> pockets, List<Placed> rigItems, List<Placed> backpackItems,
-            List<Placed> pouch, int pouchW, int pouchH, List<ItemStack> unsorted, boolean stash, List<ContainerView> containers,
-            boolean autoRefill, boolean refillFromStash, List<String> tracked, boolean opened) implements CustomPacketPayload {
+    /**
+     * Server to client: whatever container or stash is in reach, and the inventory settings. {@code storehouse} is the
+     * Storehouse level of the home base you're in (0 without one; the stash only shows from level 1).
+     */
+    public record Sync(boolean stash, int storehouse, List<ContainerView> containers, boolean autoRefill, boolean refillFromStash,
+            List<String> tracked, boolean opened) implements CustomPacketPayload {
         public static final Type<Sync> TYPE = payloadType("inv_sync");
         public static final StreamCodec<RegistryFriendlyByteBuf, Sync> CODEC = StreamCodec.of((buf, p) -> {
-            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.rig);
-            ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, p.backpack);
-            writeList(buf, p.pockets);
-            writeList(buf, p.rigItems);
-            writeList(buf, p.backpackItems);
-            writeList(buf, p.pouch);
-            buf.writeVarInt(p.pouchW);
-            buf.writeVarInt(p.pouchH);
-            buf.writeVarInt(p.unsorted.size());
-            p.unsorted.forEach(s -> ItemStack.STREAM_CODEC.encode(buf, s));
             buf.writeBoolean(p.stash);
+            buf.writeVarInt(p.storehouse);
             buf.writeBoolean(p.autoRefill);
             buf.writeBoolean(p.refillFromStash);
             buf.writeVarInt(p.tracked.size());
@@ -95,20 +88,8 @@ public final class TetrisNet {
             p.containers.forEach(c -> c.write(buf));
             buf.writeBoolean(p.opened);
         }, buf -> {
-            ItemStack rig = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
-            ItemStack backpack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
-            List<Placed> pockets = readList(buf);
-            List<Placed> rigItems = readList(buf);
-            List<Placed> backpackItems = readList(buf);
-            List<Placed> pouch = readList(buf);
-            int pw = buf.readVarInt();
-            int ph = buf.readVarInt();
-            int n = buf.readVarInt();
-            List<ItemStack> unsorted = new ArrayList<>();
-            for (int i = 0; i < n; i++) {
-                unsorted.add(ItemStack.STREAM_CODEC.decode(buf));
-            }
             boolean stash = buf.readBoolean();
+            int storehouse = buf.readVarInt();
             boolean refill = buf.readBoolean();
             boolean refillStash = buf.readBoolean();
             int t = buf.readVarInt();
@@ -121,9 +102,7 @@ public final class TetrisNet {
             for (int i = 0; i < c; i++) {
                 containers.add(ContainerView.read(buf));
             }
-            boolean opened = buf.readBoolean();
-            return new Sync(rig, backpack, pockets, rigItems, backpackItems, pouch, pw, ph, unsorted, stash, containers, refill, refillStash, tracked,
-                    opened);
+            return new Sync(stash, storehouse, containers, refill, refillStash, tracked, buf.readBoolean());
         });
         @Override public Type<Sync> type() { return TYPE; }
     }
@@ -156,19 +135,6 @@ public final class TetrisNet {
         @Override public Type<QuickMove> type() { return TYPE; }
     }
 
-    /**
-     * Client to server: a click on the grid panel shown beside vanilla container screens. Swaps with the menu's
-     * cursor item. Button 0 left (whole stack), 1 right (half, or put down one), 2 shift (send into the menu).
-     */
-    public record PanelClick(Loc loc, boolean rotated, int button) implements CustomPacketPayload {
-        public static final Type<PanelClick> TYPE = payloadType("inv_panel");
-        public static final StreamCodec<RegistryFriendlyByteBuf, PanelClick> CODEC = StreamCodec.of((buf, p) -> {
-            p.loc.write(buf);
-            buf.writeBoolean(p.rotated);
-            buf.writeVarInt(p.button);
-        }, buf -> new PanelClick(Loc.read(buf), buf.readBoolean(), buf.readVarInt()));
-        @Override public Type<PanelClick> type() { return TYPE; }
-    }
 
     /** Client to server: the whole gather tracker ("item id=goal" entries), replacing what was there. */
     public record Track(List<String> entries) implements CustomPacketPayload {
@@ -354,7 +320,6 @@ public final class TetrisNet {
         PayloadTypeRegistry.playC2S().register(QuickMove.TYPE, QuickMove.CODEC);
         PayloadTypeRegistry.playC2S().register(Action.TYPE, Action.CODEC);
         PayloadTypeRegistry.playC2S().register(Craft.TYPE, Craft.CODEC);
-        PayloadTypeRegistry.playC2S().register(PanelClick.TYPE, PanelClick.CODEC);
         PayloadTypeRegistry.playC2S().register(ContainerAction.TYPE, ContainerAction.CODEC);
         PayloadTypeRegistry.playC2S().register(ContainerName.TYPE, ContainerName.CODEC);
         PayloadTypeRegistry.playC2S().register(Track.TYPE, Track.CODEC);

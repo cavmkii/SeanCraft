@@ -1,5 +1,6 @@
 package com.cavmkii.seancraft.ecology;
 
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import com.cavmkii.seancraft.SeanCraft;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -70,9 +71,12 @@ public final class EcoContent {
 
     public static void init() {
         net.fabricmc.fabric.api.biome.v1.BiomeModifications.addFeature(
-                net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.PLAINS,
-                        net.minecraft.world.level.biome.Biomes.SUNFLOWER_PLAINS, net.minecraft.world.level.biome.Biomes.SAVANNA,
-                        net.minecraft.world.level.biome.Biomes.MEADOW),
+                // By tag, so Terralith's grasslands get it too (v23 10). Snowy plains are left out.
+                net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(ConventionalBiomeTags.IS_PLAINS)
+                        .or(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(ConventionalBiomeTags.IS_SAVANNA))
+                        .or(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.world.level.biome.Biomes.MEADOW))
+                        .and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(ConventionalBiomeTags.IS_SNOWY).negate())
+                        .and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.foundInOverworld()),
                 net.minecraft.world.level.levelgen.GenerationStep.Decoration.VEGETAL_DECORATION, REMNANT_PRAIRIE);
     }
 }

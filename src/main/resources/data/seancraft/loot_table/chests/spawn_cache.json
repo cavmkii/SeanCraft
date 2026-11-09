@@ -1,239 +1,229 @@
 {
-  "type": "minecraft:chest",
-  "pools": [
+ "type": "minecraft:chest",
+ "pools": [
+  {
+   "rolls": {
+    "type": "minecraft:uniform",
+    "min": 5,
+    "max": 8
+   },
+   "entries": [
     {
-      "rolls": {
+     "type": "minecraft:item",
+     "name": "seancraft:bandage",
+     "weight": 10,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
         "type": "minecraft:uniform",
-        "min": 5,
-        "max": 8
-      },
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:bandage",
-          "weight": 10,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 3
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:tourniquet",
-          "weight": 4
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:splint",
-          "weight": 4
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:painkillers",
-          "weight": 4,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 2
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:antidote",
-          "weight": 3
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:field_kit",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:bread",
-          "weight": 8,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 2,
-                "max": 5
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:cooked_porkchop",
-          "weight": 5,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 3
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:torch",
-          "weight": 6,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 4,
-                "max": 10
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:arrow",
-          "weight": 5,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 6,
-                "max": 16
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:bow",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:stone_axe",
-          "weight": 3
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:stone_pickaxe",
-          "weight": 3
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:stone_sword",
-          "weight": 3
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:leather_helmet",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:leather_chestplate",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:leather_leggings",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:leather_boots",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:oak_log",
-          "weight": 4,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 2,
-                "max": 6
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:string",
-          "weight": 4,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 4
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:leather",
-          "weight": 4,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 3
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:iron_ingot",
-          "weight": 2,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "type": "minecraft:uniform",
-                "min": 1,
-                "max": 3
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:rig_scav",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "seancraft:pack_sling",
-          "weight": 1
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:milk_bucket",
-          "weight": 1
-        }
-      ]
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "seancraft:tourniquet",
+     "weight": 4
+    },
+    {
+     "type": "minecraft:item",
+     "name": "seancraft:splint",
+     "weight": 4
+    },
+    {
+     "type": "minecraft:item",
+     "name": "seancraft:painkillers",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 2
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "seancraft:antidote",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "seancraft:field_kit",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:bread",
+     "weight": 8,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 5
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:cooked_porkchop",
+     "weight": 5,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:torch",
+     "weight": 6,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 4,
+        "max": 10
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:arrow",
+     "weight": 5,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 6,
+        "max": 16
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:bow",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:stone_axe",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:stone_pickaxe",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:stone_sword",
+     "weight": 3
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:leather_helmet",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:leather_chestplate",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:leather_leggings",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:leather_boots",
+     "weight": 2
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:oak_log",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 2,
+        "max": 6
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:string",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 4
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:leather",
+     "weight": 4,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:iron_ingot",
+     "weight": 2,
+     "functions": [
+      {
+       "function": "minecraft:set_count",
+       "count": {
+        "type": "minecraft:uniform",
+        "min": 1,
+        "max": 3
+       }
+      }
+     ]
+    },
+    {
+     "type": "minecraft:item",
+     "name": "minecraft:milk_bucket",
+     "weight": 1
     }
-  ]
+   ]
+  }
+ ]
 }

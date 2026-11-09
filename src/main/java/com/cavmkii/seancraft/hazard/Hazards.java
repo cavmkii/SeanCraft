@@ -38,6 +38,7 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.world.level.biome.Biomes;
 
 /**
@@ -135,9 +136,10 @@ public final class Hazards {
         if (biome.is(Biomes.DEEP_DARK) || pos.getY() < 0 && level.getBrightness(LightLayer.BLOCK, pos) < LIT
                 && level.getBrightness(LightLayer.BLOCK, pos.above()) < LIT) {
             hazard = Hazard.DARKNESS;
-        } else if (biome.is(Biomes.DESERT)) {
+        } else if (biome.is(ConventionalBiomeTags.IS_DESERT)) {
             hazard = Hazard.HEAT;
-        } else if (biome.is(Biomes.FROZEN_PEAKS) || biome.is(Biomes.JAGGED_PEAKS) && pos.getY() >= HIGH_PEAKS_Y
+        } else if (biome.is(ConventionalBiomeTags.IS_MOUNTAIN_PEAK)
+                && (biome.is(ConventionalBiomeTags.IS_ICY) || pos.getY() >= HIGH_PEAKS_Y)
                 || frozen(biome) && Distance.blocksFromSpawn(level, player.position()) >= frozenFar()) {
             hazard = Hazard.COLD;
         }
@@ -147,11 +149,13 @@ public final class Hazards {
         return hazard;
     }
 
-    /** Frozen biomes, not just snowy ones: the snowy taiga has no hazard (9.3.3). */
+    /**
+     * Frozen biomes, not just snowy ones: the snowy taiga has no hazard (9.3.3). Read from #c tags so Terralith's
+     * biomes count (10): icy, or snowy and not a forest or taiga.
+     */
     private static boolean frozen(Holder<Biome> biome) {
-        return biome.is(Biomes.ICE_SPIKES) || biome.is(Biomes.SNOWY_PLAINS) || biome.is(Biomes.FROZEN_OCEAN)
-                || biome.is(Biomes.DEEP_FROZEN_OCEAN) || biome.is(Biomes.FROZEN_RIVER) || biome.is(Biomes.SNOWY_BEACH)
-                || biome.is(Biomes.SNOWY_SLOPES) || biome.is(Biomes.GROVE);
+        return biome.is(ConventionalBiomeTags.IS_ICY) || biome.is(ConventionalBiomeTags.IS_SNOWY)
+                && !biome.is(ConventionalBiomeTags.IS_TAIGA) && !biome.is(ConventionalBiomeTags.IS_FOREST);
     }
 
     /** The boss drop that makes a hazard harmless, if it exists yet. Heat and cold keys come from tier 2 bosses. */

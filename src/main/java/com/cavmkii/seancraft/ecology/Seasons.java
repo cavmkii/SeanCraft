@@ -4,8 +4,8 @@ import java.lang.reflect.Method;
 import net.minecraft.world.level.Level;
 
 /**
- * Phenology from Serene Seasons' calendar (17.10), when it's installed. Read by reflection so SeanCraft runs without
- * it; with no seasons mod every multiplier is 1.
+ * Phenology from Serene Seasons' calendar (17.10). Serene Seasons is required; it's still read by reflection, so a
+ * dev run without it falls back to no seasons (every multiplier 1).
  */
 public final class Seasons {
     /** Multipliers for breeding (rabbits, mice), pest growth and grass regrowth; and whether plants spread. */
@@ -23,6 +23,22 @@ public final class Seasons {
     private static Method getSeason;
 
     private Seasons() {}
+
+    /** "Mid summer" and the like, for the Map room's forecast; "no seasons" without Serene Seasons. */
+    public static String describe(Level level) {
+        of(level);
+        if (getState == null) {
+            return "No seasons";
+        }
+        try {
+            Object state = getState.invoke(null, level);
+            Object sub = state.getClass().getMethod("getSubSeason").invoke(state);
+            String name = String.valueOf(sub).toLowerCase(java.util.Locale.ROOT).replace('_', ' ');
+            return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return of(level).name();
+        }
+    }
 
     public static Season of(Level level) {
         if (!looked) {

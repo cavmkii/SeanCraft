@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
 
-/** Every Hideout Bench in one dimension, with its module levels. Saved with that dimension. */
+/** Every Home Bench (home base) in one dimension, with its module levels. Saved with that dimension. The class keeps its old name. */
 public final class Hideouts extends SavedData {
     private static final String NAME = "seancraft_hideouts";
 
@@ -29,8 +29,6 @@ public final class Hideouts extends SavedData {
         public java.util.UUID owner;
         /** Where each module's block stands, or null: a module only works while its block is in the hideout (2.5). */
         public final BlockPos[] modules = new BlockPos[Module.values().length];
-        /** Parts waiting in the Recovery crate (9.4.9), by player. */
-        public final java.util.Map<java.util.UUID, List<net.minecraft.world.item.ItemStack>> recovery = new java.util.HashMap<>();
 
         Hideout(BlockPos pos) {
             this.pos = pos;
@@ -79,7 +77,8 @@ public final class Hideouts extends SavedData {
         }
 
         public double radius() {
-            return Cfg.hideoutRadius + level(Module.PERIMETER) * Module.PERIMETER_STEP;
+            int perimeter = level(Module.PERIMETER);
+            return perimeter == 0 ? Cfg.homeRadius : Module.PERIMETER_RADIUS[Math.min(perimeter, 3) - 1];
         }
 
         public boolean contains(Vec3 point) {
@@ -129,60 +128,38 @@ public final class Hideouts extends SavedData {
         }
     }
 
-    /** Hideout Benches a player has placed, in every dimension. */
-    public static int ownedBy(net.minecraft.server.MinecraftServer server, java.util.UUID player) {
-        int n = 0;
-        for (ServerLevel level : server.getAllLevels()) {
-            for (Hideout h : get(level).list) {
-                if (player.equals(h.owner)) {
-                    n++;
-                }
-            }
-        }
-        return n;
-    }
 
     /**
-     * Why a Hideout Bench can't go here, or null if it can (2.5): too close to another hideout or a spawn point, or
-     * the player already has their limit.
+     * Why a Home Bench can't go here, or null if it can (2.4): inside another player's home base, or too close to a
+     * Summoning Pedestal. A player's own earlier bench is picked up when the new one goes down.
      */
     public static String placementProblem(ServerLevel level, BlockPos pos, net.minecraft.world.entity.player.Player player) {
         if (player != null && player.isCreative()) {
             return null;
         }
-        double spacing = Cfg.hideoutSpacing;
         Vec3 at = Vec3.atCenterOf(pos);
         for (Hideout h : get(level).list) {
-            double d = Math.sqrt(Vec3.atCenterOf(h.pos).distanceToSqr(at));
-            if (d < spacing) {
-                return "Too close to another hideout (" + (int) d + " blocks; hideouts need " + (int) spacing + ").";
+            if (h.contains(at) && h.owner != null && player != null && !h.owner.equals(player.getUUID())) {
+                return "This is someone else's home base. Build here with them, or found your own elsewhere.";
             }
         }
-        if (level.dimension() == net.minecraft.world.level.Level.OVERWORLD) {
-            for (BlockPos p : SpawnPoints.get(level).points) {
-                double d = Math.sqrt(Vec3.atCenterOf(p).distanceToSqr(at));
-                if (d < spacing) {
-                    return "Too close to a spawn point (" + (int) d + " blocks; hideouts need " + (int) spacing + "). Head "
-                            + away(Vec3.atCenterOf(p), at) + " another " + (int) Math.ceil(spacing - d) + ".";
-                }
-            }
-        }
-        if (com.cavmkii.seancraft.boss.BossSites.nearSite(level, at, com.cavmkii.seancraft.Cfg.pedestalClearance)) {
-            return "Too close to a boss dungeon (hideouts need " + (int) com.cavmkii.seancraft.Cfg.pedestalClearance + " blocks).";
-        }
-        if (player != null && ownedBy(level.getServer(), player.getUUID()) >= Cfg.maxHideouts) {
-            return "You already have " + Cfg.maxHideouts + " hideouts. Break one of your Hideout Benches to move it.";
+        if (com.cavmkii.seancraft.boss.BossSites.nearSite(level, at, Cfg.pedestalClearance)) {
+            return "Too close to a boss dungeon (a Home Bench needs " + (int) Cfg.pedestalClearance + " blocks).";
         }
         return null;
     }
 
-    /** The compass direction leading away from {@code from}, as seen at {@code at}. */
-    private static String away(Vec3 from, Vec3 at) {
-        double dx = at.x - from.x;
-        double dz = at.z - from.z;
-        String ns = Math.abs(dz) > Math.abs(dx) * 0.4 ? (dz > 0 ? "south" : "north") : "";
-        String ew = Math.abs(dx) > Math.abs(dz) * 0.4 ? (dx > 0 ? "east" : "west") : "";
-        return ns.isEmpty() ? ew : ew.isEmpty() ? ns : ns + "-" + ew;
+    /** A player's Home Benches, oldest first, in every dimension: level and position. */
+    public static List<Object[]> benchesOf(net.minecraft.server.MinecraftServer server, java.util.UUID player) {
+        List<Object[]> out = new ArrayList<>();
+        for (ServerLevel level : server.getAllLevels()) {
+            for (Hideout h : get(level).list) {
+                if (player.equals(h.owner)) {
+                    out.add(new Object[] {level, h.pos});
+                }
+            }
+        }
+        return out;
     }
 
     void remove(BlockPos pos) {
@@ -221,14 +198,6 @@ public final class Hideouts extends SavedData {
                     h.modules[m.ordinal()] = BlockPos.of(c.getLong("module_" + m.name()));
                 }
             }
-            for (Tag rt : c.getList("recovery", Tag.TAG_COMPOUND)) {
-                CompoundTag r = (CompoundTag) rt;
-                List<net.minecraft.world.item.ItemStack> items = new ArrayList<>();
-                for (Tag it : r.getList("items", Tag.TAG_COMPOUND)) {
-                    net.minecraft.world.item.ItemStack.parse(registries, it).ifPresent(items::add);
-                }
-                h.recovery.put(r.getUUID("player"), items);
-            }
             data.list.add(h);
         }
         return data;
@@ -255,20 +224,6 @@ public final class Hideouts extends SavedData {
                     c.putLong("module_" + m.name(), h.modules[m.ordinal()].asLong());
                 }
             }
-            ListTag rec = new ListTag();
-            h.recovery.forEach((player, items) -> {
-                CompoundTag r = new CompoundTag();
-                r.putUUID("player", player);
-                ListTag its = new ListTag();
-                for (net.minecraft.world.item.ItemStack s : items) {
-                    if (!s.isEmpty()) {
-                        its.add(s.save(registries));
-                    }
-                }
-                r.put("items", its);
-                rec.add(r);
-            });
-            c.put("recovery", rec);
             list.add(c);
         }
         tag.put("hideouts", list);

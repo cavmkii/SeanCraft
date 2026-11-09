@@ -33,7 +33,7 @@ public final class StationTabs {
 
     public static String label(String kind) {
         return switch (kind) {
-            case HIDEOUT -> "HIDEOUT";
+            case HIDEOUT -> "HOME BENCH";
             case WEAPON_BENCH -> "WEAPON BENCH";
             case CRAFTING_TABLE -> "CRAFTING";
             default -> kind.startsWith("module_") ? moduleLabel(kind) : kind.toUpperCase();
@@ -47,7 +47,7 @@ public final class StationTabs {
 
     /** Only in a hideout, and only worth showing with somewhere else to go. */
     private static boolean shown() {
-        return ClientTarkov.raid.state() == 1 && stations.kinds().size() > 1;
+        return ClientTarkov.place.home() && stations.kinds().size() > 1;
     }
 
     /** A row of tabs centred over a panel of width {@code w} starting at {@code x}, with its top at {@code y}. */

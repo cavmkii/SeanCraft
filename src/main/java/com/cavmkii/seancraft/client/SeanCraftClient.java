@@ -135,7 +135,6 @@ public final class SeanCraftClient implements ClientModInitializer {
         // UI-SPEC tooltips: Ash lines for size, stack, durability and weight class, then the key hints.
         ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
             int ash = com.cavmkii.seancraft.client.ui.Kit.ASH & 0xFFFFFF;
-            int[] size = com.cavmkii.seancraft.tetris.ItemSize.of(stack);
             var mc = net.minecraft.client.Minecraft.getInstance();
             String line = "";
             int use = mc.player == null ? 0 : stack.getUseDuration(mc.player);
@@ -144,8 +143,10 @@ public final class SeanCraftClient implements ClientModInitializer {
                 float sec = use / 20f;
                 line = "Use " + (sec == Math.round(sec) ? String.valueOf(Math.round(sec)) : String.format("%.1f", sec)) + " s   ";
             }
-            line += "Size " + size[0] + "x" + size[1] + (stack.getMaxStackSize() > 1 ? "   Stack " + stack.getMaxStackSize() : "");
-            lines.add(Component.literal(line).withColor(ash));
+            line += stack.getMaxStackSize() > 1 ? "Stack " + stack.getMaxStackSize() : "";
+            if (!line.isBlank()) {
+                lines.add(Component.literal(line.strip()).withColor(ash));
+            }
             if (stack.isDamageableItem() && !type.isAdvanced()) {
                 lines.add(Component.literal("Durability " + (stack.getMaxDamage() - stack.getDamageValue()) + " / " + stack.getMaxDamage()).withColor(ash));
             }

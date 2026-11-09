@@ -1,0 +1,18 @@
+{
+ "station": "hideout",
+ "category": "Modules",
+ "pattern": [
+  "PPP",
+  "PMP",
+  "CCC"
+ ],
+ "key": {
+  "P": "#minecraft:planks",
+  "M": "minecraft:map",
+  "C": "minecraft:cobblestone"
+ },
+ "result": {
+  "id": "seancraft:map_room",
+  "count": 1
+ }
+}
