@@ -14,5 +14,9 @@
  "result": {
   "id": "seancraft:soil_kit",
   "count": 1
+ },
+ "gate": {
+  "module": "WORKSHOP",
+  "level": 1
  }
 }

@@ -90,8 +90,11 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
         int x = leftPos;
         int y = topPos;
         Kit.panel(g, x, y, imageWidth, imageHeight);
-        // The hotbar row under the stash box: framed so it reads as usable slots.
+        // Inventory and hotbar, framed (the inventory is vanilla since v23).
         for (int col = 0; col < 9; col++) {
+            for (int row = 0; row < 3; row++) {
+                Kit.slot(g, x + 7 + col * 18, y + 129 + row * 18, 18, Kit.SlotState.NORMAL);
+            }
             Kit.slot(g, x + 7 + col * 18, y + 187, 18, Kit.SlotState.NORMAL);
         }
         Kit.inset(g, x + BOOK_X - 1, y + BOOK_Y - 1, BOOK_W + 2, ROWS * ROW + 2);
