@@ -39,4 +39,6 @@ Fabric 1.21.1 mod. Package `com.cavmkii.seancraft`, mod id `seancraft`. The GitH
   - Drive it with xdotool (`DISPLAY=:99`, `XAUTHORITY` from `/tmp/xvfb-run.*/Xauthority`).
   - Chat commands need cheats: Esc, Open to LAN, Allow Cheats ON, Start.
   - Don't `pkill -f java`: it matches the shell running the command. Use `pkill -f "Knot[C]lient"`.
+- Server code that reads blocks away from a player must check `level.getChunkSource().getChunkNow(cx, cz) != null` first. `hasChunk`/`isLoaded` only say a chunk is on its way, and reading it makes the server thread finish or generate it on the spot (that was the ecology lag spike).
+- To profile: `jcmd <pid> JFR.start settings=profile filename=x.jfr`, then `jfr print --stack-depth 64 --events jdk.ExecutionSample x.jfr` (the default depth of 5 hides the callers).
 - Nine-slice `.mcmeta` borders must leave a centre slice (left + right < width).

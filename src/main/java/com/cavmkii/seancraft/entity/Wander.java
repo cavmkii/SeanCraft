@@ -123,7 +123,7 @@ public final class Wander {
     /** Top solid block position at a point, or null if that chunk isn't loaded. */
     public static BlockPos surface(ServerLevel level, Vec3 at) {
         BlockPos column = BlockPos.containing(at.x, 0, at.z);
-        if (!level.isLoaded(column)) {
+        if (level.getChunkSource().getChunkNow(column.getX() >> 4, column.getZ() >> 4) == null) {
             return null;
         }
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());

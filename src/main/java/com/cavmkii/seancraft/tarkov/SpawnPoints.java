@@ -210,7 +210,7 @@ public final class SpawnPoints extends SavedData {
         data.lastRefill = now;
         data.setDirty();
         for (BlockPos c : data.chests) {
-            if (level.isLoaded(c) && level.getBlockEntity(c) instanceof RandomizableContainer box && box.getLootTable() == null
+            if (level.getChunkSource().getChunkNow(c.getX() >> 4, c.getZ() >> 4) != null && level.getBlockEntity(c) instanceof RandomizableContainer box && box.getLootTable() == null
                     && box instanceof Container container && container.isEmpty()) {
                 box.setLootTable(TarkovLoot.SPAWN_CACHE, level.random.nextLong());
                 container.setChanged();
