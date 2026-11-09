@@ -29,6 +29,8 @@ dependencies {
     // Better Combat ships this inside its jar; the dev run doesn't unpack nested jars, so it needs it directly.
     modLocalRuntime "maven.modrinth:tiny-config:3.1.0-fabric"
     // Serene Seasons (design doc 17.10) is required; SeanCraft reads its calendar by reflection.
+    // Test only: Terralith, the biome mod players run with (doc 10). Not shipped, not required.
+    modLocalRuntime "maven.modrinth:terralith:MuJMtPGQ"
     modLocalRuntime "maven.modrinth:serene-seasons:q34wStJM"
     modLocalRuntime "maven.modrinth:glitchcore:sux8kYHe"
     // YAGM graves (2.2): SeanCraft sets its options and registers a placement handler. Required, with OctoLib and Architectury.

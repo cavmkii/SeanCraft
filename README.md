@@ -61,7 +61,7 @@ There's no raid timer any more. Danger comes from how far out you are, the time 
 - **Hunting parties.** At night in the Frontier or further, off safe ground, a party of 2–3 monsters can come for you, led by an elite. At most one a night. In the Nether they can come any time, about once every 10 minutes at most. Parties give up at dawn, and none come while you're in a boss fight. The mobs fit the biome (husks in the desert, strays in the snow, witches in swamps, and so on).
 - **Safe ground.** No hostile mob spawns at your home base, near a spawn point, or within 8 blocks of a camp. Mobs can still walk in.
 - **Dying.** You leave a grave (YAGM) with everything you had and half your XP. Anyone can open it, so a friend can bring your stuff home. There's no restore key: getting your gear back means going back for it. If you die in a boss arena, the grave goes just outside the ring.
-- **Spawn points.** A new world gets 3 spawn points, one at world spawn and two about 400 blocks out on opposite sides. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies with no bed or camp.
+- **Spawn points.** A new world gets 3 spawn points, one at world spawn and two about 400 blocks out on opposite sides. They always go on proper land, not out at sea or on a tiny island: each takes the nearest good land to its spot, and if world spawn itself is at sea, it moves to land too. It reads the world's own terrain generator, so it works with Terralith and other terrain mods. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies with no bed or camp.
 - **Respawn.** Any bed sets your respawn, except within 100 blocks of a boss dungeon. So does a camp.
 - **Camps.** Craft a camp kit at the Home Bench (3 planks on top, stick / campfire / stick, then 3 planks) and set it down out in the world. A camp is a tent and a fire:
   - it sets your respawn there, and using it sets it again;
@@ -414,7 +414,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Danger.DistanceBands` (`1000,3000,6000`) and `Danger.Caps` (`4.0,2.5`, the most distance and elite stars together can multiply a monster's health and damage).
   - `Home.Radius` (30, before Perimeter), `Home.MaxBenches` (1) and `Home.PedestalClearance` (100, no Home Bench, bed respawn or camp that close to a boss dungeon).
   - `Camp.SafeRadius` (8) and `Health.SleepHealPercent` (50).
-  - `Spawn.*`: number of spawn points, distance (400), safe radius, restock time.
+  - `Spawn.*`: number of spawn points, distance (400), safe radius, restock time. A config file from before this update that still says 1000 (the old default) is moved to 400 once.
   - YAGM's own config is overridden on every start: graves open to anyone, 50% XP kept, no restore key.
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
   - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
@@ -424,7 +424,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
   - `/seancraft where` shows where Joe and Sean are.
-  - `/seancraft spawnpoints respread` (op) moves the spawn points other than world spawn out to `Spawn.Distance`, for worlds made before the change. New shelters get built; the old ones stay as plain buildings and stop restocking.
+  - `/seancraft spawnpoints respread` (op) rebuilds the spawn points other than world spawn at `Spawn.Distance`, on land. If world spawn's point is out at sea, it and the world spawn move to land too. Use it on a world whose spawn points ended up in the ocean. New shelters get built; the old ones stay as plain buildings and stop restocking.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op). `/character learn <player> <SKILL> <rank> <slot>` learns an active skill at a rank and puts it in slot 0-2, skipping the web. `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft eco patch` shows everything about the patch you're in; `/seancraft eco step <days>` runs it forward; `/seancraft eco set <field> <value>` sets one number (like `nitrogen`, `pest`, `load` or `fish`) for testing (all op).

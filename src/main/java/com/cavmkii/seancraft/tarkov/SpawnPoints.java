@@ -30,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * A few fixed spawn points in the overworld, each with a small shelter and supply chests. New players and players
- * who die without a bed start at a random one. The area around each is safe: no raid starts until you leave it.
+ * who die without a bed or camp start at a random one. Each sits on land, and no hostiles spawn around it.
  * Empty chests are restocked every so often.
  */
 public final class SpawnPoints extends SavedData {
@@ -92,8 +92,9 @@ public final class SpawnPoints extends SavedData {
     // ================================================================== building
 
     /**
-     * Admin: moves the spawn points other than world spawn out to the configured distance, for worlds made before it
-     * changed. New shelters are built; the old ones stay as plain buildings and stop restocking.
+     * Admin: rebuilds the spawn points other than world spawn at the configured distance, on land; world spawn's point
+     * moves too (with the world spawn) if it's at sea. New shelters are built; the old ones stay as plain buildings
+     * and stop restocking.
      */
     public static String respread(ServerLevel level) {
         SpawnPoints data = get(level);
@@ -101,20 +102,27 @@ public final class SpawnPoints extends SavedData {
             return "This world has no spawn points.";
         }
         BlockPos center = data.points.get(0);
-        for (BlockPos old : data.points.subList(1, data.points.size())) {
+        // Point 1 (world spawn) moves too if it's out at sea, and the world spawn with it.
+        boolean moveCenter = atSea(level, center);
+        for (BlockPos old : data.points.subList(moveCenter ? 0 : 1, data.points.size())) {
             data.chests.removeIf(c -> c.closerThan(old, 10));
         }
         int extra = data.points.size() - 1;
         data.points.subList(1, data.points.size()).clear();
+        if (moveCenter) {
+            BlockPos land = findLand(level, center.getX(), center.getZ(), 512, null, 0);
+            center = floorAt(level, land.getX(), land.getZ());
+            level.setDefaultSpawnPos(center, 0);
+            shelter(level, center, data.chests);
+            data.points.set(0, center);
+        }
         StringBuilder out = new StringBuilder("Spawn points now:");
         out.append(" ").append(center.toShortString());
         for (int i = 0; i < extra; i++) {
             double angle = i * Math.PI * 2 / Math.max(1, extra) + level.random.nextDouble() * 0.6;
-            int x = center.getX() + (int) (Math.cos(angle) * Cfg.spawnDistance);
-            int z = center.getZ() + (int) (Math.sin(angle) * Cfg.spawnDistance);
-            level.getChunk(x >> 4, z >> 4);
-            int y = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), level.getSeaLevel());
-            BlockPos floor = new BlockPos(x, y, z);
+            BlockPos land = findLand(level, center.getX() + (int) (Math.cos(angle) * Cfg.spawnDistance),
+                    center.getZ() + (int) (Math.sin(angle) * Cfg.spawnDistance), (int) (Cfg.spawnDistance * 0.6), center, Cfg.spawnDistance / 2);
+            BlockPos floor = floorAt(level, land.getX(), land.getZ());
             shelter(level, floor, data.chests);
             data.points.add(floor);
             out.append(", ").append(floor.toShortString());
@@ -135,18 +143,22 @@ public final class SpawnPoints extends SavedData {
             SeanCraft.LOG.info("Existing world: no spawn points built (they're only made in new worlds).");
             return;
         }
-        BlockPos center = level.getSharedSpawnPos();
+        // Spawn points go on land: world spawn is moved to land if it isn't (vanilla can pick a beach or a sliver),
+        // and each other point takes the nearest land to its spot 400 blocks out.
+        BlockPos spawn = level.getSharedSpawnPos();
+        BlockPos center = findLand(level, spawn.getX(), spawn.getZ(), 512, null, 0);
+        if (center.getX() != spawn.getX() || center.getZ() != spawn.getZ()) {
+            level.setDefaultSpawnPos(center, 0);
+        }
         for (int i = 0; i < Cfg.spawnPoints; i++) {
-            int x = center.getX();
-            int z = center.getZ();
+            BlockPos at = center;
             if (i > 0) {
                 double angle = (i - 1) * Math.PI * 2 / Math.max(1, Cfg.spawnPoints - 1) + level.random.nextDouble() * 0.6;
-                x += (int) (Math.cos(angle) * Cfg.spawnDistance);
-                z += (int) (Math.sin(angle) * Cfg.spawnDistance);
+                at = findLand(level, center.getX() + (int) (Math.cos(angle) * Cfg.spawnDistance),
+                        center.getZ() + (int) (Math.sin(angle) * Cfg.spawnDistance), (int) (Cfg.spawnDistance * 0.6), center,
+                        Cfg.spawnDistance / 2);
             }
-            level.getChunk(x >> 4, z >> 4);
-            int y = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), level.getSeaLevel());
-            BlockPos floor = new BlockPos(x, y, z);
+            BlockPos floor = floorAt(level, at.getX(), at.getZ());
             shelter(level, floor, data.chests);
             data.points.add(floor);
             SeanCraft.LOG.info("Built spawn point {} at {}", i + 1, floor.toShortString());
@@ -154,6 +166,95 @@ public final class SpawnPoints extends SavedData {
         data.built = true;
         data.lastRefill = level.getGameTime();
         data.setDirty();
+    }
+
+    /** True if most of the surface just outside a shelter (8 blocks out, four sides) is water. */
+    private static boolean atSea(ServerLevel level, BlockPos p) {
+        int wet = 0;
+        for (int[] d : new int[][] {{8, 0}, {-8, 0}, {0, 8}, {0, -8}}) {
+            if (!level.getFluidState(floorAt(level, p.getX() + d[0], p.getZ() + d[1]).below()).isEmpty()) {
+                wet++;
+            }
+        }
+        return wet >= 3;
+    }
+
+    /** The standing level for a shelter at a column (loads that chunk; only used when building). */
+    private static BlockPos floorAt(ServerLevel level, int x, int z) {
+        level.getChunk(x >> 4, z >> 4);
+        int y = Math.max(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), level.getSeaLevel());
+        return new BlockPos(x, y, z);
+    }
+
+    /**
+     * The nearest dry land to a spot, within {@code maxR} blocks, read from the world's own generator (so any biome
+     * or terrain mod is respected) without generating chunks: terrain above sea level and not an ocean or river
+     * biome. Rings every 24 blocks outward. Falls back to the spot itself if there's no land in reach.
+     */
+    static BlockPos findLand(ServerLevel level, int x, int z, int maxR, BlockPos awayFrom, double minDist) {
+        int sea = level.getSeaLevel();
+        int checked = 0;
+        for (int r = 0; r <= maxR; r += 24) {
+            int steps = r == 0 ? 1 : Math.max(8, (int) (Math.PI * 2 * r / 24));
+            double offset = level.random.nextDouble();
+            for (int k = 0; k < steps; k++) {
+                double a = (k + offset) * Math.PI * 2 / steps;
+                int cx = x + (int) Math.round(Math.cos(a) * r);
+                int cz = z + (int) Math.round(Math.sin(a) * r);
+                if (awayFrom != null && Math.hypot(cx - awayFrom.getX(), cz - awayFrom.getZ()) < minDist) {
+                    continue;
+                }
+                int h = landHeight(level, cx, cz);
+                if (h < 0) {
+                    continue;
+                }
+                // Not a sliver or a lone island: most of the ground 48 blocks around has to be land too.
+                int around = 0;
+                for (int j = 0; j < 8; j++) {
+                    double b = j * Math.PI / 4;
+                    if (landHeight(level, cx + (int) (Math.cos(b) * 48), cz + (int) (Math.sin(b) * 48)) >= 0) {
+                        around++;
+                    }
+                }
+                if (around < 6) {
+                    continue;
+                }
+                // The generator predicts terrain for chunks not made yet; already-made chunks (an older world, or a
+                // different terrain mod back then) may differ, so check the real blocks too.
+                if (checked++ >= 40) {
+                    break;
+                }
+                BlockPos real = floorAt(level, cx, cz);
+                if (!level.getFluidState(real.below()).isEmpty() || real.getY() <= sea) {
+                    continue;
+                }
+                return real;
+            }
+        }
+        if (maxR < 1500) {
+            return findLand(level, x, z, maxR * 3, awayFrom, minDist);
+        }
+        SeanCraft.LOG.warn("No land within {} blocks of {}, {}; the spawn point goes there anyway.", maxR, x, z);
+        return new BlockPos(x, sea, z);
+    }
+
+    /** Surface height at a column if it's dry land (above sea level, not an ocean or river biome), else -1. */
+    private static int landHeight(ServerLevel level, int x, int z) {
+        var source = level.getChunkSource();
+        var generator = source.getGenerator();
+        var random = source.randomState();
+        int h = generator.getBaseHeight(x, z, Heightmap.Types.OCEAN_FLOOR_WG, level, random);
+        if (h <= level.getSeaLevel() + 1) {
+            return -1;
+        }
+        var biome = generator.getBiomeSource().getNoiseBiome(net.minecraft.core.QuartPos.fromBlock(x),
+                net.minecraft.core.QuartPos.fromBlock(h), net.minecraft.core.QuartPos.fromBlock(z), random.sampler());
+        if (biome.is(net.minecraft.tags.BiomeTags.IS_OCEAN) || biome.is(net.minecraft.tags.BiomeTags.IS_RIVER)
+                || biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_OCEAN)
+                || biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_RIVER)) {
+            return -1;
+        }
+        return h;
     }
 
     /** A 7x7 roofed platform with three supply chests, a barrel and a lantern. {@code p} is the standing level. */
