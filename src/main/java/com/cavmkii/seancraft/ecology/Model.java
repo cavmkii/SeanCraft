@@ -1,7 +1,7 @@
 package com.cavmkii.seancraft.ecology;
 
 /**
- * The phase 1 grassland loop (17.4, 17.6, 17.7): grass, rabbits, mice and foxes in a Rosenzweig-MacArthur web with
+ * The grassland loop (phase 1: 17.4, 17.6, 17.7) and water (phase 2): grass, rabbits, mice and foxes in a Rosenzweig-MacArthur web with
  * fox prey-switching, soil decomposition and leaching, and a wheat pest held down by bats. Euler steps of at most
  * 0.05 days, so a 30-day catch-up is 600 cheap steps.
  */
@@ -74,9 +74,16 @@ public final class Model {
         if (p.phosphorus > Params.baselineP) {
             p.phosphorus -= Params.vegetationUptake * veg * (p.phosphorus - Params.baselineP) * dt;
         }
-        // Leaching: what the ground can't hold washes out (phase 2 routes it to the water downstream).
+        // Leaching: what the ground can't hold washes out, and Ecology routes it to the water downhill (17.6).
         if (p.nitrogen > Params.leachAbove) {
-            p.nitrogen -= (p.nitrogen - Params.leachAbove) * Params.leachRate * dt;
+            double out = (p.nitrogen - Params.leachAbove) * Params.leachRate * dt;
+            p.nitrogen -= out;
+            p.leached += out;
+        }
+        if (p.phosphorus > Params.leachAboveP) {
+            double out = (p.phosphorus - Params.leachAboveP) * Params.leachRate * dt;
+            p.phosphorus -= out;
+            p.leached += out * Params.phosphorusLoadWeight;
         }
         p.nitrogen = clamp(p.nitrogen, 0, 250);
         p.phosphorus = clamp(p.phosphorus, 0, 120);
@@ -96,6 +103,57 @@ public final class Model {
         p.bats = Math.max(0, p.bats + Params.batRecovery * (p.roost - p.bats) * dt);
         // Resistance fades slowly without spraying.
         p.resistance = Math.max(0, p.resistance - 0.005 * dt);
+
+        stepWater(p, dt);
+    }
+
+    /**
+     * Water (17.6): nutrient load feeds algae, algae pull dissolved oxygen down, and low oxygen kills fish. The load
+     * leaves through Ecology (downstream and to neighbouring water), so a dead zone clears over weeks once the inputs
+     * stop. Fish are logistic on the open water they have.
+     */
+    static void stepWater(Patch p, double dt) {
+        if (p.water < Params.waterMin) {
+            p.fish = 0;
+            p.fishKill = 0;
+            return;
+        }
+        // Some of the load settles into the sediment as it goes; Ecology moves the rest downstream.
+        p.load *= Math.exp(-Params.settleRate * dt);
+        double c = concentration(p);
+        double grow = Params.algaeR * p.algae * c / (c + Params.algaeHalf) * (1 - p.algae);
+        p.algae = clamp(p.algae + (grow - Params.algaeDeath * p.algae + 0.001) * dt, 0.005, 1);
+        double target = 1 - Params.oxygenAlgae * p.algae;
+        p.oxygen = clamp(p.oxygen + Params.oxygenRate * (target - p.oxygen) * dt, 0, 1);
+        double k = Params.fishK * p.water;
+        double suffocating = p.oxygen < Params.lowOxygen ? Params.fishSuffocation * (Params.lowOxygen - p.oxygen) / Params.lowOxygen : 0;
+        double killed = suffocating * p.fish;
+        double immigrants = p.oxygen >= Params.lowOxygen ? Params.fishImmigration * k : 0;
+        p.fish = Math.max(0, p.fish + (Params.fishR * p.fish * (1 - p.fish / Math.max(0.01, k)) + immigrants - killed) * dt);
+        // A fish kill shows for a few days after it happens.
+        p.fishKill = Math.max(killed, p.fishKill - p.fishKill * 0.5 * dt);
+    }
+
+    /** Nutrient load diluted by how much water the patch holds: a big lake takes more to turn than a pond. */
+    public static double concentration(Patch p) {
+        return p.load * 0.25 / Math.max(Params.waterMin, p.water);
+    }
+
+    /** 0..1: the share of bites that land, from how many fish the water holds (17.3: yields fall as a stock thins). */
+    public static double fishAvailability(Patch p) {
+        if (p.water < Params.waterMin) {
+            return 1;
+        }
+        return clamp(p.fish / Math.max(0.01, p.water) / Params.fishFull, 0.05, 1);
+    }
+
+    /** Ease of moving through a patch for a grassland animal: grass and hedges are easy, roads, walls and farmland hard (17.5). */
+    static double permeability(Patch p) {
+        double total = p.grass + p.crop + p.shrub + p.forest + p.water + p.built + p.bare + p.path;
+        if (total <= 0) {
+            return 0.5;
+        }
+        return (p.grass + p.shrub + p.forest * 0.6 + p.bare * 0.4 + p.crop * 0.15 + p.path * 0.1 + p.water * 0.05 + p.built * 0.05) / total;
     }
 
     static double clamp(double v, double lo, double hi) {

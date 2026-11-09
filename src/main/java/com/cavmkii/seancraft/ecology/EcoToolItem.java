@@ -105,13 +105,25 @@ public class EcoToolItem extends Item {
                 + (p.wheat > 0 && p.pest > 20 ? String.format(Locale.ROOT, "  (aphids %.0f per ha)", p.pest) : "")).withColor(bone));
         player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Ecosystem quality: %s (%.0f)%s", Quality.band(p.quality),
                 p.quality, p.limitedBy.isEmpty() ? "" : ": " + p.limitedBy)).withColor(Quality.color(p.quality)));
+        if (Ecology.holdsWater(p)) {
+            // Water (17.6, 17.11): what's in it and what it's doing to the fish.
+            String state = p.oxygen < Params.lowOxygen ? "dead zone: too little oxygen for fish"
+                    : p.algae > 0.3 ? "algae bloom: too many nutrients coming in" : Model.concentration(p) > Params.algaeHalf ? "nutrients building up" : "clear";
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Water: %s (nutrients %.0f, oxygen %.0f%%, fish %s)", state, Model.concentration(p),
+                    p.oxygen * 100, p.fish / Math.max(0.01, p.water) >= Params.fishFull ? "plenty" : p.fish < 1 ? "almost none" : "thin"))
+                    .withColor(p.oxygen < Params.lowOxygen ? 0xC8402E : p.algae > 0.3 ? 0xC8662A : bone));
+        }
+        if (p.cropNearWater > 0) {
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Fields by the water: %.0f%% have a grass strip 4+ blocks wide before it",
+                    p.strip * 100)).withColor(bone));
+        }
         player.sendSystemMessage(Component.literal("Readings are for the whole 64 x 64 block patch.").withColor(ash));
     }
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> lines, TooltipFlag flag) {
         String text = switch (kind) {
-            case SOIL_KIT -> "Use on the ground: soil nutrients, what limits a crop there, and the patch's ecosystem quality.";
+            case SOIL_KIT -> "Use on the ground: soil nutrients, what limits a crop there, the water nearby, and the patch's ecosystem quality.";
             case INSECTICIDE -> "Use on crops: knocks pests down, but kills the bats that eat them too, and pests build resistance.";
             case BAT_GUANO -> "Fast fertilizer: use on farmland or soil. It breaks down over a few days.";
         };

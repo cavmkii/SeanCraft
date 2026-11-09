@@ -6,7 +6,7 @@ import net.minecraft.nbt.CompoundTag;
 
 /**
  * One patch's state (design doc 17.2): land cover from the last sample, populations as densities per hectare, soil
- * and pest pressure. The model steps it forward in ecological days (17.4, 17.6, 17.7).
+ * pest pressure, and (phase 2) water and fish. The model steps it forward in ecological days (17.4 to 17.7).
  */
 public final class Patch {
     // ---- land cover, shares of sampled columns (17.2)
@@ -38,6 +38,22 @@ public final class Patch {
     public double organicFast = 5;
     public double organicSlow = 40;
     public double moisture = 0.5;
+
+    // ---- water and space (phase 2: 17.5, 17.6)
+    /** Mean surface height of the sampled columns, for which way water runs (17.6). */
+    public double elevation = Double.NaN;
+    /** Share of crop columns near water that have a 4+ block grass strip between them and the water (17.16.2). */
+    public double strip = 0;
+    /** Crop columns within reach of water at the last sample (for the debug readout). */
+    public int cropNearWater;
+    /** Nutrients leached from this patch's soil since it was last routed downstream (not saved). */
+    public double leached;
+    /** Water state, for patches that hold water: nutrient load, algae 0..1, dissolved oxygen 0..1. */
+    public double load = 0, algae = 0.02, oxygen = 1;
+    /** Fish per hectare of the patch, and fish lost to low oxygen per day lately (for the dead-fish sign). */
+    public double fish = 0, fishKill = 0;
+    /** 0..1: how well connected the patch is to good habitat around it (17.5); low means the extinction debt runs. */
+    public double connectivity = 1;
 
     // ---- disturbance and time
     /** Ecological day of the last fire or grazing (17.16.1). */
@@ -89,6 +105,15 @@ public final class Patch {
         t.putDouble("day", day);
         t.putDouble("quality", quality);
         t.putString("limitedBy", limitedBy);
+        t.putDouble("elevation", elevation);
+        t.putDouble("strip", strip);
+        t.putInt("cropNearWater", cropNearWater);
+        t.putDouble("load", load);
+        t.putDouble("algae", algae);
+        t.putDouble("oxygen", oxygen);
+        t.putDouble("fish", fish);
+        t.putDouble("fishKill", fishKill);
+        t.putDouble("connectivity", connectivity);
         return t;
     }
 
@@ -132,6 +157,16 @@ public final class Patch {
         x.day = t.getDouble("day");
         x.quality = t.getDouble("quality");
         x.limitedBy = t.getString("limitedBy");
+        x.elevation = t.contains("elevation") ? t.getDouble("elevation") : Double.NaN;
+        x.strip = t.getDouble("strip");
+        x.cropNearWater = t.getInt("cropNearWater");
+        x.load = t.getDouble("load");
+        x.algae = t.contains("algae") ? t.getDouble("algae") : 0.02;
+        x.oxygen = t.contains("oxygen") ? t.getDouble("oxygen") : 1;
+        // Patches saved before phase 2 start with the water stocked, not empty.
+        x.fish = t.contains("fish") ? t.getDouble("fish") : Params.fishK * x.water * 0.8;
+        x.fishKill = t.getDouble("fishKill");
+        x.connectivity = t.contains("connectivity") ? t.getDouble("connectivity") : 1;
         return x;
     }
 

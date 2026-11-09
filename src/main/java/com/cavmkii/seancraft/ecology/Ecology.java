@@ -58,10 +58,12 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Ecology, phase 1 (design doc 17.1): the grassland loop. The world is split into patches of Ecology.PatchChunks
+ * Ecology (design doc 17): phase 1, the grassland loop, and phase 2, water and space. The world is split into patches of Ecology.PatchChunks
  * chunks a side, each holding populations, soil and pest pressure as numbers; the animals players see are samples of
  * them (17.3). Loaded patches step forward within Ecology.TickBudgetMs a tick, and a patch that was away catches up
- * when it loads again (17.2).
+ * when it loads again (17.2). Phase 2: leached nutrients run downhill to the nearest water (17.6), where they feed
+ * algae, starve the water of oxygen and kill fish; animals and fish disperse between neighbouring patches at a rate set
+ * by the land between (17.5).
  */
 public final class Ecology {
     public static final String SAMPLE_TAG = "seancraft_eco";
@@ -182,8 +184,176 @@ public final class Ecology {
         double best = bestQualityNear(level, key, 2);
         // Good habitat holds more game (17.16.2); natural enemies from good habitat nearby slow pests.
         Model.step(p, days, Seasons.of(level), p.quality >= 60 ? 0.25 : 0, best >= 60);
+        if (p.sampled) {
+            route(level, key, p);
+            exchangeWater(level, key, p, days);
+            disperse(level, key, p, days);
+            p.connectivity = connectivity(level, key);
+        }
         Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
         markDirty(level);
+    }
+
+    // ================================================================== water and space (phase 2)
+
+    private static final int[][] SIDES = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    public static boolean holdsWater(Patch p) {
+        return p != null && p.sampled && p.water >= Params.waterMin;
+    }
+
+    /** The lowest neighbour (of 8) that is lower than this patch, optionally only one holding water; null at the bottom. */
+    static long downhill(ServerLevel level, long key, Patch p, boolean waterOnly) {
+        if (Double.isNaN(p.elevation)) {
+            return Long.MIN_VALUE;
+        }
+        long best = Long.MIN_VALUE;
+        double low = p.elevation - 0.5;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                Patch n = existing(level, key, dx, dz);
+                if (n == null || !n.sampled || Double.isNaN(n.elevation) || n.elevation >= low || waterOnly && !holdsWater(n)) {
+                    continue;
+                }
+                low = n.elevation;
+                best = key(ChunkPos.getX(key) + dx, ChunkPos.getZ(key) + dz);
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Sends what leached out of this patch's soil downhill to the first patch that holds water (17.6). A Fair or better
+     * strip between the field and the water stops most of it, and good grassy land on the way stops some.
+     */
+    static void route(ServerLevel level, long key, Patch p) {
+        double amount = p.leached;
+        p.leached = 0;
+        if (amount <= 1e-6) {
+            return;
+        }
+        if (p.quality >= 40) {
+            amount *= 1 - Params.stripIntercept * p.strip;
+        }
+        if (holdsWater(p)) {
+            p.load += amount;
+            return;
+        }
+        long at = key;
+        Patch cur = p;
+        for (int hop = 0; hop < 8; hop++) {
+            long next = downhill(level, at, cur, false);
+            if (next == Long.MIN_VALUE) {
+                return; // a basin with no water: it soaks in
+            }
+            Patch n = data(level).patches.get(next);
+            if (holdsWater(n)) {
+                n.load += amount;
+                return;
+            }
+            if (n.quality >= 40 && n.grass + n.shrub >= 0.5) {
+                amount *= 1 - Params.landIntercept;
+            }
+            at = next;
+            cur = n;
+        }
+    }
+
+    /** Load flows on downhill and mixes with neighbouring water; fish swim between them (17.5, 17.6). */
+    static void exchangeWater(ServerLevel level, long key, Patch p, double days) {
+        if (!holdsWater(p)) {
+            return;
+        }
+        long down = downhill(level, key, p, true);
+        if (down != Long.MIN_VALUE) {
+            double move = p.load * (1 - Math.exp(-Params.flushRate * days));
+            p.load -= move;
+            data(level).patches.get(down).load += move;
+        }
+        double mix = 1 - Math.exp(-Params.waterMixing * days);
+        double swim = 1 - Math.exp(-Params.fishDispersal * days);
+        for (int[] d : SIDES) {
+            Patch n = existing(level, key, d[0], d[1]);
+            if (!holdsWater(n)) {
+                continue;
+            }
+            double dl = (n.load - p.load) / 2 * mix;
+            p.load += dl;
+            n.load -= dl;
+            // Fish move toward the emptier water, by density per hectare of water.
+            double df = (n.fish / n.water - p.fish / p.water) / 2 * swim * Math.min(p.water, n.water);
+            df = Math.max(-p.fish, Math.min(n.fish, df));
+            p.fish += df;
+            n.fish -= df;
+        }
+    }
+
+    /** Rabbits and foxes spread between neighbouring patches, easily over grass and hedges, barely over roads and fields (17.5). */
+    static void disperse(ServerLevel level, long key, Patch p, double days) {
+        for (int[] d : SIDES) {
+            Patch n = existing(level, key, d[0], d[1]);
+            if (n == null || !n.sampled) {
+                continue;
+            }
+            double perm = (Model.permeability(p) + Model.permeability(n)) / 2;
+            double fr = (1 - Math.exp(-Params.rabbitDispersal * perm * days)) / 2;
+            double ff = (1 - Math.exp(-Params.foxDispersal * perm * days)) / 2;
+            double dr = (n.rabbits - p.rabbits) * fr;
+            double dfx = (n.foxes - p.foxes) * ff;
+            p.rabbits = Math.max(0.05, p.rabbits + dr);
+            n.rabbits = Math.max(0.05, n.rabbits - dr);
+            p.foxes = Math.max(0.02, p.foxes + dfx);
+            n.foxes = Math.max(0.02, n.foxes - dfx);
+        }
+    }
+
+    /**
+     * 0..1: how many of the 8 patches around are good grassland or an easy corridor (hedges, trees). Unexplored
+     * neighbours count as connected. Low connectivity runs the extinction debt on conservative plants (17.5, 17.16.1).
+     */
+    static double connectivity(ServerLevel level, long key) {
+        double good = 0;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                Patch n = existing(level, key, dx, dz);
+                if (n == null || !n.sampled || n.quality >= 40 && n.grass + n.shrub >= 0.3 || Model.permeability(n) >= 0.7) {
+                    good++;
+                }
+            }
+        }
+        return Math.min(1, good / 3);
+    }
+
+    /** A fish bit: whether it lands, given the stock here, and if it does, one fewer in the patch (17.3). */
+    public static boolean fishBite(ServerLevel level, BlockPos pos, RandomSource random) {
+        if (!enabled()) {
+            return true;
+        }
+        Patch p = patchAt(level, pos);
+        if (!holdsWater(p)) {
+            return true;
+        }
+        if (random.nextDouble() >= Model.fishAvailability(p)) {
+            return false;
+        }
+        p.fish = Math.max(0, p.fish - 1 / hectares());
+        markDirty(level);
+        return true;
+    }
+
+    /** Fish spawn to match the stock (17.3): a thin stock shows fewer fish. */
+    public static boolean fishSpawnAllowed(ServerLevel level, BlockPos pos, RandomSource random) {
+        if (!enabled()) {
+            return true;
+        }
+        Patch p = data(level).patches.get(keyAt(pos));
+        return !holdsWater(p) || random.nextDouble() < Model.fishAvailability(p);
     }
 
     /** Highest quality among the patches within {@code r} (inclusive of this one). */
@@ -324,6 +494,14 @@ public final class Ecology {
         out.add(String.format(Locale.ROOT, "Quality %.0f %s, FQI %.1f from %d species%s; %.0f days since fire or grazing; grazers %d, villagers %d",
                 p.quality, Quality.band(p.quality), Quality.fqi(p), p.plants.size(), p.limitedBy.isEmpty() ? "" : ", held back by " + p.limitedBy,
                 p.daysUndisturbed(), p.grazers, p.villagers));
+        long down = downhill(level, key, p, false);
+        out.add(String.format(Locale.ROOT, "Space: height %.0f, downhill %s, connectivity %.2f, permeability %.2f; crops near water %d, buffered %.0f%%",
+                p.elevation, down == Long.MIN_VALUE ? "none" : ChunkPos.getX(down) + ", " + ChunkPos.getZ(down), p.connectivity,
+                Model.permeability(p), p.cropNearWater, p.strip * 100));
+        if (holdsWater(p)) {
+            out.add(String.format(Locale.ROOT, "Water: nutrients %.1f, algae %.0f%%, oxygen %.0f%%, fish %.1f per ha (%.0f%% of bites land), dying %.2f a day",
+                    Model.concentration(p), p.algae * 100, p.oxygen * 100, p.fish, Model.fishAvailability(p) * 100, p.fishKill));
+        }
         if (!p.builtSeen.isEmpty()) {
             out.add("Counted as built: " + String.join(", ", p.builtSeen));
         }
@@ -358,6 +536,11 @@ public final class Ecology {
             Patch p = patch(level, key);
             if (p.sampled && level.getGameTime() - p.sampledAt > RESAMPLE_EVERY) {
                 s.toSample.add(key);
+            }
+        }
+        if (level.getGameTime() % 40 == 0) {
+            for (ServerPlayer player : level.players()) {
+                algaeSigns(level, player);
             }
         }
         if (level.getGameTime() % 400 == 0) {
@@ -400,6 +583,8 @@ public final class Ecology {
         int cols = 0;
         double grass = 0, crop = 0, wheat = 0, shrub = 0, forest = 0, water = 0, built = 0, bare = 0, path = 0;
         int caves = 0;
+        double height = 0;
+        int nearWater = 0, buffered = 0;
         Map<String, Integer> plants = new HashMap<>();
         Set<String> builtSeen = new java.util.TreeSet<>();
         boolean ground = false, herbs = false;
@@ -417,6 +602,7 @@ public final class Ecology {
             BlockState gs = level.getBlockState(g);
             BlockState above = level.getBlockState(g.above());
             int canopy = top - gy;
+            height += gy;
             if (gs.getFluidState().is(Fluids.WATER) || gs.is(Blocks.WATER)) {
                 water++;
             } else if (gs.getBlock() instanceof FarmBlock || gs.getBlock() instanceof CropBlock || above.getBlock() instanceof CropBlock) {
@@ -424,6 +610,7 @@ public final class Ecology {
                 if (above.is(Blocks.WHEAT) || gs.is(Blocks.WHEAT)) {
                     wheat++;
                 }
+
             } else if (gs.is(BlockTags.LOGS) || canopy >= 4) {
                 forest++;
             } else if (canopy >= 1 || gs.is(BlockTags.LEAVES) || above.is(Blocks.SWEET_BERRY_BUSH) || gs.is(Blocks.AZALEA)
@@ -464,6 +651,26 @@ public final class Ecology {
             // Too few chunks loaded to say; try again later.
             return;
         }
+        // Fields by the water (17.16.2): every second column, so small fields count. From each crop column, is there
+        // water within 10 blocks, and a grass strip of 4+ blocks before it?
+        for (int x = x0; x < x0 + size; x += 2) {
+            for (int z = z0; z < z0 + size; z += 2) {
+                if (!level.hasChunk(x >> 4, z >> 4)) {
+                    continue;
+                }
+                BlockState gs = level.getBlockState(new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z));
+                if (!(gs.getBlock() instanceof FarmBlock) && !(gs.getBlock() instanceof CropBlock)) {
+                    continue;
+                }
+                int strip = stripToWater(level, x, z);
+                if (strip >= 0) {
+                    nearWater++;
+                    if (strip >= 4) {
+                        buffered++;
+                    }
+                }
+            }
+        }
         boolean first = !p.sampled;
         p.grass = grass / cols;
         p.crop = crop / cols;
@@ -474,6 +681,9 @@ public final class Ecology {
         p.built = built / cols;
         p.bare = bare / cols;
         p.path = path / cols;
+        p.elevation = height / cols;
+        p.cropNearWater = nearWater;
+        p.strip = nearWater == 0 ? 0 : (double) buffered / nearWater;
         p.plants = plants;
         p.builtSeen = builtSeen;
         p.layerGround = ground;
@@ -498,11 +708,41 @@ public final class Ecology {
             p.mice = Math.max(1, Params.mouseK * 0.5 * Math.max(0.1, p.grass * 0.4 + p.crop + p.shrub * 0.5));
             p.foxes = Math.max(0.05, p.rabbits / 8);
             p.bats = p.roost;
+            p.fish = Params.fishK * p.water * 0.8;
             p.sampled = true;
         }
         p.sampledAt = level.getGameTime();
         Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
         markDirty(level);
+    }
+
+    /**
+     * From a crop column, the nearest water in the four directions within 10 blocks: -1 if none, else how many grass
+     * columns lie between the crop and the water.
+     */
+    private static int stripToWater(ServerLevel level, int x, int z) {
+        int best = -1;
+        int bestDist = Integer.MAX_VALUE;
+        for (int[] d : SIDES) {
+            int grass = 0;
+            for (int i = 1; i <= 10 && i < bestDist; i++) {
+                int cx = x + d[0] * i;
+                int cz = z + d[1] * i;
+                if (!level.hasChunk(cx >> 4, cz >> 4)) {
+                    break;
+                }
+                BlockState g = level.getBlockState(new BlockPos(cx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, cx, cz) - 1, cz));
+                if (g.getFluidState().is(Fluids.WATER)) {
+                    best = grass;
+                    bestDist = i;
+                    break;
+                }
+                if (g.is(Blocks.GRASS_BLOCK)) {
+                    grass++;
+                }
+            }
+        }
+        return best;
     }
 
     /** Natural ground: dirt, sand, gravel, stone and the like (not built). */
@@ -605,12 +845,53 @@ public final class Ecology {
                 }
             }
         }
+        // Algae shows as green specks on the water; a fish kill as dead fish floating (17.11).
+        if (holdsWater(p) && p.fishKill > 0.3) {
+            int dead = 1 + random.nextInt(3);
+            for (int i = 0; i < 24 && dead > 0; i++) {
+                BlockPos c = at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16);
+                BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, c).below();
+                if (!level.getFluidState(top).is(Fluids.WATER) || !level.getBlockState(top.above()).isAir()) {
+                    continue;
+                }
+                if (dead > 0) {
+                    dead--;
+                    ItemEntity fish = new ItemEntity(level, top.getX() + 0.5, top.getY() + 0.9, top.getZ() + 0.5, new ItemStack(Items.COD));
+                    fish.getItem().set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("Dead fish"));
+                    fish.setNeverPickUp();
+                    ((com.cavmkii.seancraft.mixin.ItemEntityAgeAccessor) fish).seancraft$setAge(6000 - 1200);
+                    level.addFreshEntity(fish);
+                }
+            }
+        }
         // Overgrazed grass turns to dirt (17.11), never inside a hideout.
         if (p.grassBiomass < 0.15) {
             BlockPos c = at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16);
             BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c).below();
             if (level.getBlockState(top).is(Blocks.GRASS_BLOCK) && !protectedGround(level, top)) {
                 level.setBlockAndUpdate(top, Blocks.DIRT.defaultBlockState());
+            }
+        }
+    }
+
+    /** Algal scum: a dull green dust. */
+    private static final net.minecraft.core.particles.DustParticleOptions ALGAE =
+            new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.35f, 0.55f, 0.12f), 1.6f);
+
+    /** Every 2 seconds: green algae on the water around a player in a blooming patch (17.11). */
+    private static void algaeSigns(ServerLevel level, ServerPlayer player) {
+        Patch p = level.getChunkSource().hasChunk(player.chunkPosition().x, player.chunkPosition().z)
+                ? data(level).patches.get(keyAt(player.blockPosition())) : null;
+        if (!holdsWater(p) || p.algae <= 0.3) {
+            return;
+        }
+        RandomSource random = level.getRandom();
+        int spots = (int) (p.algae * 30);
+        for (int i = 0; i < spots; i++) {
+            BlockPos c = player.blockPosition().offset(random.nextInt(25) - 12, 0, random.nextInt(25) - 12);
+            BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, c).below();
+            if (level.getFluidState(top).is(Fluids.WATER) && level.getBlockState(top.above()).isAir()) {
+                level.sendParticles(ALGAE, top.getX() + 0.5, top.getY() + 0.95, top.getZ() + 0.5, 6, 0.45, 0, 0.45, 0);
             }
         }
     }

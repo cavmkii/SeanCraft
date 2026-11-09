@@ -321,7 +321,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 
 ### Ecology
 
-The world keeps track of its wildlife and soil, even where nobody is. It's split into patches 64 blocks across, and each one holds numbers: how much grass there is, how many rabbits, mice and foxes, bats, crop pests, and the soil's nitrogen, phosphorus, organic matter and moisture. The animals you see are a sample of those numbers, and the numbers keep running while you're away (a patch catches up on up to 30 days when it loads again). This is phase 1 of the design (the grassland loop). Water and fish, monster pressure, villages, disease and beavers come later.
+The world keeps track of its wildlife and soil, even where nobody is. It's split into patches 64 blocks across, and each one holds numbers: how much grass there is, how many rabbits, mice and foxes, bats, crop pests, and the soil's nitrogen, phosphorus, organic matter and moisture. The animals you see are a sample of those numbers, and the numbers keep running while you're away (a patch catches up on up to 30 days when it loads again). Phases 1 and 2 of the design are in (the grassland loop, then water and space). Monster pressure, villages, disease, deer and wolves, and beavers come later.
 
 - **Rabbits and foxes.** Rabbits eat grass and breed fast; foxes eat rabbits, and switch to mice when rabbits get scarce, which is what stops them eating every rabbit. Numbers swing but settle. Killing one or breeding one changes its patch. You'll see a handful near you, more where there are more. Ours fade out when you leave.
 - **Soil.** Every crop stage takes nitrogen and phosphorus from the patch, so a field farmed hard yields less each harvest. Ripe wheat, carrots, potatoes and beetroot drop more or less of their crop depending on the soil (seeds aren't affected), and poor soil also slows growth. Bone meal and bat guano go into the soil and feed it over the next few days, not instantly. Wild grass and trees soak up any surplus.
@@ -334,6 +334,13 @@ The world keeps track of its wildlife and soil, even where nobody is. It's split
   - Prairie needs fire or grazing every so often. Go 40 days without either and the prairie plants die back to grass. Disturb it more often than every 5 days and they won't spread. In between, they slowly spread into the grass around them.
   - Too much nitrogen also kills them off and drags quality down.
   - A Good patch nearby makes nearby crops yield up to 15% more (Remnant: 25%) and slows pests, holds more rabbits, and adds 1 comfort to a home base beside it (Remnant: 2).
+- **Runoff.** Soil can only hold so much. Past that, nitrogen and phosphorus wash out of the patch and run downhill to the nearest water, even a few patches away. So the lake below a field you keep bone-mealing gets the extra.
+  - **Algae and dead zones.** Nutrients in the water feed algae (green scum on the surface), algae use up the oxygen, and with too little oxygen the fish die (you'll see dead fish floating). It takes a few weeks of in-game days to turn, and a few more to clear once the runoff stops. Big lakes take more to turn than ponds. Water also carries some of it on downstream and mixes it into the water next door.
+  - **Prairie strips.** A strip of grass 4 or more blocks wide between a field and the water stops most of the runoff, if the patch is Fair or better. Good grassland on the way downhill stops some too.
+- **Fish.** Each patch with water has a fish stock. Every fish you catch takes one, and in thin water more bites get away ("It got away."). Fewer fish spawn where the stock is low. They breed back, and swim in from neighbouring water.
+- **Space.** Rabbits and foxes wander between neighbouring patches, easily over grass and hedges, barely over roads, farmland and water. So a patch can stay stocked only because the one next door keeps refilling it.
+  - **Extinction debt.** The pickiest prairie plants (score 7 and up) slowly die out in a small patch that's cut off from other good grassland. Hedges, trees, or good grassland next door keep it connected.
+- The soil kit also reads the water (clear, nutrients building up, algae bloom, or dead zone, plus how the fish are doing) and how many of the fields by the water have a strip.
 - **Seasons.** Serene Seasons drives the year: rabbits breed in spring and summer, aphids peak in summer and die back in winter, and prairie plants only spread in spring and summer.
 - Inside a home base, nothing turns to dirt from overgrazing and the prairie plants don't die back, but the soil and animals still run.
 
@@ -412,7 +419,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
   - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
   - `Ecology.*`: `Enabled`, `PatchChunks` (4, patch size in chunks; changing it starts the model over), `TickBudgetMs` (2), `DayScale` (1; raise it to speed everything up), `CatchUpMaxDays` (30), `QualityZ` and `QualityK` (2.5, 0.5).
-  - Every ecology number (breeding rates, fox hunting, soil, pests, plant scores) is in `data/seancraft/ecology/params.json`, and a datapack can override it.
+  - Every ecology number (breeding rates, fox hunting, soil, pests, water, fish, dispersal, plant scores) is in `data/seancraft/ecology/params.json`, and a datapack can override it.
   - `Boss.HealthPerPlayer` (85), `Boss.DamagePerPlayer` (10), `Boss.CooldownPerPlayer` (20), all percent per extra player, and `Boss.ScalingCap` (6 players).
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
 - **Commands:**
@@ -420,7 +427,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `/seancraft spawnpoints respread` (op) moves the spawn points other than world spawn out to `Spawn.Distance`, for worlds made before the change. New shelters get built; the old ones stay as plain buildings and stop restocking.
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op). `/character learn <player> <SKILL> <rank> <slot>` learns an active skill at a rank and puts it in slot 0-2, skipping the web. `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
-  - `/seancraft eco patch` shows everything about the patch you're in; `/seancraft eco step <days>` runs it forward; `/seancraft eco set <field> <value>` sets one number (like `nitrogen` or `pest`) for testing (all op).
+  - `/seancraft eco patch` shows everything about the patch you're in; `/seancraft eco step <days>` runs it forward; `/seancraft eco set <field> <value>` sets one number (like `nitrogen`, `pest`, `load` or `fish`) for testing (all op).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with

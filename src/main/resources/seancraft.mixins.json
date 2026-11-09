@@ -8,6 +8,8 @@
     "EcoBreedMixin",
     "EcoCropMixin",
     "EcoFireMixin",
+    "EcoFishingMixin",
+    "ItemEntityAgeAccessor",
     "SafeGroundSpawnMixin",
     "AbstractArrowAccessor",
     "BetterCombatSwingMixin",
