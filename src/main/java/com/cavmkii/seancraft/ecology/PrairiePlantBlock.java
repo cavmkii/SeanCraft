@@ -15,7 +15,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /**
  * A prairie plant (17.16). Placed by hand or at world generation in remnant prairie. It spreads into nearby grass
  * while its patch is disturbed often enough but not too often, and dies back when shrubs would move in (no fire or
- * grazing for too long) or when nitrogen runs too high (17.16.1).
+ * grazing for too long) or when nitrogen runs too high (17.16.1). The most conservative ones also die out slowly in a
+ * small patch cut off from other good grassland (the extinction debt, 17.5).
  */
 public class PrairiePlantBlock extends BushBlock {
     public static final MapCodec<PrairiePlantBlock> CODEC = simpleCodec(PrairiePlantBlock::new);
@@ -53,8 +54,17 @@ public class PrairiePlantBlock extends BushBlock {
             }
             return;
         }
-        // Slow, and slower for the most conservative plants: a restored prairie takes in-game weeks (17.16.1).
         double c = Params.PLANTS.getOrDefault(net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(this).toString(), 5.0);
+        // Extinction debt (17.5, 17.16.1): a conservative plant in a small, cut-off patch slowly dies out. Corridors
+        // and good grassland next door raise connectivity and stop it.
+        if (!protectedGround && c >= 7) {
+            double risk = (1 - p.connectivity) * (1 - Math.min(1, p.grass / 0.5));
+            if (random.nextDouble() < Params.isolationLoss * risk) {
+                level.setBlock(pos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
+                return;
+            }
+        }
+        // Slow, and slower for the most conservative plants: a restored prairie takes in-game weeks (17.16.1).
         if (undisturbed < Params.disturbanceMin || !Seasons.of(level).spreads() || random.nextInt(20 + (int) (4 * c)) != 0) {
             return;
         }

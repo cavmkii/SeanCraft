@@ -22,7 +22,7 @@ Fabric 1.21.1 mod. Package `com.cavmkii.seancraft`, mod id `seancraft`. The GitH
   - `Loc.container(i, -2, 0)` puts something away into container i; i = -1 means route it by the chest filters.
 - `client/ui/Kit.java`: the GUI kit (sprites under `assets/seancraft/textures/gui/sprites`, palette constants).
 - `tarkov/Stations.java` and `client/tarkov/StationTabs.java`: home base stations.
-- `ecology/`: design doc 17, phase 1 (the grassland loop). `Ecology` holds patch storage (`EcoData`, one saved file per dimension), the tick budget, sampling, crop hooks and the wildlife sampler; `Model` is the population and soil equations; `Quality` the 0-100 score; `Params` the tuning, overridable from `data/seancraft/ecology/params.json`. Debug with `/seancraft eco patch|step|set`.
+- `ecology/`: design doc 17, phases 1 (the grassland loop) and 2 (water and space: runoff routed downhill by patch height, algae/oxygen/fish in `Model.stepWater`, dispersal and connectivity in `Ecology`; fishing via `EcoFishingMixin`). `Ecology` holds patch storage (`EcoData`, one saved file per dimension), the tick budget, sampling, crop hooks and the wildlife sampler; `Model` is the population and soil equations; `Quality` the 0-100 score; `Params` the tuning, overridable from `data/seancraft/ecology/params.json`. Debug with `/seancraft eco patch|step|set`.
   - Serene Seasons is a hard dependency but read by reflection (`Seasons`); it and GlitchCore are `modLocalRuntime` in dev.
 - `compat/GraveCompat.java`: YAGM (required) handles death. We set its config on server start and move graves out of boss rings. In dev, OctoLib's nested snakeyaml is added as `localRuntime` by hand.
 - Dev runs pick a random player name, so a reloaded world has a new player.

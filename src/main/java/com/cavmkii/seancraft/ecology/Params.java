@@ -65,6 +65,42 @@ public final class Params {
     public static double bluestemCarbon = 2;
     public static double guanoOrganic = 6;
     public static double boneMealOrganic = 1.5;
+    // Water (phase 2, 17.6). Load is in soil nutrient units; phosphorus counts more, since it drives algae in fresh water.
+    public static double leachAboveP = 50;
+    public static double phosphorusLoadWeight = 3;
+    /** Water share a patch needs to count as holding water. */
+    public static double waterMin = 0.03;
+    /** Share of the load a patch's water loses per day: to the next water downhill (flush), and to the sediment (settle). */
+    public static double flushRate = 0.1;
+    public static double settleRate = 0.08;
+    /** Load mixing between neighbouring water patches per day. */
+    public static double waterMixing = 0.1;
+    public static double algaeR = 0.4;
+    /** Concentration (load per quarter-patch of water) at which algae grow at half speed. */
+    public static double algaeHalf = 15;
+    public static double algaeDeath = 0.06;
+    /** Oxygen moves toward 1 - oxygenAlgae x algae at this rate per day. */
+    public static double oxygenRate = 0.6;
+    public static double oxygenAlgae = 1.0;
+    /** Below this oxygen fish start dying, at up to fishSuffocation of them a day. */
+    public static double lowOxygen = 0.35;
+    public static double fishSuffocation = 1.5;
+    /** Fish that find their way in from elsewhere per day, as a share of what the water can hold, while it has oxygen. */
+    public static double fishImmigration = 0.01;
+    public static double fishR = 0.15;
+    /** Fish per hectare of open water. */
+    public static double fishK = 60;
+    /** Below this many fish per hectare of water, catches start getting away (yields fall as the stock thins). */
+    public static double fishFull = 30;
+    /** Share of runoff a Fair or better strip between field and water stops, and a grassy patch on the way. */
+    public static double stripIntercept = 0.8;
+    public static double landIntercept = 0.4;
+    // Space (phase 2, 17.5): share of the difference that moves between neighbours per day, at full permeability.
+    public static double rabbitDispersal = 0.08;
+    public static double foxDispersal = 0.15;
+    public static double fishDispersal = 0.1;
+    /** Chance per random tick an isolated conservative plant (C 7+) dies back: the extinction debt. */
+    public static double isolationLoss = 0.003;
     // Quality (17.16). The doc benchmarks FQI against 40; with the plants a Minecraft patch can hold, 20 is reachable.
     public static double fqiBenchmark = 20;
     public static double excessNitrogen = 90;
