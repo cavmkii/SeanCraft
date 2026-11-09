@@ -25,6 +25,7 @@ public final class SeanCraftClient implements ClientModInitializer {
         if (def.durability(level) != 0) parts.add(String.format("+%.0f%% durability", def.durability(level) * 100));
         if (def.block(level) != 0) parts.add(String.format("+%.0f%% block", def.block(level) * 100));
         if (def.weight(level) != 0) parts.add("lighter armor");
+        if (def.draw(level) != 0) parts.add(String.format("+%.0f%% draw speed", def.draw(level) * 100));
         return String.join(", ", parts) + " (vs. no part)";
     }
 
@@ -58,6 +59,17 @@ public final class SeanCraftClient implements ClientModInitializer {
         com.cavmkii.seancraft.client.food.ClientFood.init();
         com.cavmkii.seancraft.client.boss.ClientBoss.init();
         com.cavmkii.seancraft.client.carry.ClientCarry.init();
+        // Bows pull back at their parts' pace (BowDrawMixin), so the drawing animation follows it too.
+        for (net.minecraft.world.item.Item bow : new net.minecraft.world.item.Item[] {net.minecraft.world.item.Items.BOW,
+                com.cavmkii.seancraft.parts.WeaponItems.LONGBOW}) {
+            net.fabricmc.fabric.api.object.builder.v1.client.model.FabricModelPredicateProviderRegistry.register(bow,
+                    net.minecraft.resources.ResourceLocation.withDefaultNamespace("pull"), (stack, level, entity, seed) ->
+                            entity == null || entity.getUseItem() != stack ? 0
+                                    : (stack.getUseDuration(entity) - entity.getUseItemRemainingTicks()) * com.cavmkii.seancraft.parts.Parts.drawFactor(stack) / 20f);
+            net.fabricmc.fabric.api.object.builder.v1.client.model.FabricModelPredicateProviderRegistry.register(bow,
+                    net.minecraft.resources.ResourceLocation.withDefaultNamespace("pulling"), (stack, level, entity, seed) ->
+                            entity != null && entity.isUsingItem() && entity.getUseItem() == stack ? 1 : 0);
+        }
         net.minecraft.client.gui.screens.MenuScreens.register(com.cavmkii.seancraft.parts.PartItems.BENCH_MENU,
                 com.cavmkii.seancraft.client.parts.WeaponBenchScreen::new);
         net.minecraft.client.gui.screens.MenuScreens.register(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_CRAFT_MENU,
@@ -72,6 +84,11 @@ public final class SeanCraftClient implements ClientModInitializer {
                 lines.add(1, Component.literal("Level " + com.cavmkii.seancraft.parts.Parts.level(stack) + "/4  -  "
                         + part.def.kind().label + ", tier " + part.def.tier()).withStyle(ChatFormatting.GOLD));
                 lines.add(2, Component.literal(partEffects(part.def, com.cavmkii.seancraft.parts.Parts.level(stack))).withStyle(ChatFormatting.GRAY));
+                com.cavmkii.seancraft.parts.WoodSpecies wood = com.cavmkii.seancraft.parts.WoodSpecies.byId(com.cavmkii.seancraft.parts.Parts.wood(stack));
+                if (wood != null) {
+                    float share = part.def.kind() == com.cavmkii.seancraft.parts.PartKind.LIMBS ? 1 : com.cavmkii.seancraft.parts.WoodSpecies.GRIP_SHARE;
+                    lines.add(3, Component.literal(wood.label + " (" + wood.feel + "): " + wood.effects(share)).withStyle(ChatFormatting.DARK_GREEN));
+                }
                 com.cavmkii.seancraft.parts.MaterialTraits.Trait trait = com.cavmkii.seancraft.parts.MaterialTraits.of(part.def);
                 if (trait != null && trait != com.cavmkii.seancraft.parts.MaterialTraits.Trait.BALANCED) {
                     lines.add(3, Component.literal(trait.label + ": " + trait.effect).withStyle(ChatFormatting.LIGHT_PURPLE));
@@ -106,7 +123,9 @@ public final class SeanCraftClient implements ClientModInitializer {
                 }
                 for (var e : com.cavmkii.seancraft.parts.Parts.installed(stack).entrySet()) {
                     com.cavmkii.seancraft.parts.MaterialTraits.Trait trait = com.cavmkii.seancraft.parts.MaterialTraits.of(e.getValue().part());
-                    Component row = Component.literal(family.slotName(e.getKey()) + ": " + e.getValue().part().label() + " L" + e.getValue().level())
+                    com.cavmkii.seancraft.parts.WoodSpecies sp = e.getValue().species();
+                    Component row = Component.literal(family.slotName(e.getKey()) + ": " + (sp != null ? sp.label + " " : "")
+                            + (sp != null ? e.getValue().part().label().toLowerCase(java.util.Locale.ROOT) : e.getValue().part().label()) + " L" + e.getValue().level())
                             .withStyle(ChatFormatting.DARK_AQUA);
                     if (trait != null && trait != com.cavmkii.seancraft.parts.MaterialTraits.Trait.BALANCED) {
                         row = row.copy().append(Component.literal("  " + trait.label + ": " + trait.effect).withStyle(ChatFormatting.LIGHT_PURPLE));

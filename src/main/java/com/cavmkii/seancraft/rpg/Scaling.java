@@ -20,7 +20,7 @@ public final class Scaling {
         return switch (stock.family()) {
             case DAGGER, BOW, CROSSBOW, THROWING_KNIFE, JAVELIN, BOOMERANG -> new Attr[] {Attr.AGI, null};
             case WAND, STAFF -> new Attr[] {Attr.INT, null};
-            case SWORD, SPEAR, PIKE -> new Attr[] {Attr.STR, Attr.AGI};
+            case SWORD, SPEAR, PIKE, LONGBOW -> new Attr[] {Attr.STR, Attr.AGI};
             default -> new Attr[] {Attr.STR, null};
         };
     }

@@ -72,7 +72,7 @@ There's no raid timer any more. Danger comes from how far out you are, the time 
 - **Home base.** Craft a Home Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your home base.
   - One Home Bench each. Place a second and your old one gets picked up and handed back, so moving house is easy. You can't put one inside someone else's base or within 100 blocks of a boss dungeon.
   - The Home Bench is a 3x3 grid with a recipe book on the left. Fire arrows, stations, modules, totems and the camp kit are made here.
-  - **Module stations.** Each module is its own block. Craft it at the Home Bench, put it in your home base (one of each), then use it to build and upgrade it. Each level takes real time. Hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list. Break a module and it keeps its level, so you can move it. A built module also opens its own crafting grid; recipes it hasn't reached the level for show a lock.
+  - **Module stations.** Each module is its own block. Craft it at the Home Bench, put it in your home base (one of each), then use it to build and upgrade it. Hit CONTRIBUTE to put in whatever you have from your inventory and stash; the level is done the moment it's all in, no waiting. TRACK puts what's still missing on your gather list. Break a module and it keeps its level, so you can move it. A built module also opens its own crafting grid; recipes it hasn't reached the level for show a lock.
   - **Station tabs.** At home, the Home Bench, Weapon Bench, crafting table and every module have tabs for each other, so you can hop between them without walking over.
 
   | Module | What it does |
@@ -198,11 +198,28 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
 - Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
 - **Stash on station screens.** On the Weapon Bench, the Home Bench, a crafting table, anvil or any other screen that shows your inventory, the home **STASH** sits in a box on the left (at home, with Storehouse 3): click an item to take a stack onto your cursor, right-click for one, or drop whatever you're holding on the box to put it away (it goes where the chest filters say). The `>` cell flips pages when there's more than fits.
-- **Names.** The BUILD slots say which part they take when the names differ, like "String (wrap)", "Grip (handle)", "Stock (handle)" or "Rim (guard)", and the parts book lists them that way too ("Handle / grip", "Wrap / string").
+- **Names.** The BUILD slots say which part they take when the names differ, like "String (bowstring)", "Grip (handle)", "Stock (handle)" or "Rim (guard)", and the parts book lists them that way too ("Handle / grip").
 - **Making parts.** Under BUILD (and REPAIR) there's always a 3x3 grid with the pattern book on its left, no tab to switch to. Parts are made by pattern: lay the material out in the part's shape and take the part from the result slot. The material you use decides the part's material, and every square with the same letter has to be the same material. Click a part in the book to see its pattern as a ghost.
-  - The letters: M is metal (copper ingot, iron ingot, gold ingot, diamond), W is wood (planks, logs, bone, blaze rod, breeze rod), H is hide (string, leather, rabbit hide, phantom membrane, armadillo scute), G is a gem (quartz, lapis, amethyst shard, prismarine shard, echo shard), C a catalyst, S a stick.
-  - Patterns, top row first: knife blade `M`; blade `M / M`; long blade `MM / MM`; axe head `MM / M.`; mace head `.M. / M.M`; spearhead `.M / M.`; halberd head `MM / M. / M.`; plate `MM`; guard `MSM`; focus `M.M`; limbs `W. / .W / W.`; handle `W / W`; haft `W / W / W`; crystal `G / C / G`; wrap `H. / .H`; padding `HHH`. They work anywhere in the grid and mirrored.
+  - The letters: M is metal (copper ingot, iron ingot, gold ingot, diamond), W is wood (planks, logs, bone, blaze rod, breeze rod), H is hide (string, leather, rabbit hide, phantom membrane, armadillo scute), T is bowstring material (string, leather, rabbit hide, cobweb, phantom membrane), G is a gem (quartz, lapis, amethyst shard, prismarine shard, echo shard), C a catalyst, S a stick.
+  - Patterns, top row first: knife blade `M`; blade `M / M`; long blade `MM / MM`; axe head `MM / M.`; mace head `.M. / M.M`; spearhead `.M / M.`; halberd head `MM / M. / M.`; plate `MM`; guard `MSM`; focus `M.M`; limbs `W. / .W / W.`; handle `W / W`; haft `W / W / W`; crystal `G / C / G`; wrap `H. / .H`; bowstring `T / T / T`; padding `HHH`. They work anywhere in the grid and mirrored.
   - **Bow limbs are wood now** (planks, log, bone, blaze rod, breeze rod), so they take the wood traits.
+  - **Wraps and bowstrings are different parts.** Wraps go on melee weapons, shields and armor; bows and crossbows take a bowstring: String, Rawhide (leather), Sinew (rabbit hide), Silk (cobweb) or Membrane (phantom membrane). A better string draws faster and throws a little harder. Bows made before this keep their old wrap as a string of the same tier.
+  - **Wood species.** Plank and log parts remember their tree, and it's in the name ("Spruce Log Limbs"). All the wood squares have to be the same tree. On bow and crossbow limbs it matters a lot; on handles, hafts, stocks and other wood parts it's a third as strong (and on melee weapons the speed part becomes swing speed):
+
+    | Tree | Damage | Draw / swing | Durability | Feel |
+    |---|---|---|---|---|
+    | Oak | 0 | 0 | +10% | all-round, sturdy |
+    | Spruce | +10% | −5% | +5% | springy and strong |
+    | Birch | −5% | +10% | 0 | light and quick |
+    | Jungle | 0 | +5% | +15% | dense, lasts |
+    | Acacia | +15% | −10% | −5% | hard and stiff |
+    | Dark oak | +12% | −12% | +10% | heavy and strong |
+    | Mangrove | +5% | 0 | +20% | won't rot |
+    | Cherry | −5% | +15% | −10% | whippy |
+    | Bamboo | −12% | +20% | −15% | very light, fragile |
+    | Crimson | +8% | +5% | −5% | nether-grown, snappy |
+    | Warped | +3% | +8% | +5% | nether-grown, even |
+  - **Bows.** The vanilla bow is the **Shortbow**: quick to draw. The **Longbow** (built at the bench: limbs, grip, bowstring; on the STR and AGI ladders at rung 2, scales 50/50 STR/AGI) takes half again as long to draw, but its arrows fly 30% faster, so they hit harder and go further. The **Crossbow** loads at its parts' pace the same way. The bench shows a bow's Draw (or Reload) next to its damage.
   - **Netherite:** netherite scrap, a diamond part, netherite scrap in a row.
   - **Levelling:** the part in the centre, ringed by exactly the right number of its own material: level + 1 for metal and gems, twice that for wood and hide, never more than 8. Each level adds 6% to the head's damage, up to 4. The ring squares to fill light up.
   - **Infusions:** the wrap pattern plus one extra iron nugget (Heavy), flint (Keen) or lapis (Arcane) anywhere in the grid. Heavy moves 25% of the weapon's scaling to STR, Keen to AGI, Arcane to INT. A Keen sword scales 25% STR / 75% AGI.
@@ -227,8 +244,8 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Wraps and padding: leather nothing, rabbit hide makes you harder for mobs to spot while sneaking (stacks per piece), phantom membrane is lighter, scute padding gives +2 armor.
   - The old "gold does more to undead, netherite sets things on fire" part bonuses are gone; the trait is the bonus now.
 - **Recipe ladders.** You can use any weapon you find, but you can only make the ones you've unlocked. Each attribute has a ladder:
-  - STR: wooden club → mace, axe, sword → warhammer, greatsword, halberd.
-  - AGI: bow, dagger → sword, spear, crossbow, throwing knife → javelin, boomerang, pike.
+  - STR: wooden club → mace, axe, sword, longbow → warhammer, greatsword, halberd.
+  - AGI: shortbow, dagger → sword, spear, crossbow, longbow, throwing knife → javelin, boomerang, pike.
   - INT: wand → staff.
   - You start knowing the first rung of your origin's ladder. 5,000 damage to monsters with rung 1 weapons opens rung 2, and 25,000 with rung 2 weapons opens rung 3. Swords are on both ladders.
   - Crossing over: do 1,000 damage with a found weapon from another ladder and you unlock that weapon, plus the first rung of its ladder, which you can then climb too.

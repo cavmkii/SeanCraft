@@ -39,12 +39,12 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
     private static final int TAB_Y = 3;
     /** One icon per buildable family: its iron item (or its only item), in the menu's order. */
     private static final Item[] PICK_ICONS = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
-            .map(f -> f == Family.BOW ? Items.BOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD
+            .map(f -> f == Family.BOW ? Items.BOW : f == Family.LONGBOW ? com.cavmkii.seancraft.parts.WeaponItems.LONGBOW : f == Family.CROSSBOW ? Items.CROSSBOW : f == Family.SHIELD ? Items.SHIELD
                     : f == Family.BUCKLER ? com.cavmkii.seancraft.parts.WeaponItems.BUCKLER
                     : f == Family.TOWER_SHIELD ? com.cavmkii.seancraft.parts.WeaponItems.TOWER_SHIELD
                     : f == Family.BOOMERANG ? com.cavmkii.seancraft.parts.WeaponItems.BOOMERANG : Family.itemFor(f, 2)).toArray(Item[]::new);
     private static final String[] PICK_NAMES = java.util.Arrays.stream(WeaponBenchMenu.BUILDABLE)
-            .map(f -> f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
+            .map(f -> f == Family.BOW ? "Shortbow" : f == Family.CHEST ? "Chestplate" : f == Family.LEGS ? "Leggings" : f.name().charAt(0) + f.name().substring(1).toLowerCase())
             .toArray(String[]::new);
     private static final int PICK_PITCH = 12;
 
@@ -144,7 +144,6 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             String also = switch (kind) {
                 case HANDLE -> " / grip";
                 case HAFT -> " / long grip";
-                case WRAP -> " / string";
                 case GUARD -> " / rim";
                 default -> "";
             };
@@ -337,6 +336,8 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
             case PIKE -> new int[][] {{116, 16, 120, 18}, {113, 18, 123, 40}, {115, 40, 121, 116}, {111, 40, 125, 42}};
             case BOW -> new int[][] {{116, 16, 126, 22}, {124, 20, 134, 34}, {132, 32, 140, 50}, {134, 50, 144, 74}, {132, 74, 140, 92},
                     {124, 90, 134, 104}, {116, 102, 126, 110}, {100, 20, 102, 108}, {101, 18, 118, 20}, {101, 106, 118, 108}};
+            case LONGBOW -> new int[][] {{116, 14, 124, 18}, {122, 16, 130, 30}, {128, 28, 136, 50}, {130, 50, 140, 74}, {128, 74, 136, 96},
+                    {122, 94, 130, 108}, {116, 106, 124, 114}, {96, 16, 98, 114}, {97, 14, 118, 16}, {97, 112, 118, 114}};
             case CROSSBOW -> new int[][] {{70, 30, 164, 38}, {66, 34, 72, 44}, {162, 34, 168, 44}, {112, 38, 124, 114}, {72, 44, 110, 46},
                     {126, 44, 162, 46}};
             case SHIELD -> new int[][] {{84, 18, 150, 92}, {90, 92, 144, 104}, {100, 104, 134, 112}};
@@ -379,7 +380,9 @@ public class WeaponBenchScreen extends AbstractContainerScreen<WeaponBenchMenu> 
                 lines.add(pct("Armor", t.armor));
             } else {
                 lines.add(pct("Damage", t.damage));
-                if (family != Family.BOW && family != Family.CROSSBOW && !family.shield()) {
+                if (family.ranged()) {
+                    lines.add(pct(family == Family.CROSSBOW ? "Reload" : "Draw", Parts.drawFactor(weapon) - 1));
+                } else if (!family.shield()) {
                     lines.add(pct("Speed", -t.stamina));
                 }
             }

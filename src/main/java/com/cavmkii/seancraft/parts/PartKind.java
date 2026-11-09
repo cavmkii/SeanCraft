@@ -18,13 +18,15 @@ public enum PartKind {
     HANDLE("Handle", PartSlot.HANDLE, Material.WOOD),
     HAFT("Haft", PartSlot.HANDLE, Material.WOOD),
     WRAP("Wrap", PartSlot.WRAP, Material.HIDE),
+    /** A bow's or crossbow's string: sits in the wrap slot on those, but is its own part (draw speed). */
+    STRING("Bowstring", PartSlot.WRAP, Material.STRING),
     PADDING("Padding", PartSlot.PADDING, Material.HIDE),
     /** A wand's or staff's crystal (9.4.5): sets spell power; a catalyst set when making it sets the element. */
     CRYSTAL("Crystal", PartSlot.HEAD, Material.GEM),
     /** The metal that holds the crystal. */
     FOCUS("Focus", PartSlot.GUARD, Material.METAL);
 
-    public enum Material { METAL, WOOD, HIDE, GEM }
+    public enum Material { METAL, WOOD, HIDE, GEM, STRING }
 
     public final String label;
     public final PartSlot slot;

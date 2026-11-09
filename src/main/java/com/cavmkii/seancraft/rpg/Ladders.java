@@ -44,6 +44,7 @@ public final class Ladders {
         rung("dagger", 0, 1, 0);
         rung("spear", 0, 2, 0);
         rung("crossbow", 0, 2, 0);
+        rung("longbow", 2, 2, 0);
         rung("pike", 0, 3, 0);
         rung("throwing_knife", 0, 2, 0);
         rung("javelin", 0, 3, 0);

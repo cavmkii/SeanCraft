@@ -51,11 +51,35 @@ public final class Parts {
                     .networkSynchronized(ByteBufCodecs.STRING_UTF8)
                     .build());
 
-    /** {@code infusion} is null for a plain part. */
-    public record Installed(PartDef part, int level, String infusion) {
+    /** The tree a plank or log part came from ({@link WoodSpecies}), on the part item and kept when installed. */
+    public static final DataComponentType<String> WOOD = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+            SeanCraft.id("wood"), DataComponentType.<String>builder()
+                    .persistent(Codec.STRING)
+                    .networkSynchronized(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
+    /** {@code infusion} and {@code wood} are null for a plain part. */
+    public record Installed(PartDef part, int level, String infusion, String wood) {
         public Installed(PartDef part, int level) {
-            this(part, level, null);
+            this(part, level, null, null);
         }
+
+        public Installed(PartDef part, int level, String infusion) {
+            this(part, level, infusion, null);
+        }
+
+        public WoodSpecies species() {
+            return WoodSpecies.byId(wood);
+        }
+    }
+
+    /** An installed part from a part item stack: its level, infusion and wood. */
+    public static Installed of(ItemStack partStack) {
+        return new Installed(((PartItem) partStack.getItem()).def, level(partStack), infusion(partStack), wood(partStack));
+    }
+
+    public static String wood(ItemStack partStack) {
+        return partStack.get(WOOD);
     }
 
     public static String infusion(ItemStack partStack) {
@@ -71,6 +95,8 @@ public final class Parts {
         public float parry;
         public float armor;
         public float weight;
+        /** Draw (bows) or reload (crossbows) speed: positive = faster. */
+        public float draw;
         public boolean modified;
         public boolean missingCore;
     }
@@ -98,6 +124,9 @@ public final class Parts {
         if (installed.infusion() != null) {
             stack.set(INFUSION, installed.infusion());
         }
+        if (installed.wood() != null) {
+            stack.set(WOOD, installed.wood());
+        }
         return stack;
     }
 
@@ -120,8 +149,13 @@ public final class Parts {
                 PartDef def = PartDef.byId(bits[0]);
                 int level = bits.length > 1 ? Integer.parseInt(bits[1]) : 1;
                 String infusion = bits.length > 2 && !bits[2].isEmpty() ? bits[2] : null;
+                String wood = bits.length > 3 && !bits[3].isEmpty() ? bits[3] : null;
+                if (def != null && def.kind() == PartKind.WRAP && stock.family().ranged()) {
+                    // Bows made before strings were their own part: the wrap becomes a string of the same tier.
+                    def = PartDef.of(PartKind.STRING, def.tier());
+                }
                 if (def != null && stock.family().fits(def) && def.kind().slot == slot) {
-                    out.put(slot, new Installed(def, Math.max(1, Math.min(PartDef.MAX_LEVEL, level)), infusion));
+                    out.put(slot, new Installed(def, Math.max(1, Math.min(PartDef.MAX_LEVEL, level)), infusion, wood));
                 }
             } catch (RuntimeException ignored) {
                 // A part that no longer exists.
@@ -133,7 +167,8 @@ public final class Parts {
     /** Record the parts and rewrite the item's stats from them. */
     public static void setInstalled(ItemStack stack, Map<PartSlot, Installed> parts) {
         Map<String, String> raw = new HashMap<>();
-        parts.forEach((slot, inst) -> raw.put(slot.name(), inst.part().id() + ":" + inst.level() + (inst.infusion() != null ? ":" + inst.infusion() : "")));
+        parts.forEach((slot, inst) -> raw.put(slot.name(), inst.part().id() + ":" + inst.level() + ":" + (inst.infusion() != null ? inst.infusion() : "")
+                + ":" + (inst.wood() != null ? inst.wood() : "")));
         stack.set(INSTALLED, raw);
         applyStats(stack);
     }
@@ -151,6 +186,7 @@ public final class Parts {
             PartDef std = standard.get(slot);
             if (inst != null) {
                 add(t, inst.part(), inst.level(), 1);
+                species(t, stock.family(), inst);
             }
             if (std != null) {
                 add(t, std, 1, -1);
@@ -174,6 +210,34 @@ public final class Parts {
         return t;
     }
 
+    /**
+     * A wood part's species: full effect on limbs, a third on other wood parts. On a bow or crossbow the speed goes to
+     * draw; on anything else it goes to swing speed (lower stamina).
+     */
+    private static void species(Totals t, Family family, Installed inst) {
+        WoodSpecies sp = inst.species();
+        if (sp == null) {
+            return;
+        }
+        float share = inst.part().kind() == PartKind.LIMBS ? 1 : WoodSpecies.GRIP_SHARE;
+        t.damage += sp.damage * share;
+        t.durability += sp.durability * share;
+        if (family.ranged()) {
+            t.draw += sp.draw * share;
+        } else {
+            t.stamina -= sp.draw * share;
+        }
+    }
+
+    /** How fast a bow draws or a crossbow loads, relative to vanilla: the family's own pace times its parts. */
+    public static float drawFactor(ItemStack stack) {
+        Family.Stock stock = Family.stock(stack);
+        if (stock == null) {
+            return 1;
+        }
+        return Math.max(0.3f, stock.family().drawPace() * (1 + totals(stack).draw));
+    }
+
     private static void add(Totals t, PartDef p, int level, float sign) {
         t.damage += sign * p.damage(level);
         t.durability += sign * p.durability(level);
@@ -182,6 +246,7 @@ public final class Parts {
         t.parry += sign * p.parry(level);
         t.armor += sign * p.armor(level);
         t.weight += sign * p.weight(level);
+        t.draw += sign * p.draw(level);
     }
 
     /**

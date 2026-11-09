@@ -267,5 +267,13 @@
   "block.seancraft.map_room": "Map Room",
   "item.seancraft.map_room.desc": "Home module: a season and weather forecast when you come home, and hunting party warnings for everyone. Place it at your home base and use it to build.",
   "block.seancraft.storehouse": "Storehouse",
-  "item.seancraft.storehouse.desc": "Home module: turns the chests at your home base into one stash, then filters and refill, then the stash at every station. Place it at your home base and use it to build."
+  "item.seancraft.storehouse.desc": "Home module: turns the chests at your home base into one stash, then filters and refill, then the stash at every station. Place it at your home base and use it to build.",
+  "item.seancraft.string_string": "String Bowstring",
+  "item.seancraft.string_rawhide": "Rawhide Bowstring",
+  "item.seancraft.string_sinew": "Sinew Bowstring",
+  "item.seancraft.string_silk": "Silk Bowstring",
+  "item.seancraft.string_membrane": "Membrane Bowstring",
+  "item.minecraft.bow": "Shortbow",
+  "item.seancraft.longbow": "Longbow",
+  "item.seancraft.longbow.desc": "Slow to draw, but its arrows fly faster and hit harder. Built at the Weapon Bench."
 }

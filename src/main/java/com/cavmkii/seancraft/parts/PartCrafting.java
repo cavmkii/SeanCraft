@@ -20,6 +20,7 @@ import net.minecraft.world.item.Items;
 public final class PartCrafting {
     private static final Item[] METAL = {Items.COPPER_INGOT, Items.IRON_INGOT, Items.GOLD_INGOT, Items.DIAMOND};
     private static final Item[] HIDE = {Items.STRING, Items.LEATHER, Items.RABBIT_HIDE, Items.PHANTOM_MEMBRANE, Items.ARMADILLO_SCUTE};
+    private static final Item[] STRING = {Items.STRING, Items.LEATHER, Items.RABBIT_HIDE, Items.COBWEB, Items.PHANTOM_MEMBRANE};
     private static final Item[] GEM = {Items.QUARTZ, Items.LAPIS_LAZULI, Items.AMETHYST_SHARD, Items.PRISMARINE_SHARD, Items.ECHO_SHARD};
     private static final Item[] CATALYST = {Items.BLAZE_POWDER, Items.PACKED_ICE, Items.LIGHTNING_ROD, Items.FERMENTED_SPIDER_EYE, Items.GOLDEN_CARROT};
 
@@ -49,6 +50,7 @@ public final class PartCrafting {
             case 'W' -> s.is(ItemTags.PLANKS) ? 1 : s.is(ItemTags.LOGS) ? 2 : s.is(Items.BONE) ? 3 : s.is(Items.BLAZE_ROD) ? 4 : s.is(Items.BREEZE_ROD) ? 5 : 0;
             case 'H' -> index(HIDE, s);
             case 'G' -> index(GEM, s);
+            case 'T' -> index(STRING, s);
             case 'C' -> index(CATALYST, s);
             case 'S' -> s.is(Items.STICK) ? 1 : 0;
             default -> 0;
@@ -61,6 +63,7 @@ public final class PartCrafting {
             case WOOD -> 'W';
             case HIDE -> 'H';
             case GEM -> 'G';
+            case STRING -> 'T';
         };
     }
 
@@ -206,11 +209,34 @@ public final class PartCrafting {
             if (!same || tier == 0) {
                 continue;
             }
+            // Plank and log parts remember their tree; every wood square has to be the same one (4.3).
+            String wood = null;
+            if (main == 'W' && tier <= 2) {
+                WoodSpecies first = null;
+                boolean oneTree = true;
+                for (int i = 0; i < 9; i++) {
+                    if (at[i] == 'W') {
+                        WoodSpecies sp = WoodSpecies.of(grid[i]);
+                        if (first == null) {
+                            first = sp;
+                        } else if (sp != first) {
+                            oneTree = false;
+                        }
+                    }
+                }
+                if (!oneTree) {
+                    continue;
+                }
+                wood = first == null ? null : first.id();
+            }
             PartDef def = PartDef.of(kind, tier);
             if (def == null) {
                 continue;
             }
             ItemStack out = new ItemStack(PartItems.get(def));
+            if (wood != null) {
+                out.set(Parts.WOOD, wood);
+            }
             if (kind == PartKind.CRYSTAL && catalyst > 0) {
                 out.set(Parts.INFUSION, com.cavmkii.seancraft.rpg.Magic.ELEMENTS[catalyst - 1]);
             }
@@ -226,6 +252,7 @@ public final class PartCrafting {
             case 'W' -> Items.OAK_LOG;
             case 'H' -> Items.LEATHER;
             case 'G' -> Items.AMETHYST_SHARD;
+            case 'T' -> Items.STRING;
             case 'C' -> Items.BLAZE_POWDER;
             case 'S' -> Items.STICK;
             default -> Items.AIR;

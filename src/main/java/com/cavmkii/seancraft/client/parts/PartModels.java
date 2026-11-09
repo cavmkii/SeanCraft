@@ -51,6 +51,7 @@ public final class PartModels {
             case GEM -> PartDef.GEMS[def.tier() - 1];
             case WOOD -> WOOD[def.tier() - 1];
             case HIDE -> HIDE[def.tier() - 1];
+            case STRING -> PartDef.STRINGS[def.tier() - 1];
         };
         String kind = def.kind() == PartKind.HANDLE && family == Family.BOOMERANG ? "limbs" : def.kind().name().toLowerCase(java.util.Locale.ROOT);
         return kind + "_" + material;
