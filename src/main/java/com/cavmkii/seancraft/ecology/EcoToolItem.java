@@ -123,9 +123,9 @@ public class EcoToolItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> lines, TooltipFlag flag) {
         String text = switch (kind) {
-            case SOIL_KIT -> "Use on the ground: soil nutrients, what limits a crop there, the water nearby, and the patch's ecosystem quality.";
-            case INSECTICIDE -> "Use on crops: knocks pests down, but kills the bats that eat them too, and pests build resistance.";
-            case BAT_GUANO -> "Fast fertilizer: use on farmland or soil. It breaks down over a few days.";
+            case SOIL_KIT -> "Use on the ground: soil, water and habitat.";
+            case INSECTICIDE -> "Kills crop pests, and the bats too.";
+            case BAT_GUANO -> "Fast fertilizer for farmland.";
         };
         lines.add(Component.literal(text).withColor(0xD9CBB0));
     }

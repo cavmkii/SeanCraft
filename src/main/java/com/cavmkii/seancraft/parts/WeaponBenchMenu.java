@@ -124,11 +124,11 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         firstInventorySlot = slots.size();
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(inventory, 9 + row * 9 + col, 8 + col * 18, 130 + row * 18));
+                addSlot(new Slot(inventory, 9 + row * 9 + col, 8 + col * 18, INV_Y + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(inventory, col, 8 + col * 18, 188));
+            addSlot(new Slot(inventory, col, 8 + col * 18, HOTBAR_Y));
         }
         item.addListener(c -> loadParts());
         parts.addListener(c -> {
@@ -143,6 +143,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     }
 
     public static final int TAB_BUILD = 0;
+    /** Parts crafting no longer has a tab: it sits under BUILD and REPAIR, always there. Kept so tab numbers don't shift. */
     public static final int TAB_PARTS = 1;
     public static final int TAB_REPAIR = 2;
     /** Which tab is showing; set on both sides (the screen sends TAB_BUTTON + n). Slots of other tabs are inactive. */
@@ -150,10 +151,14 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
     public static final int TAB_BUTTON = 600;
 
     // PARTS: the pattern grid and its result (4.8).
+    /** The parts grid, under the build area (4.8). */
     public static final int GRID_X = 61;
-    public static final int GRID_Y = 30;
+    public static final int GRID_Y = 122;
     public static final int GRID_RESULT_X = 151;
-    public static final int GRID_RESULT_Y = 48;
+    public static final int GRID_RESULT_Y = 140;
+    /** The player's inventory rows and hotbar, under the parts grid. */
+    public static final int INV_Y = 184;
+    public static final int HOTBAR_Y = 242;
     private final SimpleContainer grid = new SimpleContainer(9);
     private final SimpleContainer gridOut = new SimpleContainer(1);
     private PartCrafting.Result gridResult = PartCrafting.Result.NONE;
@@ -413,9 +418,7 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             return;
         }
         if (server) {
-            if (tab == TAB_PARTS) {
-                clearContainer(player, grid);
-            } else if (tab == TAB_REPAIR) {
+            if (tab == TAB_REPAIR) {
                 clearContainer(player, repair);
             }
         }
@@ -427,11 +430,16 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             addSlot(new Slot(grid, i, GRID_X + (i % 3) * 18, GRID_Y + (i / 3) * 18) {
                 @Override
                 public boolean isActive() {
-                    return tab == TAB_PARTS;
+                    return true;
                 }
             });
         }
         addSlot(new ResultSlot(gridOut, GRID_RESULT_X, GRID_RESULT_Y, TAB_PARTS) {
+            @Override
+            public boolean isActive() {
+                return true;
+            }
+
             @Override
             void taken(Player player) {
                 consumeGrid(player, gridResult.use());
