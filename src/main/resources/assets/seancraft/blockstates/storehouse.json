@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/storehouse"
+    },
+    "facing=east": {
+      "model": "seancraft:block/storehouse",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/storehouse",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/storehouse",
+      "y": 270
+    }
+  }
+}

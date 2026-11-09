@@ -464,7 +464,8 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
             void taken(Player player) {
                 int steps = repairSteps();
                 repair.setItem(0, ItemStack.EMPTY);
-                repair.getItem(1).shrink(steps);
+                int per = stepsPerMaterial();
+                repair.getItem(1).shrink((steps + per - 1) / per);
                 repair.setChanged();
                 player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.ANVIL_USE,
                         net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, 1.2f);
@@ -560,7 +561,15 @@ public class WeaponBenchMenu extends AbstractContainerMenu {
         if (w.isEmpty() || m.isEmpty() || Wear.material(w) == null || !m.is(Wear.material(w))) {
             return 0;
         }
-        return Math.min(m.getCount(), Wear.stepsToFull(w));
+        return Math.min(m.getCount() * stepsPerMaterial(), Wear.stepsToFull(w));
+    }
+
+    /** A bench in a home base with Workshop level 3 repairs at half cost: each material does two steps (v23 2.4.1). */
+    private int stepsPerMaterial() {
+        return access.evaluate((level, pos) -> level instanceof net.minecraft.server.level.ServerLevel sl
+                && com.cavmkii.seancraft.tarkov.Hideouts.at(sl, net.minecraft.world.phys.Vec3.atCenterOf(pos)) instanceof
+                        com.cavmkii.seancraft.tarkov.Hideouts.Hideout h
+                && h.level(com.cavmkii.seancraft.tarkov.Module.WORKSHOP) >= 3 ? 2 : 1, 1);
     }
 
     private void refreshRepair() {

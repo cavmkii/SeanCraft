@@ -10,9 +10,10 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
-/** Client side of the raid loop: raid HUD, Hideout screen, and the J (gear) and H (status) keys. */
+/** Client side of the world and home base: the danger HUD line, the home base screens, and the J (inventory) and H (status) keys. */
 public final class ClientTarkov {
-    public static TarkovNet.RaidState raid = new TarkovNet.RaidState(0, 0, 0, -1, 0, -1, false);
+    /** Where the player is (home, spawn, camp, the open world) and their distance band. */
+    public static TarkovNet.PlaceState place = new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0);
 
     public static TarkovNet.Banner banner;
     public static long bannerAt;
@@ -38,7 +39,7 @@ public final class ClientTarkov {
             banner = payload;
             bannerAt = net.minecraft.Util.getMillis();
         });
-        ClientPlayNetworking.registerGlobalReceiver(TarkovNet.RaidState.TYPE, (payload, ctx) -> raid = payload);
+        ClientPlayNetworking.registerGlobalReceiver(TarkovNet.PlaceState.TYPE, (payload, ctx) -> place = payload);
         ClientPlayNetworking.registerGlobalReceiver(TarkovNet.HideoutView.TYPE, (payload, ctx) -> {
             Minecraft mc = ctx.client();
             if (mc.screen instanceof HideoutScreen screen && screen.pos.equals(payload.pos())) {

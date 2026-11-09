@@ -500,6 +500,11 @@ public final class Rpg {
         return com.cavmkii.seancraft.tarkov.Hideouts.at(player.serverLevel(), player.position()) != null;
     }
 
+    /** Home base or within a few blocks of a camp: where the loadout can change (v23). */
+    private static boolean atHomeOrCamp(ServerPlayer player) {
+        return inHideout(player) || com.cavmkii.seancraft.tarkov.Camps.near(player.serverLevel(), player.position(), 6) != null;
+    }
+
     /** Any tier 1 boss beaten, for the specialization milestone (6.2.5). */
     static boolean hasTierOneTrophy(ServerPlayer player) {
         for (String boss : player.getAttachedOrCreate(com.cavmkii.seancraft.boss.BossContent.BEATEN)) {
@@ -541,7 +546,7 @@ public final class Rpg {
                 return;
             }
             if (!inHideout(player)) {
-                player.displayClientMessage(Component.literal("Choose a specialization in a hideout."), true);
+                player.displayClientMessage(Component.literal("Choose a specialization at your home base."), true);
                 return;
             }
             data.spec = web.spec;
@@ -602,14 +607,14 @@ public final class Rpg {
         markDirty(player);
     }
 
-    /** The loadout changes only in a hideout, so the kit is chosen before a raid (6.5.2). */
+    /** The loadout changes only at home or a camp, so the kit is picked before heading out. */
     private static void setSlot(ServerPlayer player, int slot, String skillName) {
         PlayerData data = data(player);
         if (!data.slotOpen(slot)) {
             return;
         }
-        if (!inHideout(player)) {
-            player.displayClientMessage(Component.literal("Change your loadout in a hideout."), true);
+        if (!atHomeOrCamp(player)) {
+            player.displayClientMessage(Component.literal("Change your loadout at your home base or a camp."), true);
             return;
         }
         if (skillName.isEmpty()) {
@@ -781,8 +786,8 @@ public final class Rpg {
     }
 
     /**
-     * Clears the web and the specialization, frees your attribute points to place again, and kills you (6.6). Only in a
-     * hideout, so a respec never costs a raid kit. You keep a share of the web points you'd spent; the rest are gone for
+     * Clears the web and the specialization, frees your attribute points to place again, and kills you (6.6). Only at a
+     * home base. You keep a share of the web points you'd spent; the rest are gone for
      * good. Your origin stays, and the whole web stays open if it was.
      */
     private static void respec(ServerPlayer player, BlockPos pos) {
@@ -791,7 +796,7 @@ public final class Rpg {
             return;
         }
         if (!inHideout(player)) {
-            player.displayClientMessage(Component.literal("The altar only works inside a hideout."), true);
+            player.displayClientMessage(Component.literal("The altar only works at a home base."), true);
             return;
         }
         PlayerData data = data(player);

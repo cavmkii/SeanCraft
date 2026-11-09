@@ -49,7 +49,7 @@ public final class BossSites extends SavedData {
     static final int RADIUS = 20;
     /** A player this close (horizontally) gets the arena built. */
     static final double BUILD_DISTANCE = 96;
-    /** No Hideout Bench within this of a pedestal (2.5, Raid.PedestalClearance). */
+    /** No Hideout Bench within this of a pedestal (2.5, Home.PedestalClearance). */
 
     /** A dungeon: its pedestal (or, until built, where it will go) and whether it's built. */
     public static final class Site {

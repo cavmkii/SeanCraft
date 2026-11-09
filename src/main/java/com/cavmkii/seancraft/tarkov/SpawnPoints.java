@@ -86,7 +86,7 @@ public final class SpawnPoints extends SavedData {
         BlockPos p = data.points.get(i);
         player.teleportTo(overworld, p.getX() + 0.5, p.getY(), p.getZ() + 1.5, player.getYRot(), 0);
         player.sendSystemMessage(Component.literal("Spawn point " + (i + 1) + " (" + p.getX() + ", " + p.getZ()
-                + "). Safe here: the raid starts when you leave.").withStyle(ChatFormatting.GRAY));
+                + "). Safe here: no hostile spawns near it.").withStyle(ChatFormatting.GRAY));
     }
 
     // ================================================================== building

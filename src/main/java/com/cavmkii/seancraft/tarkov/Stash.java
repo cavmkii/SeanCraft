@@ -14,14 +14,18 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The hideout stash: every chest and barrel within a hideout's radius counts as one pool. Hideout crafting
- * and module building draw from what you carry first, then the stash.
+ * The home stash (2.4.1, Storehouse 1): every chest and barrel within the home base's radius counts as one pool.
+ * Home crafting and module building draw from what you carry first, then the stash.
  */
 public final class Stash {
     private Stash() {}
 
+    /** The stash's containers: none until the home base has a Storehouse (2.4.1). */
     public static List<Container> containers(ServerLevel level, Hideouts.Hideout hideout) {
         List<Container> out = new ArrayList<>();
+        if (hideout.level(Module.STOREHOUSE) < 1) {
+            return out;
+        }
         double r = hideout.radius();
         int minCx = (int) Math.floor((hideout.pos.getX() - r) / 16);
         int maxCx = (int) Math.floor((hideout.pos.getX() + r) / 16);

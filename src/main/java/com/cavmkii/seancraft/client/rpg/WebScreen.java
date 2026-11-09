@@ -285,7 +285,7 @@ public class WebScreen extends Screen {
                 lines.add(Component.literal("Click a learned skill on the web, then this slot").withStyle(ChatFormatting.DARK_GRAY));
             }
             if (hoveredSlot != PlayerData.ULTIMATE_SLOT) {
-                lines.add(Component.literal("The loadout only changes in a hideout").withStyle(ChatFormatting.DARK_GRAY));
+                lines.add(Component.literal("The loadout only changes at home or a camp").withStyle(ChatFormatting.DARK_GRAY));
             }
             g.renderTooltip(font, lines, Optional.empty(), mouseX, mouseY);
         }
@@ -320,7 +320,7 @@ public class WebScreen extends Screen {
                 lines.add(Component.literal("You're already a " + data.spec.label + ".").withStyle(ChatFormatting.RED));
             } else {
                 lines.add(Component.literal("Needs level " + com.cavmkii.seancraft.rpg.Specialization.LEVEL + " (you're " + data.level
-                        + "), any tier 1 trophy, and to be in a hideout.").withStyle(ChatFormatting.GRAY));
+                        + "), any tier 1 trophy, and to be at your home base.").withStyle(ChatFormatting.GRAY));
             }
         }
         if (n.kind != WebNode.Kind.ORIGIN) {

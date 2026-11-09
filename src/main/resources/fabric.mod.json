@@ -3,7 +3,7 @@
   "id": "seancraft",
   "version": "${version}",
   "name": "SeanCraft",
-  "description": "Survival as a raid game: safe spawns and hideouts, losing your kit when you die out there, a Tetris inventory, body-part health, gear built from parts, a passive tree and use-skills, plus Joe and Sean.",
+  "description": "Survival that gets more dangerous the further you go: one home base worth building up, camps, graves to go back for, body-part health, gear built from parts, a living ecology, a passive tree and use-skills, bosses, plus Joe and Sean.",
   "authors": ["cavmkii"],
   "contact": {
     "sources": "https://github.com/cavmkii/SeanCraft"
@@ -24,6 +24,8 @@
     "java": ">=21",
     "fabric-api": "*",
     "bettercombat": ">=2.4.0",
-    "combat_roll": ">=2.0.6"
+    "combat_roll": ">=2.0.6",
+    "sereneseasons": "*",
+    "yagm": ">=0.3.2"
   }
 }

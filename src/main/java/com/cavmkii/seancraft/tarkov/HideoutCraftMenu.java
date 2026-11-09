@@ -236,6 +236,6 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
     public static void open(ServerPlayer player, BlockPos pos, Module station) {
         player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, p) -> new HideoutCraftMenu(id, inv,
                 ContainerLevelAccess.create(player.level(), pos), station),
-                net.minecraft.network.chat.Component.literal(station == null ? "Hideout Bench" : station.label)));
+                net.minecraft.network.chat.Component.literal(station == null ? "Home Bench" : station.label)));
     }
 }

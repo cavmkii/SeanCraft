@@ -66,7 +66,7 @@ public final class ModItems {
                         output.accept(com.cavmkii.seancraft.rpg.RpgContent.ALTAR_ITEM);
                         output.accept(com.cavmkii.seancraft.rpg.RpgContent.ORB_OF_REGRET);
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_BENCH_ITEM);
-                        output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.FOB_TABLE_ITEM);
+                        output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.CAMP_KIT);
                         com.cavmkii.seancraft.ecology.EcoContent.ITEMS.forEach(output::accept);
                         output.accept(ModItems.FIRE_ARROW);
                         output.accept(ModItems.BROADHEAD_ARROW);
@@ -77,9 +77,6 @@ public final class ModItems {
                         output.accept(com.cavmkii.seancraft.boss.BossContent.PEDESTAL_ITEM);
                         output.accept(com.cavmkii.seancraft.boss.BossContent.TROPHY_OLD_SALT);
                         output.accept(com.cavmkii.seancraft.boss.BossContent.MARKS_REEL);
-                        output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.SECURE_BETA);
-                        output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.SECURE_GAMMA);
-                        output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.SECURE_KAPPA);
                         com.cavmkii.seancraft.tarkov.TarkovContent.MEDS.values().forEach(output::accept);
                         output.accept(com.cavmkii.seancraft.parts.PartItems.WEAPON_BENCH_ITEM);
                         com.cavmkii.seancraft.parts.PartItems.ITEMS.values().forEach(output::accept);

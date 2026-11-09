@@ -82,6 +82,12 @@ public final class Arenas {
         return null;
     }
 
+    /** The centre of the live ring holding a point, or null. */
+    public static BlockPos ringAt(Level level, Vec3 point) {
+        Fight f = at(level, point);
+        return f == null ? null : f.center;
+    }
+
     public static boolean inRing(BlockPos center, Vec3 point) {
         double dx = point.x - (center.getX() + 0.5);
         double dz = point.z - (center.getZ() + 0.5);

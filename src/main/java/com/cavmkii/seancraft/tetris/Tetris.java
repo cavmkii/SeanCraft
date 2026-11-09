@@ -67,9 +67,9 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The Tetris inventory, server side. The vanilla hotbar, armor and off-hand stay as they are; the 27 main slots
- * are an inbox that is emptied into the grids every tick, and pickups go straight to the grids. Chests and barrels
- * open on the GEAR tab instead of their own screen. Creative players keep the vanilla inventory.
+ * The INVENTORY screen, server side (design doc 3). The inventory itself is vanilla's (27 slots, hotbar, armor,
+ * off-hand); this handles the screen's moves, chests and barrels opening in its storage column, the home stash (with a
+ * Storehouse), crafting, auto-refill and the gather list. Creative players keep the vanilla inventory.
  */
 public final class Tetris {
     public static final AttachmentType<InvData> DATA = AttachmentRegistry.<InvData>builder()
@@ -78,15 +78,7 @@ public final class Tetris {
             .initializer(InvData::new)
             .buildAndRegister(SeanCraft.id("inventory"));
 
-    public static final Map<GearSpec, Item> GEAR = new EnumMap<>(GearSpec.class);
-
-    static {
-        for (GearSpec spec : GearSpec.values()) {
-            GEAR.put(spec, Registry.register(BuiltInRegistries.ITEM, SeanCraft.id(spec.id), new GearItem(spec, new Item.Properties().stacksTo(1))));
-        }
-    }
-
-    /** What the client last heard, for client-side code that reads the grids (bows looking for arrows). */
+    /** What the client last heard (refill toggles, gather list). */
     public static InvData clientView = new InvData();
 
     private static final double CONTAINER_REACH_SQR = 64;
@@ -213,10 +205,6 @@ public final class Tetris {
             containerAction(ctx.player(), p.index(), p.action(), p.value());
             sync(ctx.player());
         });
-        ServerPlayNetworking.registerGlobalReceiver(TetrisNet.PanelClick.TYPE, (p, ctx) -> {
-            panelClick(ctx.player(), p.loc(), p.rotated(), p.button());
-            sync(ctx.player());
-        });
         // "" refreshes; "#grid" crafts from the grid (times); "#clear" empties the grid; a recipe id lays it out.
         ServerPlayNetworking.registerGlobalReceiver(TetrisNet.Craft.TYPE, (p, ctx) -> {
             ServerPlayer player = ctx.player();
@@ -231,7 +219,6 @@ public final class Tetris {
                     default -> CraftGrid.fill(player, p.id(), true);
                 }
                 if (!p.id().isEmpty()) {
-                    purge(data(player));
                     sync(player);
                 }
             }
@@ -249,78 +236,13 @@ public final class Tetris {
             }
             Runtime rt = rt(player);
             InvData data = data(player);
-            TarkovData tarkov = Tarkov.data(player);
-            if (!tarkov.starterGiven) {
-                tarkov.starterGiven = true;
-                if (data.rig.isEmpty()) {
-                    data.rig = new ItemStack(GEAR.get(GearSpec.RIG_SCAV));
-                }
-                if (data.backpack.isEmpty()) {
-                    data.backpack = new ItemStack(GEAR.get(GearSpec.PACK_SLING));
-                }
-                player.sendSystemMessage(Component.literal("You have a Scav vest, a Sling bag and an Alpha pouch. Press E to see them.")
-                        .withStyle(ChatFormatting.GRAY));
-                rt.dirty = true;
-            }
-            if (!data.migrated) {
-                data.migrated = true;
-                Grid pouch = pouchGrid(player, data);
-                for (int i = 0; i < tarkov.secure.size(); i++) {
-                    ItemStack s = tarkov.secure.get(i);
-                    if (!s.isEmpty()) {
-                        if (!pouch.add(s)) {
-                            data.unsorted.add(s);
-                        }
-                        tarkov.secure.set(i, ItemStack.EMPTY);
-                    }
-                }
-                rt.dirty = true;
-            }
             refillHotbar(player, rt, data);
             if (server.getTickCount() % 100 == player.getId() % 100) {
                 discoverRecipes(player);
             }
-            // Empty the vanilla main slots into the grids.
-            Inventory inv = player.getInventory();
-            for (int i = Inventory.getSelectionSize(); i < inv.items.size(); i++) {
-                ItemStack s = inv.items.get(i);
-                if (!s.isEmpty()) {
-                    inv.items.set(i, ItemStack.EMPTY);
-                    storeInGrids(player, data, s);
-                    if (!s.isEmpty()) {
-                        data.unsorted.add(s);
-                    }
-                    rt.dirty = true;
-                }
-            }
-            if (purge(data)) {
-                rt.dirty = true;
-            }
-            if (server.getTickCount() % 20 == 0 && !data.unsorted.isEmpty()) {
-                for (int i = data.unsorted.size() - 1; i >= 0; i--) {
-                    ItemStack s = data.unsorted.get(i);
-                    storeInGrids(player, data, s);
-                    if (s.isEmpty()) {
-                        data.unsorted.remove(i);
-                        rt.dirty = true;
-                    }
-                }
-                if (!rt.open && server.getTickCount() % 600 == 0 && !data.unsorted.isEmpty()) {
-                    player.displayClientMessage(Component.literal(data.unsorted.size() + " unsorted item(s): open your inventory to make room.")
-                            .withStyle(ChatFormatting.YELLOW), true);
-                }
-            }
             if (rt.container != null && containerAt(player, rt.container) == null) {
                 rt.container = null;
                 rt.dirty = true;
-            }
-            // Other systems use up grid items in place (arrows, meds, hideout costs); notice it here.
-            if (periodic) {
-                int hash = hash(data);
-                if (hash != rt.hash) {
-                    rt.hash = hash;
-                    rt.dirty = true;
-                }
             }
             if (rt.dirty || (rt.open && periodic)) {
                 sync(player);
@@ -328,19 +250,9 @@ public final class Tetris {
         }
     }
 
-    private static int hash(InvData data) {
-        int h = 1;
-        for (GridId id : GridId.values()) {
-            for (Placed p : data.list(id)) {
-                h = h * 31 + p.stack.getCount() * 7 + p.x * 3 + p.y + System.identityHashCode(p.stack.getItem());
-            }
-        }
-        return h;
-    }
-
     /**
      * Auto-refill: when a hotbar slot's last item is used up (placed, eaten, broken), the same item comes up from
-     * the grids, or the stash if that's turned on and you're home. Moving a whole stack away doesn't count: only
+     * the inventory, or the stash if that's turned on and you're home with a Storehouse (3.3). Moving a whole stack away doesn't count: only
      * a slot that went from one item to none.
      */
     private static void refillHotbar(ServerPlayer player, Runtime rt, InvData data) {
@@ -364,14 +276,12 @@ public final class Tetris {
     }
 
     private static ItemStack takeForRefill(ServerPlayer player, InvData data, Item item) {
-        for (GridId id : AUTO) {
-            for (Placed p : data.list(id)) {
-                if (p.stack.is(item)) {
-                    ItemStack out = p.stack.copy();
-                    p.stack.setCount(0);
-                    purge(data);
-                    return out;
-                }
+        Inventory inv = player.getInventory();
+        for (int i = Inventory.getSelectionSize(); i < Inventory.INVENTORY_SIZE; i++) {
+            if (inv.items.get(i).is(item)) {
+                ItemStack out = inv.items.get(i);
+                inv.items.set(i, ItemStack.EMPTY);
+                return out;
             }
         }
         Hideouts.Hideout home = data.refillFromStash ? Hideouts.at(player.serverLevel(), player.position()) : null;
@@ -419,21 +329,10 @@ public final class Tetris {
         }
     }
 
-    /** Drops emptied stacks from the grids. True if anything changed. */
-    private static boolean purge(InvData data) {
-        boolean changed = false;
-        for (GridId id : GridId.values()) {
-            changed |= data.list(id).removeIf(p -> p.stack.isEmpty());
-        }
-        changed |= data.unsorted.removeIf(ItemStack::isEmpty);
-        return changed;
-    }
-
     static void sync(ServerPlayer player) {
         Runtime rt = rt(player);
         rt.dirty = false;
         InvData d = data(player);
-        TarkovData tarkov = Tarkov.data(player);
         List<TetrisNet.ContainerView> views = new ArrayList<>();
         Hideouts.Hideout home = Hideouts.at(player.serverLevel(), player.position());
         if (rt.open || rt.container != null) {
@@ -447,78 +346,27 @@ public final class Tetris {
                 views.add(new TetrisNet.ContainerView(c.pos, c.name, g.width, g.height, g.view(), overflow, List.copyOf(g.overflow), g.filter(), icon));
             }
         }
-        // Copies: on a single-player server the payload object reaches the client as is.
-        ServerPlayNetworking.send(player, new TetrisNet.Sync(d.rig.copy(), d.backpack.copy(), copy(d.pockets), copy(d.rigItems),
-                copy(d.backpackItems), copy(d.pouch), tarkov.tier.width, tarkov.tier.height,
-                d.unsorted.stream().map(ItemStack::copy).toList(), home != null, views, d.autoRefill, d.refillFromStash, List.copyOf(d.tracked),
-                // The first container is the chest you opened, if you opened one (the rest is the stash).
-                rt.container != null && !views.isEmpty()));
+        int storehouse = home == null ? 0 : home.level(com.cavmkii.seancraft.tarkov.Module.STOREHOUSE);
+        // The first container is the chest you opened, if you opened one (the rest is the stash).
+        ServerPlayNetworking.send(player, new TetrisNet.Sync(home != null && storehouse > 0, storehouse, views, d.autoRefill, d.refillFromStash,
+                List.copyOf(d.tracked), rt.container != null && !views.isEmpty()));
     }
 
-    private static List<Placed> copy(List<Placed> list) {
-        List<Placed> out = new ArrayList<>();
-        for (Placed p : list) {
-            out.add(new Placed(p.stack.copy(), p.x, p.y, p.rotated));
-        }
-        return out;
-    }
-
-    private static Grid pouchGrid(Player player, InvData data) {
-        TarkovData tarkov = Tarkov.data(player);
-        return data.grid(GridId.POUCH, tarkov.tier.width, tarkov.tier.height);
-    }
-
-    private static Grid grid(Player player, InvData data, GridId id) {
-        return id == GridId.POUCH ? pouchGrid(player, data) : data.grid(id, 0, 0);
+    /** The home's Storehouse level where the player stands, or 0. */
+    static int storehouse(ServerPlayer player) {
+        Hideouts.Hideout home = Hideouts.at(player.serverLevel(), player.position());
+        return home == null ? 0 : home.level(com.cavmkii.seancraft.tarkov.Module.STOREHOUSE);
     }
 
     // ================================================================== storing
 
-    /** Grids that pickups fill, in order. The pouch is only filled by hand. */
-    private static final GridId[] AUTO = {GridId.POCKETS, GridId.RIG, GridId.BACKPACK};
-
-    /** Tops up and places a stack in pockets, rig and backpack. Leaves what didn't fit in the stack. */
-    private static void storeInGrids(Player player, InvData data, ItemStack stack) {
-        for (GridId id : AUTO) {
-            Grid g = grid(player, data, id);
-            if (g != null) {
-                g.merge(stack);
-            }
-        }
-        for (GridId id : AUTO) {
-            if (stack.isEmpty()) {
-                return;
-            }
-            Grid g = grid(player, data, id);
-            if (g != null && g.add(stack.copy())) {
-                stack.setCount(0);
-            }
-        }
-    }
-
-    /** Weapons and tools go to an empty hotbar slot before the grids. */
-    private static boolean handItem(ItemStack stack) {
-        Item item = stack.getItem();
-        return item instanceof SwordItem || item instanceof net.minecraft.world.item.DiggerItem || item instanceof AxeItem
-                || item instanceof MaceItem || item instanceof TridentItem || item instanceof BowItem || item instanceof CrossbowItem
-                || item instanceof ShieldItem || item instanceof FishingRodItem
-                || com.cavmkii.seancraft.compat.GrappleCompat.isGrappleItem(item);
-    }
-
     /**
-     * Pickups and gifts (anything calling {@code Inventory.add}): top up the hotbar and the grids, then hotbar for
-     * weapons and tools, then free grid space, then any free hotbar slot. What doesn't fit stays in the stack.
-     * Returns what vanilla would: whether anything was taken.
+     * Puts a stack into the inventory (3.4): tops up matching stacks anywhere, then empty main slots, then the hotbar.
+     * Leaves what didn't fit in the stack.
      */
-    public static boolean pickup(ServerPlayer player, ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        int before = stack.getCount();
+    static void storeInInventory(Player player, ItemStack stack) {
         Inventory inv = player.getInventory();
-        InvData data = data(player);
-        int hotbar = Inventory.getSelectionSize();
-        for (int i = 0; i < hotbar && !stack.isEmpty(); i++) {
+        for (int i = 0; i < Inventory.INVENTORY_SIZE && !stack.isEmpty(); i++) {
             ItemStack s = inv.items.get(i);
             if (ItemStack.isSameItemSameComponents(s, stack) && s.getCount() < s.getMaxStackSize()) {
                 int n = Math.min(stack.getCount(), s.getMaxStackSize() - s.getCount());
@@ -526,104 +374,36 @@ public final class Tetris {
                 stack.shrink(n);
             }
         }
-        if (!stack.isEmpty() && handItem(stack)) {
-            freeHotbar(inv, stack);
-        }
-        if (!stack.isEmpty()) {
-            storeInGrids(player, data, stack);
-        }
-        if (!stack.isEmpty()) {
-            freeHotbar(inv, stack);
-        }
-        if (stack.getCount() != before) {
-            rt(player).dirty = true;
-        }
-        return stack.isEmpty() || stack.getCount() < before;
-    }
-
-    private static void freeHotbar(Inventory inv, ItemStack stack) {
-        for (int i = 0; i < Inventory.getSelectionSize(); i++) {
-            if (inv.items.get(i).isEmpty()) {
-                inv.items.set(i, stack.copyAndClear());
-                inv.items.get(i).setPopTime(5);
-                return;
+        for (int pass = 0; pass < 2 && !stack.isEmpty(); pass++) {
+            int from = pass == 0 ? Inventory.getSelectionSize() : 0;
+            int to = pass == 0 ? Inventory.INVENTORY_SIZE : Inventory.getSelectionSize();
+            for (int i = from; i < to && !stack.isEmpty(); i++) {
+                if (inv.items.get(i).isEmpty()) {
+                    inv.items.set(i, stack.split(Math.min(stack.getCount(), stack.getMaxStackSize())));
+                }
             }
         }
     }
 
     // ================================================================== carried items, for other systems
 
-    /**
-     * Live stacks the player carries in a fixed order: vanilla main inventory (36), off-hand, then pockets, rig,
-     * backpack and pouch. Shrinking one uses it up; emptied grid entries are cleared next tick and the client is told
-     * within half a second. Armor is not included.
-     */
+    /** Live stacks the player carries: the vanilla inventory (36 slots) and the off-hand. Shrinking one uses it up. Armor is not included. */
     public static List<ItemStack> carried(Player player) {
         List<ItemStack> out = new ArrayList<>(player.getInventory().items);
         out.add(player.getOffhandItem());
-        InvData data = data(player);
-        for (GridId id : GridId.values()) {
-            for (Placed p : data.list(id)) {
-                out.add(p.stack);
-            }
-        }
         return out;
     }
 
-    /** What a death can take (9.4.9): everything carried and worn, the pouch only if {@code pouchToo}. */
-    public static List<ItemStack> atRisk(ServerPlayer player, boolean pouchToo) {
-        List<ItemStack> out = new ArrayList<>(player.getInventory().items);
-        out.addAll(player.getInventory().armor);
-        out.addAll(player.getInventory().offhand);
-        InvData data = data(player);
-        for (GridId id : AUTO) {
-            for (Placed p : data.list(id)) {
-                out.add(p.stack);
-            }
-        }
-        if (pouchToo) {
-            for (Placed p : data.pouch) {
-                out.add(p.stack);
-            }
-        }
-        out.add(data.rig);
-        out.add(data.backpack);
-        out.removeIf(ItemStack::isEmpty);
-        return out;
-    }
-
-    /** A random live stack from pockets, rig or backpack, for Joe to steal from. Empty if there's nothing. */
+    /** A random live stack from the main inventory (never the hotbar or worn gear), for Joe to steal from (7.2). Empty if none. */
     public static ItemStack stealable(ServerPlayer player, net.minecraft.util.RandomSource random) {
-        List<Placed> all = new ArrayList<>();
-        InvData data = data(player);
-        for (GridId id : AUTO) {
-            for (Placed p : data.list(id)) {
-                if (!p.stack.isEmpty()) {
-                    all.add(p);
-                }
+        List<ItemStack> all = new ArrayList<>();
+        Inventory inv = player.getInventory();
+        for (int i = Inventory.getSelectionSize(); i < Inventory.INVENTORY_SIZE; i++) {
+            if (!inv.items.get(i).isEmpty()) {
+                all.add(inv.items.get(i));
             }
         }
-        if (all.isEmpty()) {
-            return ItemStack.EMPTY;
-        }
-        rt(player).dirty = true;
-        return all.get(random.nextInt(all.size())).stack;
-    }
-
-    /** A projectile from rig, pockets or backpack, when hands and hotbar have none. */
-    public static ItemStack gridProjectile(Player player, Predicate<ItemStack> supported) {
-        if (!active(player)) {
-            return ItemStack.EMPTY;
-        }
-        InvData data = data(player);
-        for (GridId id : new GridId[] {GridId.RIG, GridId.POCKETS, GridId.BACKPACK}) {
-            for (Placed p : data.list(id)) {
-                if (!p.stack.isEmpty() && supported.test(p.stack)) {
-                    return p.stack;
-                }
-            }
-        }
-        return ItemStack.EMPTY;
+        return all.isEmpty() ? ItemStack.EMPTY : all.get(random.nextInt(all.size()));
     }
 
     // ================================================================== containers
@@ -808,7 +588,7 @@ public final class Tetris {
         Inventory inv = player.getInventory();
         switch (loc.kind()) {
             case Loc.HAND -> {
-                if (loc.a() < 0 || loc.a() >= Inventory.getSelectionSize()) {
+                if (loc.a() < 0 || loc.a() >= Inventory.INVENTORY_SIZE) {
                     return null;
                 }
                 return new Ref() {
@@ -822,39 +602,11 @@ public final class Tetris {
                         public ItemStack get() { return inv.armor.get(3 - loc.a()); }
                         public void set(ItemStack s) { inv.armor.set(3 - loc.a(), s); }
                     };
-                    case 4 -> new Ref() {
-                        public ItemStack get() { return data.rig; }
-                        public void set(ItemStack s) { data.rig = s; }
-                    };
-                    case 5 -> new Ref() {
-                        public ItemStack get() { return data.backpack; }
-                        public void set(ItemStack s) { data.backpack = s; }
-                    };
                     case 6 -> new Ref() {
                         public ItemStack get() { return inv.offhand.get(0); }
                         public void set(ItemStack s) { inv.offhand.set(0, s); }
                     };
                     default -> null;
-                };
-            }
-            case Loc.GRID -> {
-                if (loc.a() < 0 || loc.a() >= GridId.values().length) {
-                    return null;
-                }
-                Grid g = grid(player, data, GridId.values()[loc.a()]);
-                Placed p = g == null ? null : g.at(loc.b(), loc.c());
-                if (p == null) {
-                    return null;
-                }
-                return new Ref() {
-                    public ItemStack get() { return p.stack; }
-                    public void set(ItemStack s) {
-                        if (s.isEmpty()) {
-                            g.items.remove(p);
-                        } else {
-                            p.stack = s;
-                        }
-                    }
                 };
             }
             case Loc.CONTAINER -> {
@@ -891,21 +643,6 @@ public final class Tetris {
                     public void set(ItemStack s) { cells.set(loc.a(), s); }
                 };
             }
-            case Loc.UNSORTED -> {
-                if (loc.a() < 0 || loc.a() >= data.unsorted.size()) {
-                    return null;
-                }
-                return new Ref() {
-                    public ItemStack get() { return data.unsorted.get(loc.a()); }
-                    public void set(ItemStack s) {
-                        if (s.isEmpty()) {
-                            data.unsorted.remove(loc.a());
-                        } else {
-                            data.unsorted.set(loc.a(), s);
-                        }
-                    }
-                };
-            }
             default -> {
                 return null;
             }
@@ -921,22 +658,14 @@ public final class Tetris {
         }
         return switch (loc.a()) {
             case 0, 1, 2, 3 -> player.getEquipmentSlotForItem(stack) == ARMOR[loc.a()];
-            case 4 -> stack.getItem() instanceof GearItem g && g.spec.kind == GearSpec.Kind.RIG;
-            case 5 -> stack.getItem() instanceof GearItem g && g.spec.kind == GearSpec.Kind.BACKPACK;
             default -> true;
         };
     }
 
-    /** Can the item at this location be taken out? A rig or backpack must be empty; cursed armor stays on. */
+    /** Can the item at this location be taken out? Cursed armor stays on. */
     private static String locked(ServerPlayer player, InvData data, Loc loc, ItemStack stack) {
         if (loc.kind() != Loc.EQUIP) {
             return null;
-        }
-        if (loc.a() == 4 && !data.rigItems.isEmpty()) {
-            return "Empty the rig first.";
-        }
-        if (loc.a() == 5 && !data.backpackItems.isEmpty()) {
-            return "Empty the backpack first.";
         }
         if (loc.a() <= 3 && EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)) {
             return "It won't come off.";
@@ -952,36 +681,9 @@ public final class Tetris {
         return container != null ? Math.min(max, container.getMaxStackSize()) : max;
     }
 
-    /** Puts a stack at a location. Returns what's left. {@code self} is the grid entry being moved, if any. */
+    /** Puts a stack at a location. Returns what's left. {@code self} is the container entry being moved, if any. */
     private static ItemStack insert(ServerPlayer player, InvData data, Loc to, ItemStack stack, boolean rotated, Placed self) {
         switch (to.kind()) {
-            case Loc.GRID -> {
-                if (to.a() < 0 || to.a() >= GridId.values().length) {
-                    return stack;
-                }
-                GridId id = GridId.values()[to.a()];
-                Grid g = grid(player, data, id);
-                if (g == null || (stack.getItem() instanceof GearItem gear
-                        && ((id == GridId.RIG && gear.spec.kind == GearSpec.Kind.RIG) || (id == GridId.BACKPACK && gear.spec.kind == GearSpec.Kind.BACKPACK)))) {
-                    return stack;
-                }
-                Placed there = g.at(to.b(), to.c());
-                if (there != null && there != self) {
-                    if (ItemStack.isSameItemSameComponents(there.stack, stack)) {
-                        int n = Math.min(stack.getCount(), there.stack.getMaxStackSize() - there.stack.getCount());
-                        there.stack.grow(n);
-                        stack.shrink(n);
-                    }
-                    return stack;
-                }
-                int[] s = ItemSize.of(stack);
-                int w = rotated ? s[1] : s[0];
-                int h = rotated ? s[0] : s[1];
-                if (g.fits(w, h, to.b(), to.c(), self)) {
-                    g.items.add(new Placed(stack.copyAndClear(), to.b(), to.c(), rotated && s[0] != s[1]));
-                }
-                return stack;
-            }
             case Loc.DISCARD -> {
                 player.drop(stack.copyAndClear(), false, true);
                 return stack;
@@ -1008,15 +710,12 @@ public final class Tetris {
             }
             case Loc.MATERIAL -> {
                 // Back to your inventory.
-                pickup(player, stack);
+                storeInInventory(player, stack);
                 return stack;
             }
             case Loc.CRAFT, Loc.HAND, Loc.EQUIP -> {
                 Container container = null;
                 if (!accepts(player, to, stack)) {
-                    return stack;
-                }
-                if (to.kind() == Loc.EQUIP && (to.a() == 4 || to.a() == 5) && !ref(player, data, to).get().isEmpty()) {
                     return stack;
                 }
                 Ref r = ref(player, data, to);
@@ -1044,7 +743,7 @@ public final class Tetris {
     }
 
     private static boolean slotKind(Loc loc) {
-        return loc.kind() == Loc.HAND || loc.kind() == Loc.CRAFT || (loc.kind() == Loc.EQUIP && loc.a() != 4 && loc.a() != 5);
+        return loc.kind() == Loc.HAND || loc.kind() == Loc.CRAFT || loc.kind() == Loc.EQUIP;
     }
 
     static void move(ServerPlayer player, Loc from, Loc to, boolean rotated, int count) {
@@ -1060,7 +759,6 @@ public final class Tetris {
                 if (!left.isEmpty()) {
                     give(player, left);
                 }
-                purge(data);
             }
             rt(player).dirty = true;
             return;
@@ -1095,12 +793,8 @@ public final class Tetris {
                 return;
             }
         }
-        Placed self = null;
-        if (whole && from.kind() == Loc.GRID) {
-            self = grid(player, data, GridId.values()[from.a()]).at(from.b(), from.c());
-        }
         ItemStack moving = source.copyWithCount(n);
-        ItemStack left = insert(player, data, to, moving, rotated, self);
+        ItemStack left = insert(player, data, to, moving, rotated, null);
         int moved = n - left.getCount();
         if (moved > 0) {
             source.shrink(moved);
@@ -1115,8 +809,7 @@ public final class Tetris {
                 dst.set(source);
                 src.set(other);
             }
-        } else if (whole && (to.kind() == Loc.HAND || to.kind() == Loc.CRAFT || (to.kind() == Loc.EQUIP && to.a() != 4 && to.a() != 5))
-                && (from.kind() == Loc.GRID || from.kind() == Loc.CONTAINER || from.kind() == Loc.UNSORTED)) {
+        } else if (whole && (to.kind() == Loc.HAND || to.kind() == Loc.CRAFT || to.kind() == Loc.EQUIP) && from.kind() == Loc.CONTAINER) {
             // Dropped on an occupied hotbar, craft cell or equipment slot: swap, and the displaced item takes the moved one's place.
             Ref dst = ref(player, data, to);
             if (dst != null && !dst.get().isEmpty() && locked(player, data, to, dst.get()) == null
@@ -1125,14 +818,11 @@ public final class Tetris {
                 src.set(ItemStack.EMPTY);
                 dst.set(source);
                 ItemStack back = insert(player, data, from, other, false, null);
-                if (!back.isEmpty() && from.kind() != Loc.UNSORTED) {
+                if (!back.isEmpty()) {
                     back = insert(player, data, from, back, true, null);
                 }
                 if (!back.isEmpty()) {
-                    storeInGrids(player, data, back);
-                }
-                if (!back.isEmpty()) {
-                    data.unsorted.add(back);
+                    give(player, back);
                 }
             }
         }
@@ -1155,11 +845,8 @@ public final class Tetris {
             rt(player).dirty = true;
             return;
         }
-        if (from.kind() == Loc.CONTAINER) {
-            storeInGrids(player, data, stack);
-            if (!stack.isEmpty()) {
-                freeHotbar(player.getInventory(), stack);
-            }
+        if (from.kind() == Loc.CONTAINER || from.kind() == Loc.EQUIP) {
+            storeInInventory(player, stack);
         } else {
             List<Shown> shown = containers(player);
             if (!shown.isEmpty()) {
@@ -1175,44 +862,59 @@ public final class Tetris {
                         break;
                     }
                 }
-            } else if (from.kind() == Loc.GRID || from.kind() == Loc.UNSORTED) {
-                // Equip it if it's wearable and the place is free, else to the hotbar.
-                for (int slot = 0; slot < 7 && !stack.isEmpty(); slot++) {
+            } else if (from.kind() == Loc.HAND && from.a() >= Inventory.getSelectionSize()) {
+                // Main inventory, nothing open: wear it if it's armor and the slot is free, else to the hotbar (vanilla).
+                for (int slot = 0; slot < 4 && !stack.isEmpty(); slot++) {
                     Loc eq = Loc.equip(slot);
-                    if (slot != 6 && accepts(player, eq, stack) && ref(player, data, eq).get().isEmpty()) {
+                    if (accepts(player, eq, stack) && ref(player, data, eq).get().isEmpty()) {
                         stack = insert(player, data, eq, stack, false, null);
                     }
                 }
-                if (!stack.isEmpty()) {
-                    freeHotbar(player.getInventory(), stack);
-                }
-            } else {
-                storeInGrids(player, data, stack);
+                moveWithin(player.getInventory(), stack, 0, Inventory.getSelectionSize());
+            } else if (from.kind() == Loc.HAND) {
+                // Hotbar, nothing open: into the main inventory (vanilla).
+                moveWithin(player.getInventory(), stack, Inventory.getSelectionSize(), Inventory.INVENTORY_SIZE);
             }
         }
         src.set(stack.isEmpty() ? ItemStack.EMPTY : stack);
         rt(player).dirty = true;
     }
 
+    /** Tops up, then fills empty slots, within one range of the inventory. Leaves what didn't fit. */
+    private static void moveWithin(Inventory inv, ItemStack stack, int from, int to) {
+        for (int i = from; i < to && !stack.isEmpty(); i++) {
+            ItemStack s = inv.items.get(i);
+            if (ItemStack.isSameItemSameComponents(s, stack) && s.getCount() < s.getMaxStackSize()) {
+                int n = Math.min(stack.getCount(), s.getMaxStackSize() - s.getCount());
+                s.grow(n);
+                stack.shrink(n);
+            }
+        }
+        for (int i = from; i < to && !stack.isEmpty(); i++) {
+            if (inv.items.get(i).isEmpty()) {
+                inv.items.set(i, stack.split(stack.getCount()));
+            }
+        }
+    }
+
     /**
-     * REFILL STACKS (3.4): tops up the partial stacks you carry (hotbar, pockets, rig, backpack, pouch) to full from
-     * the open container or, in a hideout, the whole stash. Never adds an item you aren't already carrying.
+     * REFILL STACKS (3.4): tops up the partial stacks you carry to full from the open container or, at home with
+     * Storehouse 2, the whole stash. Never adds an item you aren't already carrying.
      */
     private static void refillStacks(ServerPlayer player, InvData data) {
         List<Shown> shown = containers(player);
+        if (rt(player).container == null && storehouse(player) < 2) {
+            player.displayClientMessage(Component.literal("Refilling from the stash needs Storehouse 2.").withStyle(ChatFormatting.GRAY), true);
+            return;
+        }
+        if (rt(player).container != null && storehouse(player) < 2 && !shown.isEmpty()) {
+            // Only the opened chest without Storehouse 2.
+            shown = shown.subList(0, 1);
+        }
         if (shown.isEmpty()) {
             return;
         }
-        List<ItemStack> mine = new ArrayList<>();
-        Inventory inv = player.getInventory();
-        for (int i = 0; i < Inventory.getSelectionSize(); i++) {
-            mine.add(inv.items.get(i));
-        }
-        for (GridId id : GridId.values()) {
-            for (Placed p : data.list(id)) {
-                mine.add(p.stack);
-            }
-        }
+        List<ItemStack> mine = new ArrayList<>(player.getInventory().items);
         for (ItemStack stack : mine) {
             if (stack.isEmpty() || !stack.isStackable() || stack.getCount() >= stack.getMaxStackSize()) {
                 continue;
@@ -1240,46 +942,30 @@ public final class Tetris {
         Runtime rt = rt(player);
         InvData data = data(player);
         switch (action) {
-            case 0 -> {
-                List<ItemStack> left = new ArrayList<>();
-                for (GridId id : GridId.values()) {
-                    Grid g = grid(player, data, id);
-                    if (g != null) {
-                        left.addAll(g.repack());
-                    }
-                }
-                left.addAll(data.unsorted);
-                data.unsorted.clear();
-                for (ItemStack s : left) {
-                    storeInGrids(player, data, s);
-                    if (!s.isEmpty()) {
-                        data.unsorted.add(s);
-                    }
-                }
-            }
+            case 0 -> sortInventory(player.getInventory());
             case 1 -> {
                 List<Shown> shown = containers(player);
-                for (GridId id : AUTO) {
-                    for (Placed p : data.list(id)) {
-                        for (Shown c : routeFor(shown, p.stack)) {
-                            storeIn(c, p.stack);
-                            if (p.stack.isEmpty()) {
-                                break;
-                            }
+                Inventory inv = player.getInventory();
+                for (int i = Inventory.getSelectionSize(); i < Inventory.INVENTORY_SIZE; i++) {
+                    ItemStack stack = inv.items.get(i);
+                    for (Shown c : routeFor(shown, stack)) {
+                        if (stack.isEmpty()) {
+                            break;
                         }
+                        storeIn(c, stack);
+                    }
+                    if (stack.isEmpty()) {
+                        inv.items.set(i, ItemStack.EMPTY);
                     }
                 }
-                purge(data);
-            }
-            case 2 -> {
-                for (ItemStack s : data.unsorted) {
-                    player.drop(s, false, true);
-                }
-                data.unsorted.clear();
             }
             case 3 -> rt.container = null;
             case 4 -> rt.open = true;
-            case 8 -> organize(player);
+            case 8 -> {
+                if (storehouse(player) >= 2) {
+                    organize(player);
+                }
+            }
             case 9 -> refillStacks(player, data);
             case 6 -> data.autoRefill = !data.autoRefill;
             case 7 -> data.refillFromStash = !data.refillFromStash;
@@ -1299,61 +985,33 @@ public final class Tetris {
         rt.dirty = true;
     }
 
-    // ================================================================== grid panel beside vanilla screens
-
-    /**
-     * The panel works through the open menu's cursor, so the vanilla screen does the rest: click a grid item to
-     * pick it up, click a grid cell while holding something to put it there.
-     */
-    static void panelClick(ServerPlayer player, Loc loc, boolean rotated, int button) {
-        if (!player.isAlive() || !active(player) || loc.kind() != Loc.GRID) {
-            return;
-        }
-        var menu = player.containerMenu;
-        InvData data = data(player);
-        ItemStack carried = menu.getCarried();
-        if (carried.isEmpty()) {
-            Ref src = ref(player, data, loc);
-            if (src == null || src.get().isEmpty()) {
-                return;
+    /** SORT on the player inventory: stacks merged, then ordered by kind and name, in the 27 main slots. */
+    private static void sortInventory(Inventory inv) {
+        List<ItemStack> all = new ArrayList<>();
+        for (int i = Inventory.getSelectionSize(); i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack s = inv.items.get(i);
+            inv.items.set(i, ItemStack.EMPTY);
+            if (s.isEmpty()) {
+                continue;
             }
-            ItemStack stack = src.get();
-            if (button == 2) {
-                // Shift: straight into the menu's own slots (furnace input, chest, crafting grid...).
-                for (var slot : menu.slots) {
-                    if (stack.isEmpty()) {
-                        break;
-                    }
-                    if (slot.container instanceof Inventory || !slot.mayPlace(stack)) {
-                        continue;
-                    }
-                    ItemStack in = slot.getItem();
-                    int limit = slot.getMaxStackSize(stack);
-                    if (in.isEmpty()) {
-                        slot.setByPlayer(stack.split(Math.min(limit, stack.getCount())));
-                    } else if (ItemStack.isSameItemSameComponents(in, stack) && in.getCount() < limit) {
-                        int n = Math.min(stack.getCount(), limit - in.getCount());
-                        in.grow(n);
-                        stack.shrink(n);
-                        slot.setChanged();
-                    }
+            for (ItemStack into : all) {
+                if (ItemStack.isSameItemSameComponents(into, s) && into.getCount() < into.getMaxStackSize()) {
+                    int n = Math.min(s.getCount(), into.getMaxStackSize() - into.getCount());
+                    into.grow(n);
+                    s.shrink(n);
                 }
-                src.set(stack.isEmpty() ? ItemStack.EMPTY : stack);
-            } else {
-                int n = button == 1 ? (stack.getCount() + 1) / 2 : stack.getCount();
-                menu.setCarried(stack.split(n));
-                src.set(stack.isEmpty() ? ItemStack.EMPTY : stack);
             }
-        } else {
-            ItemStack moving = button == 1 ? carried.copyWithCount(1) : carried.copy();
-            int offered = moving.getCount();
-            // insert() empties what it places from the stack it's given, so count from before.
-            int placed = offered - insert(player, data, loc, moving, rotated, null).getCount();
-            carried.shrink(placed);
-            menu.setCarried(carried.isEmpty() ? ItemStack.EMPTY : carried);
+            if (!s.isEmpty()) {
+                all.add(s);
+            }
         }
-        menu.broadcastChanges();
-        rt(player).dirty = true;
+        all.sort((a, b) -> {
+            int c = Integer.compare(StorageCategory.of(a).ordinal(), StorageCategory.of(b).ordinal());
+            return c != 0 ? c : a.getHoverName().getString().compareToIgnoreCase(b.getHoverName().getString());
+        });
+        for (int i = 0; i < all.size(); i++) {
+            inv.items.set(Inventory.getSelectionSize() + i, all.get(i));
+        }
     }
 
     /** ORGANIZE STASH: anything sitting in a container that doesn't allow it moves to one that does. */
@@ -1436,7 +1094,7 @@ public final class Tetris {
         }
     }
 
-    /** A container's SORT (0) and TAKE ALL (1) buttons. */
+    /** A container's SORT (0), TAKE ALL (1) and filter (2) buttons. */
     static void containerAction(ServerPlayer player, int index, int action, int value) {
         if (!player.isAlive() || !active(player)) {
             return;
@@ -1448,28 +1106,22 @@ public final class Tetris {
         Shown c = shown.get(index);
         ContainerGrid g = c.grid();
         if (action == 3) {
-            // Refill stacks: whatever this chest already holds, put in what you carry of it (pockets, rig, backpack).
-            InvData data = data(player);
-            for (GridId id : new GridId[] {GridId.POCKETS, GridId.RIG, GridId.BACKPACK}) {
-                for (Placed p : data.list(id)) {
-                    if (holds(c.container, p.stack)) {
-                        storeIn(c, p.stack);
-                    }
-                }
-                data.list(id).removeIf(p -> p.stack.isEmpty());
+            return;        } else if (action == 2) {
+            // Filters come with Storehouse 2 (3.4.1).
+            if (storehouse(player) < 2) {
+                player.displayClientMessage(Component.literal("Chest filters need Storehouse 2.").withStyle(ChatFormatting.GRAY), true);
+                return;
             }
-        } else if (action == 2) {
             g.setFilter(value);
         } else if (action == 0) {
             g.sort();
         } else if (action == 1) {
-            InvData data = data(player);
             for (int slot = 0; slot < c.container.getContainerSize(); slot++) {
                 ItemStack stack = c.container.getItem(slot);
                 if (stack.isEmpty()) {
                     continue;
                 }
-                storeInGrids(player, data, stack);
+                storeInInventory(player, stack);
                 if (stack.isEmpty()) {
                     c.container.setItem(slot, ItemStack.EMPTY);
                     g.forget(slot);
@@ -1490,93 +1142,6 @@ public final class Tetris {
         return false;
     }
 
-    // ================================================================== death
-
-    /**
-     * Raid death rules for the grids. {@code dropAll}: everything drops (outside a raid, or the vanilla rule).
-     * The pouch is only lost under the vanilla rule.
-     */
-    public static void onDeath(ServerPlayer player, boolean raid, Cfg.DeathRule rule) {
-        InvData data = data(player);
-        if (!raid && player.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
-            return;
-        }
-        boolean wipe = raid && rule == Cfg.DeathRule.LOSE_EVERYTHING;
-        boolean pouchToo = raid && rule == Cfg.DeathRule.VANILLA;
-        List<ItemStack> lost = new ArrayList<>();
-        for (GridId id : AUTO) {
-            data.list(id).forEach(p -> lost.add(p.stack));
-            data.list(id).clear();
-        }
-        lost.addAll(data.unsorted);
-        data.unsorted.clear();
-        lost.add(data.rig);
-        lost.add(data.backpack);
-        for (int i = 0; i < 9; i++) {
-            lost.add(rt(player).craft.get(i));
-            rt(player).craft.set(i, ItemStack.EMPTY);
-        }
-        data.rig = ItemStack.EMPTY;
-        data.backpack = ItemStack.EMPTY;
-        if (pouchToo) {
-            data.pouch.forEach(p -> lost.add(p.stack));
-            data.pouch.clear();
-        }
-        if (!wipe) {
-            for (ItemStack s : lost) {
-                if (!s.isEmpty()) {
-                    player.drop(s, true, false);
-                }
-            }
-        }
-        rt(player).dirty = true;
-    }
-
-    /**
-     * Death in a boss fight: a random share of the grid stacks, the hotbar, armor and offhand is lost, and the rest drops
-     * where the player fell. The secure pouch is kept. Returns how many stacks were lost.
-     */
-    public static int onBossDeath(ServerPlayer player, float share) {
-        InvData data = data(player);
-        List<ItemStack> carried = new ArrayList<>();
-        for (GridId id : AUTO) {
-            data.list(id).forEach(p -> carried.add(p.stack));
-            data.list(id).clear();
-        }
-        carried.addAll(data.unsorted);
-        data.unsorted.clear();
-        for (int i = 0; i < 9; i++) {
-            carried.add(rt(player).craft.get(i));
-            rt(player).craft.set(i, ItemStack.EMPTY);
-        }
-        net.minecraft.world.entity.player.Inventory inv = player.getInventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            carried.add(inv.getItem(i));
-            inv.setItem(i, ItemStack.EMPTY);
-        }
-        carried.add(data.rig);
-        carried.add(data.backpack);
-        data.rig = ItemStack.EMPTY;
-        data.backpack = ItemStack.EMPTY;
-        int lost = 0;
-        List<ItemStack> gone = new ArrayList<>();
-        for (ItemStack s : carried) {
-            if (s.isEmpty()) {
-                continue;
-            }
-            if (player.getRandom().nextFloat() < share) {
-                lost++;
-                gone.add(s);
-            } else {
-                player.drop(s, true, false);
-            }
-        }
-        rt(player).dirty = true;
-        // Striking parts of the lost part-built gear go back to the hideout (9.4.9).
-        com.cavmkii.seancraft.tarkov.Recovery.onDeath(player, gone);
-        return lost;
-    }
-
     // ================================================================== crafting
 
     static boolean nearTable(ServerPlayer player) {
@@ -1592,19 +1157,11 @@ public final class Tetris {
         return false;
     }
 
-    /** What crafting may draw from: hotbar, grids, and the stash when home. */
+    /** What crafting may draw from: the inventory, and the stash at home with Storehouse 3 (2.4.1). */
     static List<ItemStack> pool(ServerPlayer player, List<Container> touched) {
-        List<ItemStack> out = new ArrayList<>();
-        Inventory inv = player.getInventory();
-        for (int i = 0; i < Inventory.getSelectionSize(); i++) {
-            out.add(inv.items.get(i));
-        }
-        InvData data = data(player);
-        for (GridId id : GridId.values()) {
-            data.list(id).forEach(p -> out.add(p.stack));
-        }
+        List<ItemStack> out = new ArrayList<>(player.getInventory().items);
         Hideouts.Hideout home = Hideouts.at(player.serverLevel(), player.position());
-        if (home != null) {
+        if (home != null && home.level(com.cavmkii.seancraft.tarkov.Module.STOREHOUSE) >= 3) {
             for (Container c : Stash.containers(player.serverLevel(), home)) {
                 touched.add(c);
                 for (int i = 0; i < c.getContainerSize(); i++) {
@@ -1691,9 +1248,9 @@ public final class Tetris {
             }
         }
         out.sort((a, b) -> a.result().getHoverName().getString().compareToIgnoreCase(b.result().getHoverName().getString()));
-        if (Hideouts.at(player.serverLevel(), player.position()) == null) {
-            // No hideout here: put the Hideout Bench first, even before you have the materials.
-            String id = com.cavmkii.seancraft.SeanCraft.id("hideout_bench").toString();
+        if (Hideouts.benchesOf(player.server, player.getUUID()).isEmpty()) {
+            // No Home Bench placed yet (4.1): put it first, even before you have the materials.
+            String id = com.cavmkii.seancraft.SeanCraft.id("home_bench").toString();
             TetrisNet.CraftEntry bench = null;
             for (TetrisNet.CraftEntry e : out) {
                 if (e.id().equals(id)) {
@@ -1751,7 +1308,6 @@ public final class Tetris {
             made++;
         }
         touched.forEach(Container::setChanged);
-        purge(data(player));
         if (made > 0) {
             player.awardStat(net.minecraft.stats.Stats.ITEM_CRAFTED.get(result.getItem()), made * result.getCount());
             player.level().playSound(null, player.blockPosition(), SoundEvents.UI_STONECUTTER_TAKE_RESULT, SoundSource.PLAYERS, 0.4f, 1.2f);
@@ -1759,11 +1315,11 @@ public final class Tetris {
         rt(player).dirty = true;
     }
 
+    /** Into the inventory; what doesn't fit drops at the player's feet. */
     public static void give(ServerPlayer player, ItemStack stack) {
-        pickup(player, stack);
+        storeInInventory(player, stack);
         if (!stack.isEmpty()) {
-            InvData data = data(player);
-            data.unsorted.add(stack);
+            player.drop(stack.copyAndClear(), false);
         }
     }
 }

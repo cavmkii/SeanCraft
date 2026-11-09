@@ -1,8 +1,6 @@
 package com.cavmkii.seancraft.client.tarkov;
 
-import com.cavmkii.seancraft.tetris.GridId;
 import com.cavmkii.seancraft.tetris.InvData;
-import com.cavmkii.seancraft.tetris.Placed;
 import com.cavmkii.seancraft.tetris.Tetris;
 import com.cavmkii.seancraft.tetris.TetrisNet;
 import java.util.ArrayList;
@@ -13,10 +11,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.HasCustomInventoryScreen;
 import net.minecraft.world.item.ItemStack;
 
-/** Client side of the Tetris inventory: the last sync, and E opening the Tarkov screen. */
+/** Client side of the INVENTORY screen: the last sync, and E opening it. */
 public final class ClientTetris {
-    public static TetrisNet.Sync sync = new TetrisNet.Sync(ItemStack.EMPTY, ItemStack.EMPTY, List.of(), List.of(), List.of(), List.of(),
-            2, 2, List.of(), false, List.of(), true, false, List.of(), false);
+    public static TetrisNet.Sync sync = new TetrisNet.Sync(false, 0, List.of(), true, false, List.of(), false);
     public static TetrisNet.CraftList craft = new TetrisNet.CraftList(List.of(), java.util.Collections.nCopies(9, ItemStack.EMPTY),
             ItemStack.EMPTY, false, List.of(), true, false, "");
 
@@ -30,13 +27,9 @@ public final class ClientTetris {
             sync = payload;
             syncs++;
             InvData view = new InvData();
-            view.rig = payload.rig();
-            view.backpack = payload.backpack();
-            view.pockets.addAll(payload.pockets());
-            view.rigItems.addAll(payload.rigItems());
-            view.backpackItems.addAll(payload.backpackItems());
-            view.pouch.addAll(payload.pouch());
-            view.unsorted.addAll(payload.unsorted());
+            view.autoRefill = payload.autoRefill();
+            view.refillFromStash = payload.refillFromStash();
+            view.tracked.addAll(payload.tracked());
             Tetris.clientView = view;
         });
         ClientPlayNetworking.registerGlobalReceiver(TetrisNet.CraftList.TYPE, (payload, ctx) -> craft = payload);
@@ -48,7 +41,7 @@ public final class ClientTetris {
                 mc.setScreen(new TarkovScreen(payload.tab()));
             }
         });
-        // The vanilla tutorial (open inventory, craft planks) can't see the grids, so its toasts would never clear.
+        // The vanilla tutorial (open inventory, craft planks) can't see SeanCraft's screen, so its toasts would never clear.
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
             if (mc.options.tutorialStep != net.minecraft.client.tutorial.TutorialSteps.NONE) {
                 mc.getTutorial().setStep(net.minecraft.client.tutorial.TutorialSteps.NONE);
@@ -78,17 +71,11 @@ public final class ClientTetris {
         }
     }
 
-    /** Same order as {@link Tetris#carried}: main inventory, off-hand, pockets, rig, backpack, pouch. */
+    /** Same order as {@link Tetris#carried}: the vanilla inventory, then the off-hand. */
     public static List<ItemStack> carried() {
         Minecraft mc = Minecraft.getInstance();
         List<ItemStack> out = new ArrayList<>(mc.player.getInventory().items);
         out.add(mc.player.getOffhandItem());
-        InvData view = Tetris.clientView;
-        for (GridId id : GridId.values()) {
-            for (Placed p : view.list(id)) {
-                out.add(p.stack);
-            }
-        }
         return out;
     }
 }

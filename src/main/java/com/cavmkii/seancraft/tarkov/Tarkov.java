@@ -2,6 +2,7 @@ package com.cavmkii.seancraft.tarkov;
 
 import com.cavmkii.seancraft.Cfg;
 import com.cavmkii.seancraft.SeanCraft;
+import com.cavmkii.seancraft.ecology.Seasons;
 import com.cavmkii.seancraft.entity.Wander;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +13,6 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -33,42 +33,35 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * TarkoValheim's raid loop on the server. Outside every hideout is raid; the longer you're out, the higher the
- * threat (elite mobs, hunting parties). Dying in raid costs your kit, except the secure pouch. Hideout
- * benches hold modules and craft hideout-only items from what you carry plus the stash.
+ * The world's danger and the home base on the server (design doc 2). There is no timer: distance from spawn, night
+ * and biome set the risk. Mobs get tougher by distance band and can spawn as elites, more often at night; at night in
+ * the Frontier and Far lands, hunting parties track players off safe ground. Home Benches hold modules and craft
+ * home-only items from what you carry plus the stash.
  */
 public final class Tarkov {
-    public static final int MAX_THREAT = 4;
-    private static final int[] WAVE_SECONDS = {0, 150, 100, 70, 50};
-    private static final int[] WAVE_SIZE = {0, 1, 2, 3, 3};
-    private static final double[] ONE_STAR = {0, 0.10, 0.20, 0.35, 0.50};
-    private static final double[] TWO_STAR = {0, 0, 0.05, 0.10, 0.20};
     private static final String ROLLED_TAG = "seancraft_threat_rolled";
+    private static final String PARTY_TAG = "seancraft_hunting_party";
+    /** Elite chances per band (2.1): one star, two stars. Doubled at night. */
+    private static final double[] ONE_STAR = {0, 0.05, 0.15, 0.25};
+    private static final double[] TWO_STAR = {0, 0, 0.05, 0.10};
 
-    /** Per-session raid state. */
+    /** Per-session state. */
     static final class Runtime {
         long graceUntil;
-        Boolean inRaid;
-        long raidStart;
-        int announcedThreat;
-        long nextWave;
-        long lastRaidTicks;
         Distance band;
-        /** Raid time paused by FOB tables so far this raid. */
-        long fobUsedTicks;
-        long lastHurt = Long.MIN_VALUE / 2;
+        Integer place;
+        /** Overworld day number of the last hunting party sent at this player, and the game time of the last one. */
+        long partyDay = -1;
+        long lastParty;
+        final List<UUID> party = new ArrayList<>();
     }
 
     private static final Map<UUID, Runtime> RUNTIME = new HashMap<>();
@@ -91,12 +84,12 @@ public final class Tarkov {
         Cures.init();
         SpawnPoints.init();
         TarkovLoot.init();
+        Camps.init();
 
         ServerTickEvents.END_SERVER_TICK.register(Tarkov::tick);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             Runtime rt = runtime(handler.player);
             rt.graceUntil = handler.player.serverLevel().getGameTime() + 100;
-            rt.inRaid = null;
             TarkovData data = data(handler.player);
             if (!data.placedAtSpawn) {
                 data.placedAtSpawn = true;
@@ -110,21 +103,15 @@ public final class Tarkov {
         net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
             Runtime rt = runtime(newPlayer);
             rt.graceUntil = newPlayer.serverLevel().getGameTime() + 60;
-            rt.inRaid = null;
-            rt.announcedThreat = 0;
+            rt.place = null;
         });
         ServerEntityEvents.ENTITY_LOAD.register(Tarkov::rollElite);
-        net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, base, taken, blocked) -> {
-            if (entity instanceof ServerPlayer player) {
-                runtime(player).lastHurt = player.serverLevel().getGameTime();
-            }
-        });
-        // Only a bed in a hideout sets your respawn point (2.5), so a bed beside a boss arena doesn't skip the trip back.
+        // Any bed sets respawn (2.4), except near a Summoning Pedestal, so a bed beside a boss arena doesn't skip the trip back.
         net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.ALLOW_SETTING_SPAWN.register((player, sleepingPos) -> {
-            if (!(player instanceof ServerPlayer sp) || Hideouts.at(sp.serverLevel(), Vec3.atCenterOf(sleepingPos)) != null) {
+            if (!(player instanceof ServerPlayer sp) || !nearPedestal(sp.serverLevel(), sleepingPos)) {
                 return true;
             }
-            sp.displayClientMessage(Component.literal("This bed isn't in a hideout, so it doesn't set your spawn.").withStyle(ChatFormatting.GRAY), true);
+            sp.displayClientMessage(Component.literal("Too close to a boss dungeon: this bed doesn't set your spawn.").withStyle(ChatFormatting.GRAY), true);
             return false;
         });
 
@@ -153,6 +140,16 @@ public final class Tarkov {
             }
             openHideout(ctx.player(), payload.pos());
         });
+    }
+
+    /** Within Home.PedestalClearance of a boss dungeon's pedestal. */
+    public static boolean nearPedestal(ServerLevel level, BlockPos pos) {
+        return com.cavmkii.seancraft.boss.BossSites.nearSite(level, Vec3.atCenterOf(pos), Cfg.pedestalClearance);
+    }
+
+    /** Safe ground (1.1): a home base, a spawn point's safe radius, or around a lit camp. Hostile mobs don't spawn there. */
+    public static boolean safeGround(ServerLevel level, Vec3 pos) {
+        return Hideouts.at(level, pos) != null || SpawnPoints.safe(level, pos) || Camps.near(level, pos, Cfg.campSafeRadius) != null;
     }
 
     // ================================================================== tick
@@ -194,14 +191,11 @@ public final class Tarkov {
         Runtime rt = runtime(player);
         ServerLevel level = player.serverLevel();
         long now = level.getGameTime();
-        Hideouts.Hideout home = Hideouts.at(level, player.position());
-        TarkovData data = data(player);
-
         if (now < rt.graceUntil) {
-            ServerPlayNetworking.send(player, new TarkovNet.RaidState(0, 0, 0, -1, 0, -1, false));
+            ServerPlayNetworking.send(player, new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0));
             return;
         }
-
+        Hideouts.Hideout home = Hideouts.at(level, player.position());
         Distance band = Distance.at(level, player.position());
         if (rt.band != null && band != rt.band && Cfg.distanceScaling) {
             title(player, band.label.toUpperCase(java.util.Locale.ROOT), band == Distance.HEARTLAND ? "Monsters here are ordinary"
@@ -209,159 +203,70 @@ public final class Tarkov {
                     band.ordinal() > rt.band.ordinal() ? ChatFormatting.GOLD : ChatFormatting.GREEN);
         }
         rt.band = band;
-
-        boolean atSpawn = home == null && SpawnPoints.safe(level, player.position());
-        boolean inRaid = home == null && !atSpawn;
-        if (rt.inRaid == null || rt.inRaid != inRaid) {
-            if (inRaid) {
-                rt.raidStart = now;
-                rt.fobUsedTicks = 0;
-                rt.announcedThreat = 0;
-                title(player, "RAID STARTED", "Only your secure pouch is safe", ChatFormatting.RED);
-            } else if (rt.inRaid != null) {
-                title(player, "EXTRACTED", "Raid time " + clock(now - rt.raidStart), ChatFormatting.GREEN);
-            }
-            rt.inRaid = inRaid;
-        }
-
+        int place = home != null ? TarkovNet.PlaceState.HOME : SpawnPoints.safe(level, player.position()) ? TarkovNet.PlaceState.SPAWN
+                : Camps.near(level, player.position(), Cfg.campSafeRadius) != null ? TarkovNet.PlaceState.CAMP : TarkovNet.PlaceState.OPEN;
         if (home != null) {
-            data.lastIntel = home.level(Module.INTEL);
             if (home.level(Module.MEDSTATION) >= 3) {
                 player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, true, false, true));
             }
-            ServerPlayNetworking.send(player, new TarkovNet.RaidState(1, 0, 0, -1, band.ordinal(), -1, false));
-            return;
+            if (home.level(Module.MAP_ROOM) >= 2 && (rt.place == null || rt.place != TarkovNet.PlaceState.HOME)) {
+                forecast(player);
+            }
         }
-        if (atSpawn) {
-            ServerPlayNetworking.send(player, new TarkovNet.RaidState(3, 0, 0, -1, band.ordinal(), -1, false));
-            return;
-        }
-
-        // The Frontier, the Far lands and the Nether start at threat level 2 (2.3.1).
-        long headStart = (long) (com.cavmkii.seancraft.Cfg.netherThreatStart * 1200);
-        if ((band.headStart || level.dimension() == Level.NETHER) && Cfg.raidHostility && now - rt.raidStart < headStart) {
-            rt.raidStart = now - headStart;
-        }
-        boolean paused = fobPauses(player, rt, now);
-        if (com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
-            // Raid threat stops rising while a boss is alive (8.4.5); this costs no FOB time.
-            rt.raidStart = Math.min(rt.raidStart + 20, now);
-        } else if (paused) {
-            // This runs once a second: push the raid's start back by the second that just passed.
-            rt.raidStart = Math.min(rt.raidStart + 20, now);
-            rt.fobUsedTicks += 20;
-        }
-        long raidTicks = now - rt.raidStart;
-        rt.lastRaidTicks = raidTicks;
-        int threat = threat(raidTicks, data.lastIntel);
-        if (threat > rt.announcedThreat) {
-            String[] lines = {"", "The land stirs. Monsters grow bolder.", "You're being hunted.", "They're closing in.", "Get out. Now."};
-            title(player, "THREAT " + threat, lines[threat], ChatFormatting.GOLD);
-            rt.nextWave = now + 400;
-        }
-        rt.announcedThreat = threat;
-        if (threat > 0 && Cfg.huntingParties && now >= rt.nextWave) {
-            rt.nextWave = now + (long) (WAVE_SECONDS[threat] * 20 * (0.8 + player.getRandom().nextDouble() * 0.4));
-            sendParty(player, threat, data.lastIntel);
-        }
-        int fobLeft = (int) Math.max(0, (fobBudgetTicks() - rt.fobUsedTicks) / 20);
-        ServerPlayNetworking.send(player, new TarkovNet.RaidState(2, (int) (raidTicks / 20), threat, secondsToNextThreat(raidTicks, data.lastIntel),
-                band.ordinal(), fobLeft, paused));
+        rt.place = place;
+        ServerPlayNetworking.send(player, new TarkovNet.PlaceState(place, band.ordinal()));
+        huntingParty(player, rt, place, band);
     }
 
-    private static long fobBudgetTicks() {
-        return (long) (Cfg.fobPauseMinutes * 1200);
-    }
-
-    /**
-     * A FOB table in the player's chunk stops the raid timer (2.6), while the raid's FOB time lasts, and not with a
-     * monster within 16 blocks or for 10 seconds after the player is hurt.
-     */
-    private static boolean fobPauses(ServerPlayer player, Runtime rt, long now) {
-        if (rt.fobUsedTicks >= fobBudgetTicks() || now - rt.lastHurt < 200 || !Fobs.get(player.serverLevel()).has(player.chunkPosition())) {
-            return false;
+    /** Map room 2 (2.4.1): the season and the weather ahead, on coming home. */
+    private static void forecast(ServerPlayer player) {
+        ServerLevel level = player.serverLevel();
+        String season = Seasons.describe(level);
+        String weather;
+        if (level.getLevelData() instanceof net.minecraft.world.level.storage.ServerLevelData data) {
+            if (level.isRaining()) {
+                int left = data.getRainTime() / 1200;
+                weather = (level.isThundering() ? "Storm" : "Rain") + " for about " + Math.max(1, left) + " more minutes";
+            } else {
+                int clear = data.getClearWeatherTime() > 0 ? data.getClearWeatherTime() : data.getRainTime();
+                weather = "Dry for about " + Math.max(1, clear / 1200) + " minutes";
+            }
+        } else {
+            weather = "No forecast";
         }
-        return player.serverLevel().getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(16),
-                m -> m.isAlive() && m instanceof net.minecraft.world.entity.monster.Enemy).isEmpty();
-    }
-
-    /** Raid minute at which a threat level (1-4) starts. The Intel center pushes every level back. */
-    private static double threatStart(int level, int intel) {
-        double[] at = Cfg.threatMinutes;
-        double base = at[Math.min(level, at.length) - 1];
-        return base + intel * Module.INTEL_CALM_MINUTES;
-    }
-
-    static int threat(long raidTicks, int intel) {
-        if (!Cfg.raidHostility) {
-            return 0;
-        }
-        double minutes = raidTicks / 1200.0;
-        int threat = 0;
-        while (threat < MAX_THREAT && minutes >= threatStart(threat + 1, intel)) {
-            threat++;
-        }
-        return threat;
-    }
-
-    private static int secondsToNextThreat(long raidTicks, int intel) {
-        int threat = threat(raidTicks, intel);
-        if (!Cfg.raidHostility || threat >= MAX_THREAT) {
-            return -1;
-        }
-        return (int) Math.max(0, threatStart(threat + 1, intel) * 60 - raidTicks / 20.0);
-    }
-
-    /** Current threat for a player, 0 if not in raid. */
-    public static int threatFor(ServerPlayer player) {
-        Runtime rt = RUNTIME.get(player.getUUID());
-        if (rt == null || rt.inRaid == null || !rt.inRaid) {
-            return 0;
-        }
-        return threat(player.serverLevel().getGameTime() - rt.raidStart, data(player).lastIntel);
-    }
-
-    public static boolean inRaid(ServerPlayer player) {
-        Runtime rt = RUNTIME.get(player.getUUID());
-        if (rt != null && rt.inRaid != null) {
-            return rt.inRaid;
-        }
-        return Hideouts.at(player.serverLevel(), player.position()) == null && !SpawnPoints.safe(player.serverLevel(), player.position());
+        player.sendSystemMessage(Component.literal("Map room: " + season + ". " + weather + ".").withStyle(ChatFormatting.GRAY));
     }
 
     // ================================================================== elites and hunting parties
 
     /**
-     * Hostile mobs get tougher with distance from spawn, and near a player deep in a raid they may be elite. Both are
-     * decided once, where the mob first appears, and the mob keeps them.
+     * Hostile mobs get tougher with distance from spawn (2.1) and may spawn as elites: more often further out, twice
+     * as often at night, and at Far lands rates in the Nether. Decided once, where the mob appears; the mob keeps it.
      */
     private static void rollElite(Entity entity, ServerLevel level) {
         if (!(entity instanceof Mob mob) || !(entity instanceof net.minecraft.world.entity.monster.Enemy)
-                || entity.getTags().contains(ROLLED_TAG)) {
+                || entity instanceof com.cavmkii.seancraft.boss.BossEntity || entity.getTags().contains(ROLLED_TAG)) {
             return;
         }
         entity.addTag(ROLLED_TAG);
-        int threat = 0;
-        for (ServerPlayer player : level.players()) {
-            if (player.distanceToSqr(entity) < 90 * 90) {
-                threat = Math.max(threat, threatFor(player));
-            }
-        }
-        scale(mob, threat > 0 ? rollStars(threat, level.random.nextDouble()) : 0, Distance.at(level, mob.position()));
+        Distance band = Distance.at(level, mob.position());
+        scale(mob, Cfg.elites ? rollStars(level, band, level.random.nextDouble()) : 0, band);
     }
 
-    private static int rollStars(int threat, double roll) {
-        if (roll < TWO_STAR[threat]) {
+    private static int rollStars(ServerLevel level, Distance band, double roll) {
+        int b = level.dimension() == Level.NETHER ? Distance.FAR_LANDS.ordinal() : band.ordinal();
+        double night = level.dimension() == Level.OVERWORLD && level.isNight() ? 2 : 1;
+        if (roll < TWO_STAR[b] * night) {
             return 2;
         }
-        return roll < TWO_STAR[threat] + ONE_STAR[threat] ? 1 : 0;
+        return roll < (TWO_STAR[b] + ONE_STAR[b]) * night ? 1 : 0;
     }
 
-    /** Tag recording the distance band a mob appeared in, for its XP (2.3.1). */
+    /** Tag recording the distance band a mob appeared in, for its XP (2.1). */
     public static final String BAND_TAG = "seancraft_band_";
 
     /**
-     * Distance and elite bonuses, added together and capped (2.3.2): each elite star is +100% health and +50% damage
+     * Distance and elite bonuses, added together and capped (2.1.1): each elite star is +100% health and +50% damage
      * on top of the band's own bonus.
      */
     private static void scale(Mob mob, int stars, Distance band) {
@@ -392,20 +297,59 @@ public final class Tarkov {
         return 1;
     }
 
-    /** A few of the local biome's monsters, 30-45 blocks away, sent straight at you. */
-    private static void sendParty(ServerPlayer player, int threat, int intel) {
+    /**
+     * Hunting parties (2.1): at night in the Frontier and Far lands, a player off safe ground can be tracked by two or
+     * three mobs led by an elite, about once a night. In the Nether, any time, at half the rate. They give up at dawn.
+     * None while the player is in a boss fight.
+     */
+    private static void huntingParty(ServerPlayer player, Runtime rt, int place, Distance band) {
         ServerLevel level = player.serverLevel();
-        if (level.getDifficulty() == Difficulty.PEACEFUL) {
+        boolean nether = level.dimension() == Level.NETHER;
+        boolean night = level.dimension() == Level.OVERWORLD && level.isNight();
+        if (!rt.party.isEmpty() && level.dimension() == Level.OVERWORLD && !night) {
+            // Dawn: the party gives up.
+            for (UUID id : rt.party) {
+                if (level.getEntity(id) instanceof Mob mob) {
+                    mob.setTarget(null);
+                    AttributeInstance follow = mob.getAttribute(Attributes.FOLLOW_RANGE);
+                    if (follow != null) {
+                        follow.removeModifier(SeanCraft.id("hunter"));
+                    }
+                }
+            }
+            rt.party.clear();
+        }
+        if (!Cfg.huntingParties || place != TarkovNet.PlaceState.OPEN || level.getDifficulty() == Difficulty.PEACEFUL
+                || com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
             return;
         }
+        long now = level.getGameTime();
+        if (nether) {
+            // Half the overworld rate, at any time: about one a day.
+            if (now - rt.lastParty < 12000 || player.getRandom().nextInt(1200) != 0) {
+                return;
+            }
+        } else {
+            long day = level.getDayTime() / 24000;
+            if (!night || band.ordinal() < Distance.FRONTIER.ordinal() || rt.partyDay == day || player.getRandom().nextInt(400) != 0) {
+                return;
+            }
+            rt.partyDay = day;
+        }
+        rt.lastParty = now;
+        sendParty(player, rt, band);
+    }
+
+    /** Two or three of the local monsters, 30-45 blocks out, led by an elite, sent straight at you. */
+    private static void sendParty(ServerPlayer player, Runtime rt, Distance band) {
+        ServerLevel level = player.serverLevel();
         List<EntityType<? extends Mob>> pool = hunters(level, player.blockPosition());
         if (pool.isEmpty()) {
             return;
         }
-        if (intel >= 2) {
-            player.displayClientMessage(Component.literal("Intel: a hunting party is coming for you.").withStyle(ChatFormatting.RED), true);
-        }
-        for (int i = 0; i < WAVE_SIZE[threat]; i++) {
+        int size = 2 + level.random.nextInt(2);
+        int sent = 0;
+        for (int i = 0; i < size; i++) {
             BlockPos spot = findSpot(level, player);
             if (spot == null) {
                 continue;
@@ -416,6 +360,7 @@ public final class Tarkov {
             }
             mob.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, level.random.nextFloat() * 360, 0);
             mob.addTag(ROLLED_TAG);
+            mob.addTag(PARTY_TAG);
             mob.finalizeSpawn(level, level.getCurrentDifficultyAt(spot), MobSpawnType.EVENT, null);
             if (mob.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
                 // Keeps undead from burning before they reach you.
@@ -426,9 +371,35 @@ public final class Tarkov {
             if (follow != null) {
                 follow.addOrReplacePermanentModifier(new AttributeModifier(SeanCraft.id("hunter"), 32, AttributeModifier.Operation.ADD_VALUE));
             }
-            scale(mob, rollStars(threat, level.random.nextDouble()), Distance.at(level, mob.position()));
+            // The first one leads, as an elite: two stars in the Far lands.
+            int stars = i == 0 ? (band == Distance.FAR_LANDS || level.dimension() == Level.NETHER ? 2 : 1) : 0;
+            scale(mob, stars, Distance.at(level, mob.position()));
             level.addFreshEntity(mob);
             mob.setTarget(player);
+            rt.party.add(mob.getUUID());
+            sent++;
+        }
+        if (sent > 0) {
+            warnFriends(player);
+        }
+    }
+
+    /** Map room 2 (2.4.1): everyone else hears when a hunting party is tracking a friend. */
+    private static void warnFriends(ServerPlayer hunted) {
+        boolean mapRoom = false;
+        for (ServerLevel level : hunted.server.getAllLevels()) {
+            for (Hideouts.Hideout h : Hideouts.get(level).list) {
+                mapRoom |= h.level(Module.MAP_ROOM) >= 2;
+            }
+        }
+        if (!mapRoom) {
+            return;
+        }
+        for (ServerPlayer p : hunted.server.getPlayerList().getPlayers()) {
+            if (p != hunted) {
+                p.displayClientMessage(Component.literal("Map room: a hunting party is tracking " + hunted.getName().getString() + ".")
+                        .withStyle(ChatFormatting.RED), true);
+            }
         }
     }
 
@@ -444,20 +415,23 @@ public final class Tarkov {
             pool.add(EntityType.ENDERMAN);
             return pool;
         }
+        // Biome tags (10), so Terralith's biomes pick the right hunters.
         Holder<Biome> biome = level.getBiome(pos);
         if (biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_RIVER)) {
             pool.add(EntityType.DROWNED);
-        } else if (biome.is(Biomes.DESERT) || biome.is(BiomeTags.IS_BADLANDS)) {
+        } else if (biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_DESERT) || biome.is(BiomeTags.IS_BADLANDS)) {
             pool.add(EntityType.HUSK);
             pool.add(EntityType.SKELETON);
-        } else if (biome.value().getPrecipitationAt(pos) == Biome.Precipitation.SNOW) {
+        } else if (biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_SNOWY)
+                || biome.value().getPrecipitationAt(pos) == Biome.Precipitation.SNOW) {
             pool.add(EntityType.STRAY);
             pool.add(EntityType.ZOMBIE);
-        } else if (biome.is(Biomes.SWAMP) || biome.is(Biomes.MANGROVE_SWAMP)) {
+        } else if (biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_SWAMP)) {
             pool.add(EntityType.WITCH);
             pool.add(EntityType.ZOMBIE);
             pool.add(EntityType.SLIME);
-        } else if (biome.is(Biomes.DARK_FOREST)) {
+        } else if (biome.is(net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags.IS_VEGETATION_DENSE)
+                && biome.is(BiomeTags.IS_FOREST) && !biome.is(BiomeTags.IS_JUNGLE)) {
             pool.add(EntityType.VINDICATOR);
             pool.add(EntityType.PILLAGER);
         } else if (biome.is(BiomeTags.IS_JUNGLE)) {
@@ -478,52 +452,11 @@ public final class Tarkov {
             Vec3 at = player.position().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
             BlockPos ground = Wander.surface(level, at);
             if (ground != null && Math.abs(ground.getY() - player.getY()) < 25 && level.getFluidState(ground.below()).isEmpty()
-                    && Hideouts.at(level, Vec3.atCenterOf(ground)) == null && !SpawnPoints.safe(level, Vec3.atCenterOf(ground))) {
+                    && !safeGround(level, Vec3.atCenterOf(ground))) {
                 return ground;
             }
         }
         return null;
-    }
-
-    // ================================================================== death
-
-    /** Called (from a mixin) just before a dying player's inventory would drop. */
-    /** Share of carried stacks lost on a boss death. */
-    static final float BOSS_DEATH_LOSS = 0.3f;
-
-    public static void beforeDeathDrops(ServerPlayer player) {
-        boolean raid = inRaid(player);
-        Runtime rt = runtime(player);
-        String time = rt.inRaid != null && rt.inRaid ? " Raid time " + clock(player.serverLevel().getGameTime() - rt.raidStart) + "." : "";
-        boolean bossFight = com.cavmkii.seancraft.boss.Arenas.inFight(player);
-        if (raid && !bossFight && !player.serverLevel().getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_KEEPINVENTORY)) {
-            // Striking parts of lost part-built gear go back to the hideout (9.4.9).
-            Recovery.onDeath(player, com.cavmkii.seancraft.tetris.Tetris.atRisk(player, Cfg.raidDeathRule == Cfg.DeathRule.VANILLA));
-        }
-        if (bossFight) {
-            // A boss death costs a random share of what you carry, lighter than a raid death (8.4.7). The rest drops
-            // where you fell, for the run back.
-            int lost = com.cavmkii.seancraft.tetris.Tetris.onBossDeath(player, BOSS_DEATH_LOSS);
-            player.sendSystemMessage(Component.literal("Down in the boss fight. You lost " + lost
-                    + " stacks; the rest is where you fell. The fight goes on while anyone is still in the ring.").withStyle(ChatFormatting.DARK_RED));
-            return;
-        }
-        com.cavmkii.seancraft.tetris.Tetris.onDeath(player, raid, Cfg.raidDeathRule);
-        if (!raid) {
-            return;
-        }
-        switch (Cfg.raidDeathRule) {
-            case LOSE_EVERYTHING -> {
-                player.getInventory().clearContent();
-                player.sendSystemMessage(Component.literal("Killed in action." + time + " Everything outside your secure pouch is gone.")
-                        .withStyle(ChatFormatting.DARK_RED));
-            }
-            case KEEP_SECURE -> player.sendSystemMessage(Component.literal("Killed in action." + time + " Your secure pouch is safe.")
-                    .withStyle(ChatFormatting.DARK_RED));
-            case VANILLA -> {
-                // Everything drops, the secure pouch too (handled with the grids).
-            }
-        }
     }
 
     // ================================================================== hideout bench
@@ -735,26 +668,22 @@ public final class Tarkov {
         if (stack.is(TarkovContent.ANTIDOTE)) {
             return "Cures every harmful effect: poison, wither, hunger, nausea...";
         }
-        if (stack.getItem() instanceof SecureItem secure) {
-            return "Secure pouch, " + secure.tier.width + "x" + secure.tier.height + ". Use it to install.";
-        }
-        if (stack.getItem() instanceof com.cavmkii.seancraft.tetris.GearItem gear) {
-            return (gear.spec.kind == com.cavmkii.seancraft.tetris.GearSpec.Kind.RIG ? "Rig, " : "Backpack, ")
-                    + gear.spec.gridWidth + "x" + gear.spec.gridHeight + " grid. Wear it on the GEAR tab.";
+        if (stack.is(TarkovContent.CAMP_KIT)) {
+            return "A fire and a bedroll: sets your respawn and makes a small safe circle. Sneak and use it to pack it up.";
         }
         return "";
     }
 
-    /** Furnaces inside a hideout cook faster with its Workshop: extra ticks of progress per tick. */
+    /** Furnaces in a home base cook faster with its Workshop (2.4.1): +25%, +50%, +75%. Extra ticks of progress per tick. */
     public static double furnaceBonus(ServerLevel level, BlockPos pos) {
         Hideouts.Hideout h = Hideouts.at(level, Vec3.atCenterOf(pos));
         if (h == null) {
             return 0;
         }
         return switch (h.level(Module.WORKSHOP)) {
-            case 1 -> 1 / 3.0;
-            case 2 -> 1;
-            case 3 -> 3;
+            case 1 -> 0.25;
+            case 2 -> 0.5;
+            case 3 -> 0.75;
             default -> 0;
         };
     }

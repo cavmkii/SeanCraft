@@ -28,7 +28,7 @@ public class HideoutScreen extends Screen {
     private int ticks;
 
     HideoutScreen(TarkovNet.HideoutView view) {
-        super(Component.literal("Hideout"));
+        super(Component.literal("Home Base"));
         this.pos = view.pos();
         this.view = view;
     }

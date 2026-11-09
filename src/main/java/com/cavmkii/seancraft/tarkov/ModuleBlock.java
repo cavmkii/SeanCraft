@@ -65,7 +65,7 @@ public class ModuleBlock extends com.cavmkii.seancraft.FacingBlock {
         if (player instanceof ServerPlayer serverPlayer) {
             Hideouts.Hideout h = Hideouts.at(serverPlayer.serverLevel(), Vec3.atCenterOf(pos));
             if (h == null || !pos.equals(h.modules[module.ordinal()])) {
-                serverPlayer.displayClientMessage(Component.literal("This " + module.label + " isn't part of a hideout.").withStyle(ChatFormatting.GRAY), true);
+                serverPlayer.displayClientMessage(Component.literal("This " + module.label + " isn't part of a home base.").withStyle(ChatFormatting.GRAY), true);
             } else {
                 Tarkov.useModule(serverPlayer, h, module);
             }
@@ -83,8 +83,8 @@ public class ModuleBlock extends com.cavmkii.seancraft.FacingBlock {
         public InteractionResult place(BlockPlaceContext context) {
             if (context.getLevel() instanceof ServerLevel server && getBlock() instanceof ModuleBlock block) {
                 Hideouts.Hideout h = Hideouts.at(server, Vec3.atCenterOf(context.getClickedPos()));
-                String problem = h == null ? "A " + block.module.label + " has to go inside a hideout."
-                        : h.modules[block.module.ordinal()] != null ? "This hideout already has a " + block.module.label + "." : null;
+                String problem = h == null ? "A " + block.module.label + " has to go inside your home base."
+                        : h.modules[block.module.ordinal()] != null ? "This home base already has a " + block.module.label + "." : null;
                 if (problem != null) {
                     if (context.getPlayer() != null) {
                         context.getPlayer().displayClientMessage(Component.literal(problem).withStyle(ChatFormatting.RED), true);
@@ -101,7 +101,7 @@ public class ModuleBlock extends com.cavmkii.seancraft.FacingBlock {
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
             int level = stack.getOrDefault(TarkovContent.MODULE_LEVEL, 0);
-            lines.add(Component.literal(level > 0 ? "Level " + level + ", kept when you move it." : "Not built yet. Place it in a hideout, then use it to build.")
+            lines.add(Component.literal(level > 0 ? "Level " + level + ", kept when you move it." : "Not built yet. Place it at your home base, then use it to build.")
                     .withStyle(ChatFormatting.GRAY));
         }
     }

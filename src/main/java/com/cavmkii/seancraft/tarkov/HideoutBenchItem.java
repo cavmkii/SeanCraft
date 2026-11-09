@@ -8,7 +8,7 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** The Hideout Bench as an item: refuses to be placed too near another hideout, or past the player's limit (2.5). */
+/** The Home Bench as an item: refuses to go inside someone else's home base or near a boss dungeon (2.4). */
 public class HideoutBenchItem extends BlockItem {
     public HideoutBenchItem(Block block, Properties properties) {
         super(block, properties);

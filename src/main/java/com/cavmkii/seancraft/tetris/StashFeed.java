@@ -59,7 +59,8 @@ public final class StashFeed {
     private static List<ItemStack> stash(ServerPlayer player, List<Container> touched) {
         List<ItemStack> out = new ArrayList<>();
         Hideouts.Hideout home = Hideouts.at(player.serverLevel(), player.position());
-        if (home != null) {
+        // The stash at every station comes with Storehouse 3 (2.4.1).
+        if (home != null && home.level(com.cavmkii.seancraft.tarkov.Module.STOREHOUSE) >= 3) {
             for (Container c : Stash.containers(player.serverLevel(), home)) {
                 touched.add(c);
                 for (int i = 0; i < c.getContainerSize(); i++) {
@@ -87,7 +88,7 @@ public final class StashFeed {
                 merged.add(s.copy());
             }
         }
-        boolean home = Hideouts.at(player.serverLevel(), player.position()) != null;
+        boolean home = Tetris.storehouse(player) >= 3;
         int h = home ? 1 : 0;
         for (ItemStack s : merged) {
             h = 31 * h + ItemStack.hashItemAndComponents(s) * 7 + s.getCount();
@@ -103,7 +104,7 @@ public final class StashFeed {
     private static void take(ServerPlayer player, TetrisNet.StashTake p) {
         AbstractContainerMenu menu = player.containerMenu;
         if (menu == player.inventoryMenu || !Tetris.active(player) || !player.isAlive() || !applies(menu)
-                || Hideouts.at(player.serverLevel(), player.position()) == null) {
+                || Tetris.storehouse(player) < 3) {
             return;
         }
         ItemStack carried = menu.getCarried();

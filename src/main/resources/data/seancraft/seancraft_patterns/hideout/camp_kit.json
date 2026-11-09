@@ -1,0 +1,19 @@
+{
+ "station": "hideout",
+ "category": "Stations",
+ "pattern": [
+  "WW.",
+  "TCT",
+  "PPP"
+ ],
+ "key": {
+  "W": "#minecraft:wool",
+  "T": "minecraft:stick",
+  "C": "minecraft:campfire",
+  "P": "#minecraft:planks"
+ },
+ "result": {
+  "id": "seancraft:camp_kit",
+  "count": 1
+ }
+}

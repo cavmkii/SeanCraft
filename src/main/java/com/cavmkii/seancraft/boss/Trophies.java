@@ -44,7 +44,7 @@ import net.minecraft.world.phys.Vec3;
 import com.mojang.serialization.MapCodec;
 
 /**
- * Trophies and their powers (design doc 8.2.3, 8.3): a boss trophy goes on a Trophy Rack in a hideout, where you
+ * Trophies and their powers (design doc 8.2.3, 8.3): a boss trophy goes on a Trophy Rack at your home base, where you
  * pick one as your active power. A key uses it: about 5 minutes on, about 20 minutes to recharge.
  */
 public final class Trophies {
@@ -148,7 +148,7 @@ public final class Trophies {
         Power power = s.power();
         long now = player.serverLevel().getGameTime();
         if (power == null) {
-            player.displayClientMessage(Component.literal("No trophy power chosen. Pick one at a Trophy Rack in a hideout.").withStyle(ChatFormatting.GRAY), true);
+            player.displayClientMessage(Component.literal("No trophy power chosen. Pick one at a Trophy Rack at your home base.").withStyle(ChatFormatting.GRAY), true);
             return;
         }
         if (now < s.readyAt()) {
@@ -185,7 +185,7 @@ public final class Trophies {
         @Override
         public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
             lines.add(Component.literal("Power: " + power.label + " (" + power.lower() + ")").withStyle(ChatFormatting.GOLD));
-            lines.add(Component.literal("Put it on a Trophy Rack in a hideout to choose it.").withStyle(ChatFormatting.GRAY));
+            lines.add(Component.literal("Put it on a Trophy Rack at your home base to choose it.").withStyle(ChatFormatting.GRAY));
         }
     }
 
@@ -256,7 +256,7 @@ public final class Trophies {
                 return InteractionResult.SUCCESS;
             }
             if (com.cavmkii.seancraft.tarkov.Hideouts.at(server, Vec3.atCenterOf(pos)) == null) {
-                player.displayClientMessage(Component.literal("A Trophy Rack only works in a hideout.").withStyle(ChatFormatting.RED), true);
+                player.displayClientMessage(Component.literal("A Trophy Rack only works at a home base.").withStyle(ChatFormatting.RED), true);
                 return InteractionResult.SUCCESS;
             }
             List<Power> powers = new ArrayList<>();

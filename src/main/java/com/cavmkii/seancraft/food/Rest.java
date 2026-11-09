@@ -98,7 +98,9 @@ public final class Rest {
         UUID id = player.getUUID();
         ServerLevel level = player.serverLevel();
         boolean hurt = level.getGameTime() - LAST_HURT.getOrDefault(id, Long.MIN_VALUE / 2) < RESTING_SECONDS * 20;
-        if (!player.isAlive() || hurt || !nearFire(level, player.blockPosition()) || !underRoof(level, player.blockPosition())) {
+        // A camp's fire has an awning: it counts as both (2.5).
+        boolean camp = com.cavmkii.seancraft.tarkov.Camps.shelters(level, player.blockPosition());
+        if (!player.isAlive() || hurt || !camp && (!nearFire(level, player.blockPosition()) || !underRoof(level, player.blockPosition()))) {
             if (RESTING_FOR.remove(id) != null) {
                 player.removeEffect(RESTING);
             }

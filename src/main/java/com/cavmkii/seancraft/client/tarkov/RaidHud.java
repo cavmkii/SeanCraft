@@ -9,7 +9,10 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
-/** Bottom left: HIDEOUT, or RAID with the timer, threat level and when it rises next; injuries and effects above. */
+/**
+ * Bottom left (C.5): where you are and the danger band, Blood light in the Frontier and Far lands; injuries and
+ * effects above it. Also the banners at the top of the screen.
+ */
 final class RaidHud {
     private RaidHud() {}
 
@@ -68,43 +71,52 @@ final class RaidHud {
         return (int) (g.guiHeight() - 40 - visible * lineHeight) - 4;
     }
 
-    /** One line for the inventory's top right (C.4): IN RAID, the band, threat and FOB time; or HIDEOUT / SPAWN. */
+    private static String band(TarkovNet.PlaceState s) {
+        return Distance.values()[Math.min(s.band(), Distance.values().length - 1)].label.toUpperCase();
+    }
+
+    /** Night in the overworld: elites spawn twice as often, and hunting parties come out in the Frontier and Far lands. */
+    private static boolean night() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level != null && mc.level.dimension() == net.minecraft.world.level.Level.OVERWORLD && !mc.level.isDay();
+    }
+
+    /** One line for the inventory's top right (C.4): HOME, SPAWN or CAMP on safe ground, else the band (and NIGHT). */
     static String stateLine() {
-        TarkovNet.RaidState s = ClientTarkov.raid;
-        if (s == null || s.state() == 0) {
+        TarkovNet.PlaceState s = ClientTarkov.place;
+        if (s == null || s.place() == TarkovNet.PlaceState.UNKNOWN) {
             return "";
         }
-        if (s.state() == 1) {
-            return "HIDEOUT";
-        }
-        if (s.state() == 3) {
-            return "SPAWN (SAFE)";
-        }
-        StringBuilder out = new StringBuilder("IN RAID ").append(String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60));
-        if (s.band() > 0) {
-            out.append("   ").append(Distance.values()[Math.min(s.band(), Distance.values().length - 1)].label.toUpperCase());
-        }
-        out.append("   THREAT ").append(s.threat());
-        if (s.fobLeft() >= 0) {
-            out.append("   FOB ").append(String.format("%d:%02d", s.fobLeft() / 60, s.fobLeft() % 60));
-        }
-        return out.toString();
+        String where = switch (s.place()) {
+            case TarkovNet.PlaceState.HOME -> "HOME";
+            case TarkovNet.PlaceState.SPAWN -> "SPAWN (SAFE)";
+            case TarkovNet.PlaceState.CAMP -> "CAMP";
+            default -> "";
+        };
+        String band = band(s) + (night() ? "  NIGHT" : "");
+        return where.isEmpty() ? band : where + "  " + band;
     }
 
     /** The state line from longest to shortest, for wherever it has to fit. */
     static java.util.List<String> stateLines() {
         String full = stateLine();
-        TarkovNet.RaidState s = ClientTarkov.raid;
-        if (full.isEmpty() || s == null || s.state() != 2) {
-            return full.isEmpty() ? java.util.List.of() : java.util.List.of(full);
+        TarkovNet.PlaceState s = ClientTarkov.place;
+        if (full.isEmpty()) {
+            return java.util.List.of();
         }
-        String time = String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60);
-        return java.util.List.of(full, "IN RAID " + time + "   THREAT " + s.threat(), "RAID " + time + " T" + s.threat(), time);
+        return java.util.List.of(full, band(s));
     }
 
+    /** Blood light in the Frontier and Far lands (C.5); Moss on safe ground; Ash otherwise. */
     static int stateColor() {
-        TarkovNet.RaidState s = ClientTarkov.raid;
-        return s != null && s.state() == 2 ? com.cavmkii.seancraft.client.ui.Kit.BLOOD_LIGHT : com.cavmkii.seancraft.client.ui.Kit.ASH;
+        TarkovNet.PlaceState s = ClientTarkov.place;
+        if (s == null) {
+            return Kit.ASH;
+        }
+        if (s.safe()) {
+            return Kit.MOSS;
+        }
+        return s.band() >= Distance.FRONTIER.ordinal() ? Kit.BLOOD_LIGHT : Kit.ASH;
     }
 
     static void render(GuiGraphics g, DeltaTracker delta) {
@@ -112,48 +124,30 @@ final class RaidHud {
         if (mc.player != null && !mc.options.hideGui) {
             banner(g, mc);
         }
-        TarkovNet.RaidState s = ClientTarkov.raid;
         if (mc.player == null || mc.options.hideGui) {
             return;
         }
         int x = 4;
-        int y = g.guiHeight() - 30;
-        EffectHud.render(g, mc, x, Math.min(s.state() == 0 ? g.guiHeight() - 4 : y - 4, chatTop(g, mc)));
+        int y = g.guiHeight() - 20;
+        TarkovNet.PlaceState s = ClientTarkov.place;
+        EffectHud.render(g, mc, x, Math.min(s.place() == TarkovNet.PlaceState.UNKNOWN ? g.guiHeight() - 4 : y - 4, chatTop(g, mc)));
         EffectHud.topLeft(g, mc);
-        if (s.state() == 0) {
+        // The longest line that clears the hotbar; if even the short one doesn't, sit above the hotbar.
+        int room = g.guiWidth() / 2 - 91 - 6 - x;
+        String line = "";
+        for (String l : stateLines()) {
+            line = l;
+            if (mc.font.width(l) + 5 <= room) {
+                break;
+            }
+        }
+        if (line.isEmpty()) {
             return;
         }
-        if (s.state() == 1 || s.state() == 3) {
-            // Safe places are gold: gold marks what's secure (C.2).
-            String safe = s.state() == 1 ? "HIDEOUT" : "SPAWN (SAFE)";
-            Kit.hudPanel(g, x - 5, y - 4, mc.font.width(safe) + 10, 15);
-            Kit.text(g, mc.font, safe, x, y, Kit.GOLD);
-            return;
+        if (mc.font.width(line) + 5 > room) {
+            y = g.guiHeight() - 42;
         }
-        boolean fobLine = s.fobLeft() >= 0 && (s.fobPaused() || s.fobLeft() < Cfg.fobPauseMinutes * 60);
-        Kit.hudPanel(g, x - 5, y - 4, 150, fobLine ? 35 : 25);
-        String time = String.format("%02d:%02d", s.raidSeconds() / 60, s.raidSeconds() % 60);
-        String raid = "RAID " + time;
-        Kit.text(g, mc.font, raid, x, y, Kit.BLOOD_LIGHT);
-        int rx = x + mc.font.width(raid) + 6;
-        if (s.band() > 0) {
-            String band = Distance.values()[Math.min(s.band(), Distance.values().length - 1)].label;
-            Kit.text(g, mc.font, band.toUpperCase(), rx, y, Kit.BLOOD_LIGHT);
-        }
-        // FOB time left this raid, under the threat line; bright while a FOB table is holding the timer.
-        if (fobLine) {
-            String fob = (s.fobPaused() ? "FOB: timer paused, " : "FOB time ") + String.format("%d:%02d", s.fobLeft() / 60, s.fobLeft() % 60)
-                    + (s.fobPaused() ? " left" : "");
-            Kit.text(g, mc.font, fob, x, y + 20, s.fobPaused() ? Kit.GOLD : Kit.ASH);
-        }
-        // Threat as the kit's pips, then when it rises next.
-        Kit.text(g, mc.font, "THREAT", x, y + 10, s.threat() == 0 ? Kit.ASH : Kit.BLOOD_LIGHT);
-        int px = x + mc.font.width("THREAT") + 4;
-        for (int i = 1; i <= 4; i++) {
-            Kit.blit(g, i <= s.threat() ? "hud/threat_pip_on" : "hud/threat_pip_off", px + (i - 1) * 7, y + 11, 5, 5);
-        }
-        if (s.nextThreat() >= 0) {
-            Kit.text(g, mc.font, String.format("next %d:%02d", s.nextThreat() / 60, s.nextThreat() % 60), px + 32, y + 10, Kit.ASH);
-        }
+        Kit.hudPanel(g, x - 5, y - 4, mc.font.width(line) + 10, 15);
+        Kit.text(g, mc.font, line, x, y, stateColor());
     }
 }

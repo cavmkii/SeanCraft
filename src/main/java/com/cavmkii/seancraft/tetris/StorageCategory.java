@@ -68,7 +68,7 @@ public enum StorageCategory {
                 || item instanceof MaceItem || item instanceof ShieldItem || item instanceof com.cavmkii.seancraft.item.GlockItem) {
             return WEAPONS;
         }
-        if (item instanceof ArmorItem || item instanceof ElytraItem || item instanceof GearItem) {
+        if (item instanceof ArmorItem || item instanceof ElytraItem) {
             return ARMOR;
         }
         if (item instanceof DiggerItem || item instanceof ShearsItem || item instanceof FlintAndSteelItem || item instanceof FishingRodItem) {

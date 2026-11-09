@@ -89,33 +89,28 @@ public final class Cfg {
     public static double babyHealthScale = 0.35;
     public static double babyDamageScale = 0.5;
 
-    // Raid
-    public enum DeathRule { VANILLA, KEEP_SECURE, LOSE_EVERYTHING }
-    public static DeathRule raidDeathRule = DeathRule.LOSE_EVERYTHING;
-    public static double hideoutRadius = 30;
-    public static boolean raidHostility = true;
-    public static boolean huntingParties = true;
-    /** Raid minute each threat level (1-4) starts at. */
-    public static double[] threatMinutes = {5, 20, 40, 60};
-    public static double sleepHealPercent = 50;
+    // Danger (2.1)
     public static boolean distanceScaling = true;
-    public static double hideoutSpacing = 500;
-    public static int maxHideouts = 3;
-    public static double fobPauseMinutes = 15;
+    public static boolean elites = true;
+    public static boolean huntingParties = true;
+    /** Where the Wilds, Frontier and Far lands start, in blocks from world spawn. */
+    public static double[] distanceBands = {1000, 3000, 6000};
+    /** Most a mob's health and damage can be multiplied by distance, elites and monster pressure together (2.1.1). */
+    public static double[] distanceCaps = {4.0, 2.5};
+
+    // Home base (2.4) and camps (2.5)
+    public static double homeRadius = 30;
+    public static int maxBenches = 1;
+    /** No Home Bench, bed or camp within this many blocks of a Summoning Pedestal. */
+    public static double pedestalClearance = 100;
+    public static double campSafeRadius = 8;
+
+    public static double sleepHealPercent = 50;
     public static int spawnPoints = 3;
-    /** Far enough that the 500-block hideout spacing around each spawn point leaves room to build between them (2.4). */
-    public static double spawnDistance = 1000;
+    /** How far the other spawn points are from world spawn (2.3). */
+    public static double spawnDistance = 400;
     public static double spawnRadius = 24;
     public static double spawnRefillMinutes = 30;
-
-    /** Hideout Benches can't go within this many blocks of a Summoning Pedestal (2.5). */
-    public static double pedestalClearance = 100;
-    /** Raid minute a raid starts at in the Nether, the Frontier and the Far lands (threat 2 by default; 2.3.1). */
-    public static double netherThreatStart = 20;
-    /** Where the Wilds, Frontier and Far lands start, in blocks from world spawn (2.3.1). */
-    public static double[] distanceBands = {1000, 3000, 6000};
-    /** Most a mob's health and damage can be multiplied by threat and distance together (2.3.2). */
-    public static double[] distanceCaps = {4.0, 2.5};
 
     // Combat
     public static double healthBase = 300;
@@ -213,34 +208,25 @@ public final class Cfg {
         d("BabyWars", "BabyHealthScale", "Baby health relative to Joe's scaled health.", v -> babyHealthScale = v, () -> babyHealthScale);
         d("BabyWars", "BabyDamageScale", "Baby damage relative to Joe's scaled damage.", v -> babyDamageScale = v, () -> babyDamageScale);
 
-        s("Raid", "DeathRule", "What happens to your inventory when you die outside a hideout. VANILLA: normal drops. KEEP_SECURE: normal drops, but the secure pouch stays with you. LOSE_EVERYTHING: no drops; everything outside the secure pouch is gone.",
-                v -> raidDeathRule = DeathRule.valueOf(v.trim().toUpperCase(Locale.ROOT)), () -> raidDeathRule.name());
-        d("Raid", "SleepHealPercent", "Sleeping through the night heals each body part that isn't destroyed by this percent of its health.", v -> sleepHealPercent = v, () -> sleepHealPercent);
-        d("Raid", "HideoutRadius", "Radius (blocks) of a Hideout Bench's safe zone before Perimeter upgrades.", v -> hideoutRadius = v, () -> hideoutRadius);
-        b("Raid", "Hostility", "Threat rises the longer you stay out: elite mobs and hunting parties.", v -> raidHostility = v, () -> raidHostility);
-        b("Raid", "HuntingParties", "Send hunting parties at raiding players as threat rises.", v -> huntingParties = v, () -> huntingParties);
-        b("Raid", "DistanceScaling", "Hostile mobs get more health, damage and XP the further from world spawn they appear (Heartland, Wilds, Frontier, Far lands).",
+        b("Danger", "DistanceScaling", "Hostile mobs get more health, damage and XP the further from world spawn they appear (Heartland, Wilds, Frontier, Far lands).",
                 v -> distanceScaling = v, () -> distanceScaling);
-        d("Raid", "HideoutSpacing", "A Hideout Bench can't be placed within this many blocks of another hideout or a spawn point.", v -> hideoutSpacing = v, () -> hideoutSpacing);
-        i("Raid", "MaxHideouts", "How many Hideout Benches each player can have placed at once.", v -> maxHideouts = v, () -> maxHideouts);
-        d("Raid", "FobPauseMinutes", "Minutes of paused raid time each raid gets from FOB tables, shared between all of them. Refills when you extract.",
-                v -> fobPauseMinutes = v, () -> fobPauseMinutes);
+        b("Danger", "Elites", "Hostile mobs can spawn as 1- or 2-star elites, more often further out and twice as often at night.", v -> elites = v, () -> elites);
+        b("Danger", "HuntingParties", "At night in the Frontier and Far lands, hunting parties track players who are off safe ground.",
+                v -> huntingParties = v, () -> huntingParties);
+        s("Danger", "DistanceBands", "Where the Wilds, Frontier and Far lands start, in blocks from world spawn, comma-separated and ascending.",
+                v -> distanceBands = list(v, 3, true), () -> join(distanceBands));
+        s("Danger", "Caps", "Most a monster's health and damage can be multiplied by distance and elites together: health, damage.",
+                v -> distanceCaps = list(v, 2, false), () -> join(distanceCaps));
+        d("Home", "Radius", "Home base radius in blocks before Perimeter upgrades.", v -> homeRadius = v, () -> homeRadius);
+        i("Home", "MaxBenches", "Home Benches each player can have placed; placing one more picks up the oldest.", v -> maxBenches = Math.max(1, v), () -> maxBenches);
+        d("Home", "PedestalClearance", "No Home Bench, bed respawn or camp within this many blocks of a Summoning Pedestal (a boss dungeon).",
+                v -> pedestalClearance = v, () -> pedestalClearance);
+        d("Camp", "SafeRadius", "No hostile spawns within this many blocks of a lit camp.", v -> campSafeRadius = v, () -> campSafeRadius);
+        d("Health", "SleepHealPercent", "Sleeping through the night heals each body part that isn't destroyed by this percent of its health.", v -> sleepHealPercent = v, () -> sleepHealPercent);
         i("Spawn", "Points", "Fixed spawn points (with a supply shelter) built in a new world. 0 turns them off. Only read when the world is first started.", v -> spawnPoints = v, () -> spawnPoints);
         d("Spawn", "Distance", "How far the other spawn points are from world spawn (blocks).", v -> spawnDistance = v, () -> spawnDistance);
-        d("Spawn", "Radius", "Safe radius around each spawn point: no raid starts until you leave it.", v -> spawnRadius = v, () -> spawnRadius);
+        d("Spawn", "Radius", "Safe radius around each spawn point: hostile mobs don't spawn inside it.", v -> spawnRadius = v, () -> spawnRadius);
         d("Spawn", "RefillMinutes", "Empty spawn chests are restocked after this long.", v -> spawnRefillMinutes = v, () -> spawnRefillMinutes);
-        s("Raid", "ThreatMinutes", "Raid minute each threat level starts at, levels 1 to 4, comma-separated.",
-                v -> threatMinutes = parseThreat(v), () -> java.util.Arrays.stream(threatMinutes)
-                        .mapToObj(m -> m == Math.floor(m) ? String.valueOf((long) m) : String.valueOf(m))
-                        .collect(java.util.stream.Collectors.joining(",")));
-        d("Raid", "PedestalClearance", "A Hideout Bench can't be placed within this many blocks of a Summoning Pedestal (a boss dungeon).",
-                v -> pedestalClearance = v, () -> pedestalClearance);
-        d("Raid", "NetherThreatStart", "Minutes already on the threat timer when a raid starts in the Nether, the Frontier or the Far lands (20 = threat 2).",
-                v -> netherThreatStart = v, () -> netherThreatStart);
-        s("Raid", "DistanceBands", "Where the Wilds, Frontier and Far lands start, in blocks from world spawn, comma-separated and ascending.",
-                v -> distanceBands = list(v, 3, true), () -> join(distanceBands));
-        s("Raid", "DistanceCaps", "Most a monster's health and damage can be multiplied by threat and distance together: health, damage.",
-                v -> distanceCaps = list(v, 2, false), () -> join(distanceCaps));
         d("Combat", "HealthBase", "Player base max health, before food and the web.", v -> healthBase = v, () -> healthBase);
         d("Combat", "DamageScale", "Multiplier on vanilla damage, healing and monster health. Mobs already loaded keep their old health scale. Skill and weapon numbers assume 5, so other values throw the balance off.",
                 v -> damageScale = Math.max(0.1, v), () -> damageScale);
@@ -299,21 +285,6 @@ public final class Cfg {
                 .collect(java.util.stream.Collectors.joining(","));
     }
 
-    /** Four ascending minutes; anything malformed keeps the defaults. */
-    private static double[] parseThreat(String v) {
-        String[] parts = v.split(",");
-        if (parts.length != 4) {
-            return threatMinutes;
-        }
-        double[] out = new double[4];
-        for (int i = 0; i < 4; i++) {
-            out[i] = Math.max(0, Double.parseDouble(parts[i].trim()));
-            if (i > 0 && out[i] < out[i - 1]) {
-                return threatMinutes;
-            }
-        }
-        return out;
-    }
 
     public static Path dir() {
         return net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("seancraft");
@@ -344,10 +315,6 @@ public final class Cfg {
                 } catch (RuntimeException e) {
                     problems.add(entry.section + "." + entry.key + "=" + raw);
                 }
-            }
-            if (spawnDistance == 400) {
-                // The old default, from before spawn points moved out to make room for hideouts between them.
-                spawnDistance = 1000;
             }
             write(path);
         } catch (IOException e) {

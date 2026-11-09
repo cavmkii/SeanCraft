@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "seancraft:block/workshop_top",
+    "bottom": "seancraft:block/workshop_bottom",
+    "side": "seancraft:block/workshop_side",
+    "front": "seancraft:block/workshop_front"
+  }
+}

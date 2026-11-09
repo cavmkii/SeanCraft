@@ -76,7 +76,7 @@ public final class Cures {
         }
         if (!player.getAbilities().instabuild) {
             stack.shrink(1);
-            Tetris.pickup(player, back);
+            Tetris.give(player, back);
             if (!back.isEmpty()) {
                 player.drop(back, false);
             }

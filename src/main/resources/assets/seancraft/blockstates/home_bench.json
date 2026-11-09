@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/home_bench"
+    },
+    "facing=east": {
+      "model": "seancraft:block/home_bench",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/home_bench",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/home_bench",
+      "y": 270
+    }
+  }
+}

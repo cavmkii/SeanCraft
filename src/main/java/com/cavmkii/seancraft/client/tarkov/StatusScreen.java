@@ -157,7 +157,7 @@ public class StatusScreen extends Screen {
             mx += 22;
         }
         if (medSlots().isEmpty()) {
-            g.drawString(font, "none (Hideout Bench, Medstation)", lx, ly + 4, Kit.ASH, false);
+            g.drawString(font, "none (Home Bench, Medstation)", lx, ly + 4, Kit.ASH, false);
         }
 
         // Status effects, each with the cures you carry.

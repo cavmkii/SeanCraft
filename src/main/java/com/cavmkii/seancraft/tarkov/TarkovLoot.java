@@ -1,8 +1,6 @@
 package com.cavmkii.seancraft.tarkov;
 
 import com.cavmkii.seancraft.SeanCraft;
-import com.cavmkii.seancraft.tetris.GearSpec;
-import com.cavmkii.seancraft.tetris.Tetris;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
@@ -79,9 +77,7 @@ public final class TarkovLoot {
                 .add(entry(Items.STRING, 5, 1, 4))
                 .add(entry(Items.ARROW, 4, 4, 10))
                 .add(entry(Items.IRON_INGOT, 3, 1, 3))
-                .add(entry(Items.HONEY_BOTTLE, 2, 1, 1))
-                .add(entry(Tetris.GEAR.get(GearSpec.RIG_SCAV), 1, 1, 1))
-                .add(entry(Tetris.GEAR.get(GearSpec.PACK_SLING), 1, 1, 1));
+                .add(entry(Items.HONEY_BOTTLE, 2, 1, 1));
     }
 
     private static LootItem.Builder<?> entry(Item item, int weight, int min, int max) {

@@ -156,7 +156,7 @@ public final class ClientTracker {
     /** Top-left while you're out (raid or spawn), not in the hideout. */
     static void render(GuiGraphics g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui || mc.screen != null || ClientTarkov.raid.state() == 1) {
+        if (mc.player == null || mc.options.hideGui || mc.screen != null || ClientTarkov.place.home()) {
             return;
         }
         List<Entry> list = entries();

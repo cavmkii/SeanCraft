@@ -23,9 +23,6 @@ public final class ItemSize {
 
     public static int[] of(ItemStack stack) {
         var item = stack.getItem();
-        if (item instanceof GearItem gear) {
-            return new int[] {gear.spec.itemWidth, gear.spec.itemHeight};
-        }
         if (item instanceof TridentItem) {
             return new int[] {1, 4};
         }

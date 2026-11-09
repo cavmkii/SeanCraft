@@ -1,6 +1,6 @@
 # SeanCraft
 
-A Fabric mod for Minecraft Java 1.21.1. It turns survival into a raid game: you head out from a safe spot, loot what you can, and get back before things get bad. If you die out there, you lose your kit. It also adds a character system with a big passive tree, use-based skills, gear built from parts, body-part health, a Tetris-style inventory, and two NPCs who hate each other.
+A Fabric mod for Minecraft Java 1.21.1. Survival gets more dangerous the further you go from spawn, and at night. You build up one home base, set camps on the way out, and when you die your stuff waits in a grave you have to go back for. It also adds a character system with a big passive tree, use-based skills, gear built from parts, body-part health, an ecology model for grassland, and two NPCs who hate each other.
 
 Everyone needs the mod, the server and every player.
 
@@ -11,8 +11,10 @@ Everyone needs the mod, the server and every player.
    - [Fabric API](https://modrinth.com/mod/fabric-api)
    - [Better Combat](https://modrinth.com/mod/better-combat), which also needs [Player Animator](https://modrinth.com/mod/playeranimator) and [Cloth Config](https://modrinth.com/mod/cloth-config)
    - [Combat Roll](https://modrinth.com/mod/combat-roll)
+   - [YAGM](https://modrinth.com/mod/yagm) (graves), which needs [OctoLib](https://modrinth.com/mod/shatterbyte-lib) and [Architectury API](https://modrinth.com/mod/architectury-api)
+   - [Serene Seasons](https://modrinth.com/mod/serene-seasons), which needs [GlitchCore](https://modrinth.com/mod/glitchcore)
    - `seancraft-<version>.jar`
-3. Start a **new world**. Spawn points are only built in new worlds.
+3. Start a **new world**. Worlds from the raid versions aren't supported: the old grid inventory and hideout data don't carry over.
 
 To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar shows up in `build/libs/`.
 
@@ -31,22 +33,21 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 | Shift (over an item) | Full tooltip |
 
 The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY has everything on one screen:
-  - **Left (equipment):** your gear in boxes beside your actual character, who turns to follow the mouse. OFF is your off-hand, and MAIN shows whatever's in your selected hotbar slot. Under that, the secure pouch (its grid is kept on death), then your load and class, health, stamina, and Rage or mana if your skills use them. Hover the load for what it's costing you.
-  - **Middle top (crafting):** the crafting grid, always there. No mode to switch on. See Crafting below.
-  - **Middle bottom (player inventory):** your rig and pockets, with the backpack beside them, each with its own item next to its grid. A big backpack that won't fit beside them goes underneath, and the zone scrolls. The sort icon on the title sorts your grids. Things with no room show at the top as UNSORTED, with a DROP button.
-  - **Right (stash):** the hideout's stash, or the chest you opened when you're out in the world. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and REFILL STACKS, STASH ALL, TAKE ALL, sort and filter icons on its title. It's a list, not the chest's own layout: drop something on it and it goes into that tab's chest, or on ALL wherever the chest filters send it.
+  - **Left (equipment):** your armor in boxes beside your actual character, who turns to follow the mouse. OFF is your off-hand, and MAIN shows whatever's in your selected hotbar slot. Under that, your load and class, health, stamina, and Rage or mana if your skills use them. Hover the load for what it's costing you.
+  - **Middle top (crafting):** the crafting grid, always there. See Crafting below.
+  - **Middle bottom (player inventory):** the normal 27 slots. The sort icon on the title merges stacks and sorts by kind, then name.
+  - **Right (storage):** the chest you opened, or your stash at home once you've built a Storehouse. It has a search box, a tab for ALL and one per chest or barrel (right-click a tab to rename it), and REFILL STACKS, STASH ALL, TAKE ALL, sort and filter icons on its title. Some of those need a higher Storehouse; they're greyed out and the tooltip says which level.
   - **Bottom:** your hotbar in its own frame with number badges, the selected slot glowing, then the auto-refill toggles. Bottom left is the **GATHER LIST** button (see Gather list).
-  - **Station row** (top right, in a hideout only): one button per station in that hideout. Click one to open it; the open one shows its name.
-  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Click anywhere off the zones with something held to drop it, like vanilla. Every small icon has a tooltip. Item tooltips are short: the name and one line (what it does, or its damage). Hold **Shift** for the full thing: use time, size and stack size, durability, part levels, weight, which module you need to craft it, and the key hints. CHARACTER is the passive web with your level, attributes, stats and use-skills down the left (hover a skill to see what it does). Creative mode keeps the vanilla inventory.
+  - **Station row** (top right, at home only): one button per station in your home base. Click one to open it.
+  - The vanilla hotbar and hearts hide while any SeanCraft screen is up. Every small icon has a tooltip. Item tooltips are short: the name and one line. Hold **Shift** for the full thing: use time, stack size, durability, part levels, weight, which module you need to craft it, and the key hints. Creative mode keeps the vanilla inventory.
 
 ## What's different from vanilla
 
-### Raids, spawn and hideout
+### Danger, death and home
 
-- **Spawn points.** A new world gets 3 fixed spawn points, one at world spawn and two about 1,000 blocks out, on opposite sides, so there's room for a hideout between them. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies without a bed.
-- **Safe zones.** The area around a spawn point is safe, and so is your hideout. Anywhere else, you're **in raid**. The HUD in the bottom left says which one you're in, and a short banner at the top of the screen tells you when a raid starts or you extract.
-- **Threat.** The longer a raid goes, the worse it gets. Threat 1 hits at 5 minutes, 2 at 20, 3 at 40 and 4 at 60. Mobs start spawning as elites with more health and damage, and hunting parties come after you.
-- **Distance.** The further you get from world spawn, the tougher the monsters, and the more XP they give. The HUD shows which band you're in, and a banner pops up when you cross into a new one.
+There's no raid timer any more. Danger comes from how far out you are, the time of day, and what's around.
+
+- **Distance.** The further you get from world spawn, the tougher the monsters, and the more XP they give. The HUD in the bottom left shows which band you're in, and a banner pops up when you cross into a new one.
 
   | Band | Distance from spawn | Monster health | Monster damage | XP |
   |---|---|---|---|---|
@@ -55,25 +56,32 @@ The inventory screen has three tabs: INVENTORY, STATUS and CHARACTER. INVENTORY 
   | Frontier | 3,000–6,000 | +50% | +30% | +50% |
   | Far lands | 6,000+ | +100% | +50% | +100% |
 
-  Elites add on top of that, but a monster never gets past 4x health or 2.5x damage. In the Frontier and the Far lands, raids start at threat 2, and so does any raid in the Nether. Nether distances count 8x, like the travel.
-- **FOB tables.** Made at the Hideout Bench: 3 planks on top, stick / campfire / stick, then a stick in each bottom corner. While you're in the same chunk as one, the raid timer stops. Each raid only gets 15 minutes of that, shared between every table, and it fills back up when you extract. It doesn't count while a monster is within 16 blocks or for 10 seconds after you get hit. One per chunk, and not in a safe zone. It's not a safe zone itself, and it has no stash.
-- **Dying in raid.** By default you lose everything except what's in your secure pouch, and nothing drops. Dying in a safe zone is a normal death.
-- **Hideout.** Craft a Hideout Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your hideout. Chests and barrels inside it are your stash.
-  - Hideouts have to be at least 500 blocks from each other and from spawn points. If you try too close, the message says which way to go and how much further.
-  - The Hideout Bench is a 3x3 grid with a recipe book on the left, like a crafting table. Click a book entry to see its pattern as a ghost in the grid. The first rig, backpack and pouch, fire arrows, stations, modules and totems are made here.
-  - **Module stations.** What a module unlocks is made at that module's own block: meds at the Medstation, the bigger rigs, backpacks and pouches at the Workshop, the Intel module at the Perimeter. Using a built module opens its crafting grid, with UPGRADE to get to building it up; before it's built you get the build screen, with CRAFT to see what it'll make. Recipes it hasn't reached the level for show a lock and the level they need.
-  - You can have 3 Hideout Benches placed at once. Break one to move it. Anyone can use anyone's hideout as a safe zone.
-  - Only a bed inside a hideout sets your respawn point. You can still sleep in other beds.
-- **Hideout modules.** Each module is its own block. Craft it at the Hideout Bench, put it anywhere inside the hideout (one of each per hideout), then use it to build and upgrade it. Each level takes real time. You don't need everything at once: hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list (see below). Break a module and it keeps its level, so you can move it to another hideout.
-  - A module only works while its block is in the hideout. Hideouts from before module blocks get their old levels back when you place each block.
-- **Station tabs.** In your hideout, the Hideout Bench, Weapon Bench, crafting table and every module have tabs for each other, so you can hop between them from anywhere in the hideout without walking over. Each station shows up once it's within the hideout.
+  Nether distances count 8x, like the travel. A monster never gets past 4x health or 2.5x damage, elites included.
+- **Elites.** Monsters can spawn with one or two stars (gold name). Each star is +100% health and +50% damage. None in the Heartland. One star: 5% in the Wilds, 15% in the Frontier, 25% in the Far lands; two stars: 5% in the Frontier, 10% in the Far lands. Those double at night in the overworld. The Nether always uses the Far lands rates.
+- **Hunting parties.** At night in the Frontier or further, off safe ground, a party of 2–3 monsters can come for you, led by an elite. At most one a night. In the Nether they can come any time, about once every 10 minutes at most. Parties give up at dawn, and none come while you're in a boss fight. The mobs fit the biome (husks in the desert, strays in the snow, witches in swamps, and so on).
+- **Safe ground.** No hostile mob spawns at your home base, near a spawn point, or within 8 blocks of a camp. Mobs can still walk in.
+- **Dying.** You leave a grave (YAGM) with everything you had and half your XP. Anyone can open it, so a friend can bring your stuff home. There's no restore key: getting your gear back means going back for it. If you die in a boss arena, the grave goes just outside the ring.
+- **Spawn points.** A new world gets 3 spawn points, one at world spawn and two about 400 blocks out on opposite sides. Each has a small shelter with 3 chests and a barrel of starting gear, and the empty ones restock every 30 minutes. New players start at a random one, and so does anyone who dies with no bed or camp.
+- **Respawn.** Any bed sets your respawn, except within 100 blocks of a boss dungeon. So does a camp.
+- **Camps.** Craft a camp kit at the Home Bench (3 planks on top, stick / campfire / stick, then 3 planks) and set it down out in the world. A camp is a tent and a fire:
+  - it sets your respawn there, and using it sets it again;
+  - it counts as a fire and a roof for resting;
+  - you can change your skill loadout at one;
+  - no hostile mobs spawn within 8 blocks.
+  - One camp each. Setting down a new kit packs up the old one and gives it back. Sneak + use packs it up. Not within 100 blocks of a boss dungeon.
+- **Home base.** Craft a Home Bench (3 cobblestone on top, then plank / crafting table / plank, then 3 planks) and place it. Everything within 30 blocks is your home base.
+  - One Home Bench each. Place a second and your old one gets picked up and handed back, so moving house is easy. You can't put one inside someone else's base or within 100 blocks of a boss dungeon.
+  - The Home Bench is a 3x3 grid with a recipe book on the left. Fire arrows, stations, modules, totems and the camp kit are made here.
+  - **Module stations.** Each module is its own block. Craft it at the Home Bench, put it in your home base (one of each), then use it to build and upgrade it. Each level takes real time. Hit CONTRIBUTE to put in whatever you have from your inventory and stash, and once it's all in it starts building. TRACK puts what's still missing on your gather list. Break a module and it keeps its level, so you can move it. A built module also opens its own crafting grid; recipes it hasn't reached the level for show a lock.
+  - **Station tabs.** At home, the Home Bench, Weapon Bench, crafting table and every module have tabs for each other, so you can hop between them without walking over.
 
   | Module | What it does |
   |---|---|
-  | Workshop | Faster furnaces in the hideout; unlocks bigger pouches, rigs and backpacks |
-  | Medstation | Unlocks meds; bleeds stop and fractures heal in the hideout |
-  | Perimeter | Bigger hideout radius |
-  | Intel center | More calm time per raid; warns you about hunting parties |
+  | Storehouse | 1: every chest and barrel at home becomes one stash. 2: chest filters, ORGANIZE, and refill from the stash. 3: the stash at every station, so crafting and furnaces pull from it |
+  | Workshop | Furnaces at home cook 25/50/75% faster; level 3 halves Weapon Bench repair costs |
+  | Medstation | Unlocks meds; bleeds stop and fractures heal at home; level 3 gives regen at home |
+  | Perimeter | Bigger home radius: 48, 72, 96 |
+  | Map room | 2: a season and weather forecast when you get home, and everyone hears when a hunting party is after a friend. Level 1 is meant to share maps through JourneyMap; that part isn't built |
 
 ### Combat
 
@@ -109,7 +117,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Pierce ignores a quarter of armor.
   - Armor doesn't stop elemental damage. Each level of Fire, Blast or Projectile Protection gives 4 resistance points against its kind, through the same formula.
   - Monsters' armor uses the same formula.
-- **Fire arrows.** Made at the Hideout Bench: an arrow in each corner, coal or charcoal top middle, string in the centre. Makes 4. They hit with pierce plus some fire, and set what they hit alight. Bows with Flame add a smaller fire share.
+- **Fire arrows.** Made at the Home Bench: an arrow in each corner, coal or charcoal top middle, string in the centre. Makes 4. They hit with pierce plus some fire, and set what they hit alight. Bows with Flame add a smaller fire share.
 - **Other arrows** are at the crafting table now, 4 at a time, laid out like a vanilla arrow (tip over stick over feather): bodkin (iron nugget tip) ignores another 25% of armor; broadhead (iron ingot tip) makes bleeds half again as bad but gets through 10% less armor; blunt (leather tip) does blunt damage, so it breaks bones and staggers instead of bleeding.
 - **Potions.** One of each type every 5 minutes (long and strong versions count as the same type). Fire Resistance gives 20 fire resistance points instead of making you immune to fire and lava. Resistance adds 10 armor a level to every body part. Strength is 30% more damage a level instead of a flat bonus.
 - **The vanilla Mace.** Its smash bonus is capped at 50% and does nothing in a boss arena.
@@ -128,48 +136,30 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A Resting chip counts down while you wait.
   - Rested gives +50% health regen, +100% stamina regen and +50% skill XP.
   - It lasts 8 minutes, plus 1 minute for each point of comfort.
-  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built in the hideout you're in, plus 1 or 2 if the land around is Good or Remnant (see Ecology).
-  - It works away from a hideout too, like at a FOB table, but there's usually less comfort out there.
+  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built at the home base you're in, plus 1 or 2 if the land around is Good or Remnant (see Ecology).
+  - It works away from home too, and a camp counts as a fire and a roof, but there's usually less comfort out there.
 
 ### Inventory
 
-- **Grids.** Your inventory is a set of grids: pockets (5x2), a rig, a backpack, and a secure pouch. Items take up real space, so a sword is 1x3 and a chestplate is 3x3. The hotbar, armor and off-hand still work like vanilla.
-- **Controls** work like vanilla:
-  - click to pick up and click to put down;
-  - right-click picks up half, or puts down one while you keep holding the rest;
-  - **Shift**+click (or Ctrl) sends an item across;
-  - **1-9** puts the item you're hovering on that hotbar slot;
-  - **Q** drops one, Ctrl+Q drops the stack;
-  - **R** rotates;
-  - Esc lets go.
-- **Swapping.** Dropping something on a hotbar or armor slot that's already full swaps them, and you end up holding the item you bumped, like vanilla. Put it wherever you want, or let go and it stays where the new one came from.
-- **Auto-refill.** When the last item in a hotbar slot gets used up (a block placed, food eaten, a tool broken), more of the same comes up from your grids. The toggles next to HOTBAR turn it off, or let it pull from the stash too (off by default).
-- **Pickups** fill pockets, then rig, then backpack. Weapons and tools go to the hotbar first. If nothing has room, the item stays on the ground.
-- **Rigs and backpacks** have to be empty before you can take them off. You start with a Scav vest (4x2), a Sling bag (3x3) and a 2x2 pouch. Bigger ones are made at the Hideout Bench:
-  - Rigs: Chest rig (4x3), Carrier rig (5x3, Workshop 1), Assault rig (6x3, Workshop 2).
-  - Backpacks: Scav backpack (4x5), Pilgrim backpack (5x7, Workshop 1), Expedition pack (6x8, Workshop 3).
-  - Each one after the first in a line takes the empty one below it in the centre of its pattern, so you're trading up, not starting over.
-- **Chests and barrels** open on the INVENTORY tab as grids too. Where you put things stays put, while hoppers still work like normal. Each one has a SORT button (merges stacks and packs it tight) and a TAKE ALL button. In your hideout, every stash chest shows up there, and STASH ALL dumps your pockets, rig and backpack into them. REFILL STACKS tops up the part stacks you already carry (arrows, planks, bandages...) to full from the open chest, or from the whole stash in a hideout. It never hands you anything you weren't already carrying.
-- **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. Picking up half of a double chest leaves the other half as a single chest. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
-- **Large chests** show up as one Large Chest everywhere, whether you open it or see it from the stash.
-- **Naming chests.** Click a chest's name to rename it, then hit Enter. The name shows up next to a picture of the block, so you can tell a chest from a barrel at a glance.
-- **Chest filters** work like RimWorld stockpiles. FILTER on a chest lets you allow or disallow kinds of things: weapons, ammo, armor & gear, tools, food, meds, parts, blocks and materials.
-  - STASH ALL, and Shift-click with no chest open, put things where the filters say. Chests with narrower filters get first pick, so a weapons-only chest fills before a take-anything chest.
-  - ORGANIZE STASH moves anything sitting in the wrong chest to one that allows it, then tops up half-stacks across chests so the same item ends up in as few stacks as it can.
-  - Filters only steer automatic moves. You can always put anything anywhere by hand. Sneak + use with an empty hand opens the old chest screen.
-- **Vanilla screens** like the crafting table, furnace and anvil show your grids beside them. Click a grid item to grab it, then drop it in a slot, or the other way round.
-- **Furnaces** (and smokers and blast furnaces) list your fuel and anything that furnace can cook under the backpack, with a second row for each from the stash when you're in the hideout. Click one to put a stack in the right slot, or right-click for one. Tools, weapons and enchanted stuff are left off the fuel list so you don't burn your bow by accident.
-- **Crafting.** The grid sits at the top middle of the INVENTORY tab. It's 2x2 out in the world and 3x3 at a crafting table or in your hideout (the title says which). RECIPES opens the recipe book over the equipment side, so your bags and the stash stay in view while you drag stuff in: search, a CAN MAKE NOW box, folding categories, and every recipe, with ?????? for ones you haven't found. Right-clicking a crafting table opens the inventory with the book already open. RECIPES again, or Esc, closes it.
-  - Pick a recipe and its pattern shows as faded icons in the grid, with a faded result. NEEDS beside the result lists each ingredient with have / need, green when you've got enough, red with an X when you're short. There's no craft button and nothing fills the grid for you; you lay it out yourself and click the result for one, or Shift-click for as many as you can.
-  - The grid works like vanilla: left-click picks up a stack, right-click picks up half; holding something, right-click puts down one. Hold the left button and drag across cells to split the stack evenly, or the right button to put one in each. A different item dropped on a full cell swaps with it. Shift-click a cell to send it back to your inventory. The same drag works on the hotbar. CLEAR puts everything in the grid back.
-  - Hover a recipe and its layout shows in the tooltip and as dimmed icons in the empty grid squares; click it to keep the ghost up while you lay it out. The Hideout Bench and Weapon Bench books do the same. Have/need counts include your hotbar, grids and stash.
-  - The pin button next to RECIPES (while a recipe is picked) puts its ingredients on your gather list.
-  - Anything left in the grid goes back when you close the screen.
-  - You find a recipe by picking up one of its ingredients. Recipes that need a 3x3 grid show a lock while you only have 2x2.
-  - 3x3 recipes need a crafting table within 6 blocks, or you have to be in the hideout. Otherwise you get 2x2.
-  - Outside a hideout, the Hideout Bench is pinned to the top of the book.
-- **Gather list.** It's a to-do list for materials. Pin a recipe with the pin button by RECIPES, hit TRACK on a hideout module (it adds whatever hasn't been put in yet), or hover an item and press T. To change it, hit **GATHER LIST** at the bottom left of the inventory: each line has - and + (Shift does steps of 10) and an X to take it off, and there's CLEAR ALL. Pressing T again over something that's already on the list takes it off too. While you're out of the hideout, the list shows in the top left (under the body figure and food) with how many you're carrying, and each line turns green when you have enough. It holds up to 6 things.
-- **Ammo.** Bows and crossbows pull arrows from your rig, pockets or backpack.
+- **It's the vanilla inventory:** 27 slots, the hotbar, armor and off-hand. No grids, rigs, backpacks or pouches any more.
+- **Controls** work like vanilla: click, right-click for half or one, drag to split, **1-9** to put the hovered item on that hotbar slot, **Q** drops one, Ctrl+Q the stack.
+- **Shift-click** moves things across:
+  - from a chest or the stash into your inventory;
+  - from your inventory into the open chest or stash;
+  - with nothing open, from the main slots to the hotbar (armor goes on if it fits), and from the hotbar to the main slots.
+- **Auto-refill.** When the last item in a hotbar slot gets used up (a block placed, food eaten, a tool broken), more of the same comes up from your main slots. The toggles next to the hotbar turn it off, or let it pull from the stash too (off by default; needs a Storehouse).
+- **Ammo.** Bows and crossbows pull arrows like vanilla. The stack your bow will shoot next gets a green outline.
+- **Chests and barrels** open on the INVENTORY tab as a list. Each one has a SORT button and a TAKE ALL button. REFILL STACKS tops up the part stacks you already carry (arrows, planks, bandages...) to full from the open chest, or from the stash at home with Storehouse 2. It never hands you anything you weren't already carrying. STASH ALL (at home) puts your 27 main slots into the stash and leaves the hotbar alone.
+- **Carrying chests.** Shift + left-click a chest or barrel to pick it up with everything in it, and Shift + right-click to set it down again. While you carry it you walk slowly and can't sprint, switch hotbar slots, use items, fight, mine or open any menus. If you die carrying one, it and its contents drop where you fell. Spawn point chests can't be carried off.
+- **Naming chests.** Right-click a chest's tab to rename it, then hit Enter.
+- **Chest filters** (Storehouse 2) work like RimWorld stockpiles: allow or disallow weapons, ammo, armor & gear, tools, food, meds, parts, blocks and materials. STASH ALL and shift-click into the stash put things where the filters say, narrower filters first. ORGANIZE moves anything in the wrong chest to one that allows it and merges half-stacks. Filters only steer automatic moves.
+- **Furnaces** (and smokers and blast furnaces) show your fuel and anything that furnace can cook beside it. Click one to put a stack in the right slot, or right-click for one. With Storehouse 3 there's a second row from the stash. Tools, weapons and enchanted stuff are left off the fuel list.
+- **Crafting.** The grid sits at the top middle of the INVENTORY tab. It's 2x2 out in the world and 3x3 at a crafting table or at home (the title says which). RECIPES opens the recipe book over the equipment side: search, a CAN MAKE NOW box, folding categories, and every recipe, with ?????? for ones you haven't found. Right-clicking a crafting table opens the inventory with the book already open.
+  - Pick a recipe and its pattern shows as faded icons in the grid. NEEDS beside the result lists each ingredient with have / need, green when you've got enough, red when you're short. You lay it out yourself and click the result for one, or Shift-click for as many as you can.
+  - Have/need counts include your inventory, and the stash with Storehouse 3.
+  - The pin button next to RECIPES puts the recipe's ingredients on your gather list.
+  - Until you've placed a Home Bench, it's pinned to the top of the book.
+- **Gather list.** A to-do list for materials. Pin a recipe, hit TRACK on a module, or hover an item and press T. Hit **GATHER LIST** at the bottom left of the inventory to change it: each line has - and + (Shift does steps of 10) and an X, and there's CLEAR ALL. Away from home it shows in the top left with how many you're carrying, green when you have enough. Up to 6 things.
 
 ### Health
 
@@ -201,13 +191,13 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - milk clears everything;
   - honey cures poison;
   - an antidote (made at the Medstation) cures every bad effect.
-- **Sleeping** through the night heals every body part that isn't destroyed by 50% of its max (`Raid.SleepHealPercent`). Destroyed ones still need surgery, and sleep can't get past lasting damage.
+- **Sleeping** through the night heals every body part that isn't destroyed by 50% of its max (`Health.SleepHealPercent`). Destroyed ones still need surgery, and sleep can't get past lasting damage.
 
 ### Weapons and armor from parts
 
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bows, crossbows, shields and metal armor are made from parts. The vanilla recipes for them are gone.
 - Everything happens at the **Weapon Bench** (a smithing table and a crafting table, shapeless). The crafting table is vanilla only, except for the **wooden club**: 2 logs over a stick, so you've got something to hit with before you find a bench. It's blunt and has no parts.
-- **Stash and hotbar on station screens.** On the Weapon Bench, the Hideout Bench, a crafting table, anvil or any other screen that would show the vanilla inventory, the box where it used to be is your hideout **STASH** (when you're in a hideout): click an item to take a stack onto your cursor, right-click for one, or drop whatever you're holding on the box to put it away (it goes where the chest filters say). The `>` cell flips pages when there's more than fits. The hotbar row under it works like normal.
+- **Stash and hotbar on station screens.** On the Weapon Bench, the Home Bench, a crafting table, anvil or any other screen that would show the vanilla inventory, the box where it used to be is your **STASH** (at home, with Storehouse 3): click an item to take a stack onto your cursor, right-click for one, or drop whatever you're holding on the box to put it away (it goes where the chest filters say). The `>` cell flips pages when there's more than fits. The hotbar row under it works like normal.
 - **Names.** The BUILD slots say which part they take when the names differ, like "String (wrap)", "Grip (handle)", "Stock (handle)" or "Rim (guard)", and the parts book lists them that way too ("Handle / grip", "Wrap / string").
 - **PARTS tab.** A 3x3 grid with a book on the left. Parts are made by pattern: lay the material out in the part's shape and take the part from the result slot. The material you use decides the part's material, and every square with the same letter has to be the same material. Click a part in the book to see its pattern as a ghost.
   - The letters: M is metal (copper ingot, iron ingot, gold ingot, diamond), W is wood (planks, logs, bone, blaze rod, breeze rod), H is hide (string, leather, rabbit hide, phantom membrane, armadillo scute), G is a gem (quartz, lapis, amethyst shard, prismarine shard, echo shard), C a catalyst, S a stick.
@@ -222,7 +212,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   1. Pick what to build. You get an outline of it, with each part's slot sitting where that part goes: blade on top, guard across, grip and pommel below, and so on.
   2. Empty slots show a faded example of the part that goes there. Hover one for its name, and the plate slot shows how many plates it takes.
   3. Drop the parts in and take the weapon from the result slot. The blade, axe head or plates decide what you get (copper makes the stone version); the other parts can be any material. If the result slot stays empty, hover it to see what's missing.
-- **REPAIR tab.** Like an anvil: the item on the left, its striking part's material next to it, the repaired item on the right. 1 material per 25%.
+- **REPAIR tab.** Like an anvil: the item on the left, its striking part's material next to it, the repaired item on the right. 1 material per 25%, or per 50% on a bench at home with Workshop 3.
 - The standard parts give you exactly the vanilla item. Other materials change damage, swing speed, durability, armor and weight.
 - **Weapon families.** Each one has its own moveset (from Better Combat), damage type and base numbers. At iron:
   - Dagger (knife blade, handle): 20 damage, 2 swings a second, pierce and slash. Quick strikes leave enemies open again fast, and hits from behind do 50% more.
@@ -248,7 +238,6 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - Put an existing item in the left slot on BUILD and its parts show on its outline. You can swap them out; level a part on the PARTS tab.
 - **Requirements.** Rung 2 weapons want 15 in their scaling attribute and rung 3 want 30 (half of each for split weapons like the sword). Under that, they do 30% less damage and cost 30% more stamina. The tooltip shows it, red when you're short.
 - **Wear.** Part-built gear never breaks. At zero durability it works at half strength (half damage, half armor, half block) until you repair it on the REPAIR tab.
-- **Recovery.** When part-built gear is lost on a raid or boss death, its striking part (or the armor plates) comes back at level 1 in a Recovery crate in the hideout you respawn at. The crate appears beside the Hideout Bench; use it to take your parts.
 - Vanilla swords, axes, bows, crossbows and shields you pick up turn into part-built items with their standard parts.
 - Swords, axes, daggers, maces, warhammers, greatswords, halberds, spears, pikes, bucklers, tower shields, throwing knives, javelins, boomerangs, wands and staves are drawn from the parts actually in them, so a swapped blade shows.
 
@@ -265,7 +254,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Agility: crit chance, swing speed, faster meds, and Agility weapons and skills cost up to 50% less stamina.
   - Intelligence: more mana and faster regen, shorter cooldowns, faster skill XP, and longer food, Rested and painkillers.
 - **The web (K)** has 120 nodes in six regions around a ring. At first you only see your starter web, your origin's home region, with a faint outline of the rest. Every node does something on its own: damage, health, stamina, elemental resistance, bonuses that scale with an attribute, keystones with a real drawback, and active skills.
-- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being in a hideout. It gives you a title, opens the whole web (with a zoom-out the first time), opens your ultimate (V), and opens the first of your specialization's three signature nodes at the outer edge of its region. You get one specialization.
+- **Specialization.** Your starter web ends at three gates, one for each of your origin's specializations. Taking one needs level 20, any tier 1 boss trophy, and being at your home base. It gives you a title, opens the whole web (with a zoom-out the first time), opens your ultimate (V), and opens the first of your specialization's three signature nodes at the outer edge of its region. You get one specialization.
 - **Milestones.** Mastery (level 40 and any tier 2 trophy) opens your second signature node and ranks your ultimate up; Capstone (level 60 and a tier 3 trophy) opens the third and ranks it up again. Tier 2 and 3 bosses aren't in yet, so for now only the first step is reachable.
 
   | Specialization | Signature nodes (specialization / mastery / capstone) | Ultimate (cost) | Mastery / capstone rank |
@@ -281,7 +270,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   | Cleric | Meds apply and heal 30% better / surgical kits leave 15% lasting damage instead of 35% / you and players near you regenerate | Miracle (80 mana): revives every destroyed part on players near you, with lasting damage | lasting damage halved / also clears fractures |
 
   Ultimates recharge in 90 seconds, 75 at mastery and 60 at capstone.
-- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes in a hideout. Shift-click a learned skill on the web to rank it up, up to 4, for a point each. Each rank does one specific thing (the web tooltip says what the next one is); there's no flat bonus per rank any more.
+- **Skills and loadout.** Learned skills go in three slots (Z, X, C); V is the ultimate. You can learn more than you can equip, but the loadout only changes at home or at a camp. Shift-click a learned skill on the web to rank it up, up to 4, for a point each. Each rank does one specific thing (the web tooltip says what the next one is); there's no flat bonus per rank any more.
 - **Paying for skills.** Warrior skills cost Rage, Ranger stamina, Mage mana. The in-between regions pay from either of two pools, whichever is fuller right now: Duelist Rage or stamina, Shadow stamina or mana, Templar mana or Rage. Above each slot is a little plate with the cost: one icon and the number, or for those regions both icons with the one it'll use lit.
 - **What hands you need.** Warrior and Duelist skills need a melee weapon in hand, Ranger skills a bow or crossbow, Mage skills a wand or staff. Shadow and Templar need nothing. No skill makes you invulnerable (that's the roll's job) and none heals.
 - **Skill damage** is built on the gear in your hand. W is your weapon's damage, SP is spell power (a staff bolt's 35 times your crystal's factor; 0 without a wand or staff), and Shadow and Templar use whichever is higher ("power"). On top of that, every skill gets +1% per point of its region's attributes, spell-damage nodes and Casting.
@@ -315,7 +304,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
 - **Resources.** Rage (Strength skills) starts at 100, Strength raises it; +5 per hit you land and +10 per hit you take, and it drains 10 a second after 5 seconds out of combat. Mana (Intelligence skills) starts at 100, Intelligence raises it. Stamina is everyone's.
 - **Crits.** Every melee hit and arrow has a chance to crit. You start at 5%, Agility adds to it, and it caps at 75%. A crit does +50% damage, plus 0.25% per point of Strength. Some web nodes add more of both. Your numbers are on the CHARACTER tab.
 - **Use-skills** level up as you use them: swords, axes, blocking, mining, bows & crossbows, running, sneaking, swimming, enchanting, brewing, casting and farming. You lose 5% of your skill progress when you die. Firing a grappling hook (from the Grappling Hook Mod) also trains bows & crossbows.
-- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) inside a hideout. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
+- **Respec.** Use the Altar of Regret (2 gold ingots and a book over 3 crying obsidian) at your home base. It wipes your web and specialization, frees all your attribute points to place again (the [+] buttons on the web screen), and kills you. Below level 21 you get every web point back. From 21 you get 75% back, and from 41 you get 50% and it also needs an Orb of Regret. Your origin stays, and the whole web stays open.
 - **Old characters** get their web points back once, since the web's layout changed, and their attribute points from the levels they already have. They pick an origin like everyone else.
 
 ### World
@@ -339,29 +328,28 @@ The world keeps track of its wildlife and soil, even where nobody is. It's split
 - **Pests.** Wheat gets aphids, worse on big wheat fields. Bats eat them, and how many bats a patch has depends on caves and trees nearby, so a field beside a bat cave is protected. You'll see specks over badly hit wheat.
   - **Insecticide** (Workshop 1: fermented spider eye, poisonous potato, glass bottle; makes 2) knocks the aphids down, but it kills the bats too, and the aphids come back faster than the bats do. Spray the same patch again and again and they build resistance.
   - **Bat guano** drops under roosting bats. It's a fast fertilizer.
-- **Soil kit** (Hideout Bench: iron nugget over glass bottle over paper). Use it on the ground to read the patch: nitrogen, phosphorus, organic matter, moisture, what's holding a crop back there, and the patch's ecosystem quality with what's dragging it down.
+- **Soil kit** (Home Bench: iron nugget over glass bottle over paper). Use it on the ground to read the patch: nitrogen, phosphorus, organic matter, moisture, what's holding a crop back there, and the patch's ecosystem quality with what's dragging it down.
 - **Ecosystem quality** runs 0 to 100: Degraded, Weedy, Fair, Good, Remnant. It's built from how many kinds of plants there are and how picky they are (each plant has a score: grass and dandelions 0, lily of the valley 6, the prairie plants 5 to 9), threats nearby (cropland, roads, buildings, livestock pens, villages), and soil.
   - **Prairie plants:** big bluestem, compass plant, butterfly milkweed, pale purple coneflower, rattlesnake master and leadplant. Remnant prairie patches of them generate in plains, savannas and meadows; that's where the seed comes from. Big bluestem builds soil, and leadplant adds nitrogen.
   - Prairie needs fire or grazing every so often. Go 40 days without either and the prairie plants die back to grass. Disturb it more often than every 5 days and they won't spread. In between, they slowly spread into the grass around them.
   - Too much nitrogen also kills them off and drags quality down.
-  - A Good patch nearby makes nearby crops yield up to 15% more (Remnant: 25%) and slows pests, holds more rabbits, and adds 1 comfort to a hideout beside it (Remnant: 2).
-- **Seasons.** With [Serene Seasons](https://modrinth.com/mod/serene-seasons) installed (it's optional), rabbits breed in spring and summer, aphids peak in summer and die back in winter, and prairie plants only spread in spring and summer.
-- Inside a hideout, nothing turns to dirt from overgrazing and the prairie plants don't die back, but the soil and animals still run.
+  - A Good patch nearby makes nearby crops yield up to 15% more (Remnant: 25%) and slows pests, holds more rabbits, and adds 1 comfort to a home base beside it (Remnant: 2).
+- **Seasons.** Serene Seasons drives the year: rabbits breed in spring and summer, aphids peak in summer and die back in winter, and prairie plants only spread in spring and summer.
+- Inside a home base, nothing turns to dirt from overgrazing and the prairie plants don't die back, but the soil and animals still run.
 
 ### Bosses
 
-- **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Hideout Bench says roughly how far and which way, and crafting the totem gives you a map to it.
+- **Dungeons.** Each boss has one dungeon in its home biome, out in its tier's distance band (tier 1 is 500 to 2,000 blocks from spawn). It gets built the first time someone comes near it. The totem's entry at the Home Bench says roughly how far and which way, and crafting the totem gives you a map to it.
   - Mark: a sandy landing on a beach or river mouth. Daylan: a photo-shoot clearing in a cherry grove. Bo Daddy: a lit cavern dug in at the edge of the deep dark. It's walled in, so you tunnel to it.
-  - No Hideout Bench within 100 blocks of a dungeon.
+  - No Home Bench within 100 blocks of a dungeon.
   - **Custom dungeons.** Build one in a creative world and save it with a structure block named `seancraft:dungeon/<boss>` (`mark`, `daylan` or `bo_daddy`). Copy the saved `.nbt` from the world's `generated` folder into `src/main/resources/data/seancraft/structure/dungeon/`. From then on that boss's dungeon is your build instead of the built-in one. The bottom layer is the floor, set at ground level (at the site's depth for Bo Daddy), and the Summoning Pedestal goes wherever you put one in it, or in the middle if you didn't. Keep the 40-block ring in mind.
 
-- **Summoning.** Craft the boss's totem at the Hideout Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
+- **Summoning.** Craft the boss's totem at the Home Bench and use it on a Summoning Pedestal. The boss rises after 3 seconds. The totem is used up. Beaten bosses can be summoned again.
 - **The arena** is a ring 40 blocks across around the pedestal. Everyone inside sees the boss bar.
   - While the boss is alive, nobody can break or place blocks in the ring.
   - Hits from outside the ring do nothing.
   - The boss walks back if you pull it out, and it never chases you out.
   - It can't be put in a boat or minecart.
-  - Raid threat stops rising while you're in the ring.
 - **How bosses fight.** A boss moves into position, picks an attack, winds it up (arm raised, sounds, particles), strikes, then stays open for a moment. Touching it doesn't hurt; only its attacks do. At set health it changes phase: a few seconds where it can't be hurt, then new attacks. Hits it's weak to burst with crit sparks; resisted ones spark dully.
 - **Groups.** Each extra player who has been in the ring adds 85% boss health and 10% damage, and the boss attacks more often. It counts up to 6 players.
 - **Dying in a boss fight** costs a random third of what you carry; the rest drops where you fell, so you can run back. The fight keeps going while anyone is in the ring. If the ring is empty for 30 seconds, the boss leaves and the totem is gone.
@@ -390,7 +378,7 @@ The world keeps track of its wildlife and soil, even where nobody is. It's split
   - His heavy hits stagger you for a moment.
   - Three sculk shriekers sit around the stage. Every roar and Drop fills them up, and once they're full the whole arena pulses with Darkness every 5 seconds until someone breaks a shrieker. The Follower Lantern blocks it.
   - Drops: the Subwoofer (shows every mob within 32 blocks through walls for 5 seconds, 30 second cooldown), and on your first kill the Too Much Soul trophy and the "Twinkle (Bo Daddy Cover)" music disc. Also copper, leather and sometimes amethyst.
-- **Trophy powers.** Craft a Trophy Rack at the Hideout Bench (6 planks, an item frame, 2 iron) and put it in a hideout.
+- **Trophy powers.** Craft a Trophy Rack at the Home Bench (6 planks, an item frame, 2 iron) and put it in your home base.
   - Use it with a trophy to put the trophy on the rack. Use it empty-handed to choose that trophy's power, and sneak to take a trophy back.
   - Press Y to use your power: 5 minutes on, then 20 minutes to recharge.
   - Old Salt (Mark): Tailwind, faster swimming.
@@ -399,7 +387,7 @@ The world keeps track of its wildlife and soil, even where nobody is. It's split
 
 ### Joe and Sean
 
-- **Joe** is a small green goblin who wanders around looking for Sean, says stuff in chat, throws up, and steals from your pockets, rig or backpack (never your hotbar, gear or pouch). He leaves you alone unless you hit him, or unless someone says "baby wars" in chat. When he dies he drops everything he stole. He gets stronger as players progress.
+- **Joe** is a small green goblin who wanders around looking for Sean, says stuff in chat, throws up, and steals from your main inventory (never your hotbar or what you're wearing). He leaves you alone unless you hit him, or unless someone says "baby wars" in chat. When he dies he drops everything he stole. He gets stronger as players progress.
 - **Sean** is a travelling merchant. He sells Soda, Merch, a Glock, a Restraining Order (keeps Joe away), Diddy Oil and the 67 sword, all for emeralds.
 - **Fights.** When Joe and Sean get close, they fight. There are spells everywhere, and anyone nearby gets hit too.
 - **The Baby Wars.** Say "baby wars" 3 times in an hour and they start:
@@ -415,12 +403,12 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 
 - **Config file:** `config/seancraft/seancraft.properties`. It's created on first run, and every setting has a comment. Run `/seancraft reload` after changing it.
 - **Common changes:**
-  - `Raid.DeathRule`: `LOSE_EVERYTHING`, `KEEP_SECURE` (normal drops, but you keep the pouch), or `VANILLA`.
-  - `Raid.DistanceScaling`: turn the distance bands off.
-  - `Raid.HideoutSpacing` (500), `Raid.MaxHideouts` (3) and `Raid.FobPauseMinutes` (15).
-  - `Raid.ThreatMinutes`: when each threat level starts (default `5,20,40,60`).
-  - `Spawn.*`: number of spawn points, distance (1000), safe radius, restock time. A config still on the old 400 is moved to 1000.
-  - `Raid.PedestalClearance` (100), `Raid.NetherThreatStart` (20, the raid minute you start at in the Nether, Frontier and Far lands), `Raid.DistanceBands` (`1000,3000,6000`) and `Raid.DistanceCaps` (`4.0,2.5`, the most threat and distance together can multiply a monster's health and damage).
+  - `Danger.DistanceScaling`, `Danger.Elites` and `Danger.HuntingParties`: turn each of those off.
+  - `Danger.DistanceBands` (`1000,3000,6000`) and `Danger.Caps` (`4.0,2.5`, the most distance and elite stars together can multiply a monster's health and damage).
+  - `Home.Radius` (30, before Perimeter), `Home.MaxBenches` (1) and `Home.PedestalClearance` (100, no Home Bench, bed respawn or camp that close to a boss dungeon).
+  - `Camp.SafeRadius` (8) and `Health.SleepHealPercent` (50).
+  - `Spawn.*`: number of spawn points, distance (400), safe radius, restock time.
+  - YAGM's own config is overridden on every start: graves open to anyone, 50% XP kept, no restore key.
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
   - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
   - `Ecology.*`: `Enabled`, `PatchChunks` (4, patch size in chunks; changing it starts the model over), `TickBudgetMs` (2), `DayScale` (1; raise it to speed everything up), `CatchUpMaxDays` (30), `QualityZ` and `QualityK` (2.5, 0.5).
@@ -437,8 +425,9 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 
 ## Works with
 
-- **Serene Seasons:** optional. With it, the ecology follows its seasons (see Ecology).
-- **FallingTree:** trees you chop go into your grids, and axes made from parts work with it.
+- **YAGM:** required, for graves (see Dying).
+- **Serene Seasons:** required. The ecology and the Map room forecast follow its seasons.
+- **FallingTree:** trees you chop go into your inventory, and axes made from parts work with it.
 - **Better Combat and Combat Roll:** required (see Combat).
 - **Grappling Hook Mod:** needs Forge Config API Port too. Hooks go to your hotbar, and using them trains bows & crossbows.
 
@@ -446,6 +435,6 @@ FallingTree and the Grappling Hook Mod were checked by reading their code, and n
 
 ## Custom icons
 
-Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons are layered from the pack's part textures, so they change look when you swap parts. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection and anything secure, blood for danger and the raid, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
+Most items, parts and station blocks now use the SeanCraft asset pack (Appendix C palette). The part-built weapons are layered from the pack's part textures, so they change look when you swap parts. Station blocks face you when placed. The screens and HUD are drawn with the pack's GUI kit, following the UI spec (Appendix C, v16): forged-iron panels, soot slots, one gold accent, and colours that always mean the same thing (gold for selection, blood for danger, injuries and graves, moss for stamina and "enough", ember for rage, blue for mana, cyan for painkillers). Headings use Jacquard 12 (OFL, in `assets/seancraft/font/`). The pack's vanilla theme (buttons, hotbar, hearts, XP bar, boss bars) comes built in and is on by default; turn off "SeanCraft vanilla theme" under Options > Resource Packs if you don't want it.
 
 A few items still borrow a vanilla texture (bow limbs, for one). To give one its own icon, drop a 16x16 PNG named after the item into `src/main/resources/assets/seancraft/textures/item/` and the build uses it. See [ICONS.md](ICONS.md) for the rules and the full list of item names.
