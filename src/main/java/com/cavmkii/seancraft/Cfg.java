@@ -316,6 +316,17 @@ public final class Cfg {
                     problems.add(entry.section + "." + entry.key + "=" + raw);
                 }
             }
+            // Config version 2: the spawn distance default went from 1000 back to 400 (v23). A file older than that
+            // still on exactly 1000 is the old default, so it moves; after this the file says version 2.
+            int version = 1;
+            try {
+                version = Integer.parseInt(props.getProperty("ConfigVersion", "1").trim());
+            } catch (NumberFormatException ignored) {
+                // treat as old
+            }
+            if (version < 2 && spawnDistance == 1000) {
+                spawnDistance = 400;
+            }
             write(path);
         } catch (IOException e) {
             return "Couldn't read " + path + ", using defaults: " + e.getMessage();
@@ -331,6 +342,7 @@ public final class Cfg {
         }
         try (Writer w = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             w.write("# SeanCraft settings. Server-side only. Reload in-game with /seancraft reload\n");
+            w.write("# Which version of this file it is, for moving old defaults. Don't change it.\nConfigVersion=2\n");
             for (Map.Entry<String, List<Entry>> section : bySection.entrySet()) {
                 w.write("\n# ---- " + section.getKey() + "\n");
                 for (Entry entry : section.getValue()) {

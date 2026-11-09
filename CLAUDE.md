@@ -25,6 +25,8 @@ Fabric 1.21.1 mod. Package `com.cavmkii.seancraft`, mod id `seancraft`. The GitH
 - `ecology/`: design doc 17, phases 1 (the grassland loop) and 2 (water and space: runoff routed downhill by patch height, algae/oxygen/fish in `Model.stepWater`, dispersal and connectivity in `Ecology`; fishing via `EcoFishingMixin`). `Ecology` holds patch storage (`EcoData`, one saved file per dimension), the tick budget, sampling, crop hooks and the wildlife sampler; `Model` is the population and soil equations; `Quality` the 0-100 score; `Params` the tuning, overridable from `data/seancraft/ecology/params.json`. Debug with `/seancraft eco patch|step|set`.
   - Serene Seasons is a hard dependency but read by reflection (`Seasons`); it and GlitchCore are `modLocalRuntime` in dev.
 - `compat/GraveCompat.java`: YAGM (required) handles death. We set its config on server start and move graves out of boss rings. In dev, OctoLib's nested snakeyaml is added as `localRuntime` by hand.
+- Dev runs also load Terralith 2.5.8 (`modLocalRuntime`, test only) to match players' terrain. Its world-gen datapack shows an experimental-settings warning on create and load; click through. The current Terralith and Tectonic need Fabric Loader 0.17+/0.18 and newer Loom (their `.ct` class tweakers), which this build doesn't have.
+- `Cfg` has a `ConfigVersion` line; bump it and add a step in `Cfg.load` when a default changes and old files should move.
 - Dev runs pick a random player name, so a reloaded world has a new player.
 - UI spec: the user supplies it in zip packs (UI-SPEC.md plus mock-ups). It isn't in the repo.
 

@@ -806,7 +806,8 @@ public class TarkovScreen extends Screen {
                 : sh2 ? "Organize: merge and sort across the stash" : "Organize needs a Storehouse level 2");
         iconButton(g, "take_all", stashButtonX(2), by, 12, !cs.isEmpty(), mx, my, chestTab ? "Take all from this chest" : "Take all from every chest");
         iconButton(g, "stash_all", stashButtonX(3), by, 12, hideout, mx, my,
-                hideout ? "Stash all: your main inventory (not the hotbar)" : "Stash all: at your home base only");
+                hideout ? "Stash all: your main inventory (not the hotbar)"
+                        : ClientTarkov.place.home() ? "Stash all needs a Storehouse at your home base (level 1)" : "Stash all: at your home base only");
         boolean refillOk = !cs.isEmpty() && (!hideout || sh2);
         iconButton(g, "refill", stashButtonX(4), by, 12, refillOk, mx, my, hideout && !sh2 ? "Refill from the stash needs a Storehouse level 2"
                 : "Refill stacks: top up the partial stacks you carry from " + (hideout ? "the stash" : "this container"));
