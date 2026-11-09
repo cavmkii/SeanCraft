@@ -198,6 +198,14 @@ public final class Ecology {
 
     private static final int[][] SIDES = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
+    /**
+     * A chunk that is fully loaded right now. Level.hasChunk only says one is on its way; reading a chunk that isn't
+     * finished makes the server thread stop and finish it (or generate it) on the spot, which is a lag spike.
+     */
+    static boolean ready(ServerLevel level, int cx, int cz) {
+        return level.getChunkSource().getChunkNow(cx, cz) != null;
+    }
+
     public static boolean holdsWater(Patch p) {
         return p != null && p.sampled && p.water >= Params.waterMin;
     }
@@ -584,6 +592,7 @@ public final class Ecology {
         double grass = 0, crop = 0, wheat = 0, shrub = 0, forest = 0, water = 0, built = 0, bare = 0, path = 0;
         int caves = 0;
         double height = 0;
+        BlockPos lastLoaded = null;
         int nearWater = 0, buffered = 0;
         Map<String, Integer> plants = new HashMap<>();
         Set<String> builtSeen = new java.util.TreeSet<>();
@@ -591,7 +600,7 @@ public final class Ecology {
         for (int i = 0; i < SAMPLE_COLUMNS; i++) {
             int x = x0 + random.nextInt(size);
             int z = z0 + random.nextInt(size);
-            if (!level.hasChunk(x >> 4, z >> 4)) {
+            if (!ready(level, x >> 4, z >> 4)) {
                 continue;
             }
             cols++;
@@ -603,6 +612,7 @@ public final class Ecology {
             BlockState above = level.getBlockState(g.above());
             int canopy = top - gy;
             height += gy;
+            lastLoaded = new BlockPos(x, top + 1, z);
             if (gs.getFluidState().is(Fluids.WATER) || gs.is(Blocks.WATER)) {
                 water++;
             } else if (gs.getBlock() instanceof FarmBlock || gs.getBlock() instanceof CropBlock || above.getBlock() instanceof CropBlock) {
@@ -627,9 +637,13 @@ public final class Ecology {
                 built++;
                 builtSeen.add(BuiltInRegistries.BLOCK.getKey(gs.getBlock()).getPath());
             }
-            // Plants in a 3 x 3 around the column (17.16).
+            // Plants in a 3 x 3 around the column (17.16). Only in loaded chunks: reading an unloaded one would make
+            // the server load (or generate) it on the spot.
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dz = -1; dz <= 1; dz++) {
+                    if (!ready(level, (x + dx) >> 4, (z + dz) >> 4)) {
+                        continue;
+                    }
                     BlockPos at = new BlockPos(x + dx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz), z + dz);
                     String id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(at).getBlock()).toString();
                     if (Params.PLANTS.containsKey(id)) {
@@ -655,7 +669,7 @@ public final class Ecology {
         // water within 10 blocks, and a grass strip of 4+ blocks before it?
         for (int x = x0; x < x0 + size; x += 2) {
             for (int z = z0; z < z0 + size; z += 2) {
-                if (!level.hasChunk(x >> 4, z >> 4)) {
+                if (!ready(level, x >> 4, z >> 4)) {
                     continue;
                 }
                 BlockState gs = level.getBlockState(new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z));
@@ -691,7 +705,8 @@ public final class Ecology {
         p.layerShrubs = p.shrub > 0.03;
         p.layerCanopy = p.forest > 0.08;
         p.roost = p.forest * 4 + (double) caves / cols * 15;
-        p.moisture = Model.clamp(0.35 + p.water * 1.5 + (level.isRainingAt(new BlockPos(x0 + size / 2, level.getSeaLevel() + 1, z0 + size / 2)) ? 0.15 : 0), 0, 1);
+        // Rain where we last looked (a loaded column), not the patch centre, which may not be loaded.
+        p.moisture = Model.clamp(0.35 + p.water * 1.5 + (lastLoaded != null && level.isRainingAt(lastLoaded) ? 0.15 : 0), 0, 1);
         AABB box = new AABB(x0, level.getMinBuildHeight(), z0, x0 + size, level.getMaxBuildHeight(), z0 + size);
         // Wild herds count as grazing; a pen (animals plus fences or buildings) also counts as a threat (17.16.1).
         p.grazers = level.getEntitiesOfClass(Mob.class, box, e -> e instanceof Sheep || e instanceof Cow || e instanceof Goat).size();
@@ -728,7 +743,7 @@ public final class Ecology {
             for (int i = 1; i <= 10 && i < bestDist; i++) {
                 int cx = x + d[0] * i;
                 int cz = z + d[1] * i;
-                if (!level.hasChunk(cx >> 4, cz >> 4)) {
+                if (!ready(level, cx >> 4, cz >> 4)) {
                     break;
                 }
                 BlockState g = level.getBlockState(new BlockPos(cx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, cx, cz) - 1, cz));
@@ -880,7 +895,7 @@ public final class Ecology {
 
     /** Every 2 seconds: green algae on the water around a player in a blooming patch (17.11). */
     private static void algaeSigns(ServerLevel level, ServerPlayer player) {
-        Patch p = level.getChunkSource().hasChunk(player.chunkPosition().x, player.chunkPosition().z)
+        Patch p = ready(level, player.chunkPosition().x, player.chunkPosition().z)
                 ? data(level).patches.get(keyAt(player.blockPosition())) : null;
         if (!holdsWater(p) || p.algae <= 0.3) {
             return;
@@ -921,7 +936,7 @@ public final class Ecology {
             double angle = random.nextDouble() * Math.PI * 2;
             int dist = 20 + random.nextInt(20);
             BlockPos c = player.blockPosition().offset((int) (Math.cos(angle) * dist), 0, (int) (Math.sin(angle) * dist));
-            if (!level.hasChunkAt(c)) {
+            if (!ready(level, c.getX() >> 4, c.getZ() >> 4)) {
                 continue;
             }
             BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c);
