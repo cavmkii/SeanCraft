@@ -20,95 +20,72 @@ import net.minecraft.server.packs.resources.ResourceManager;
  * conservatism (17.16). Rates are per ecological day; densities per hectare.
  */
 public final class Params {
-    // Food web (17.4)
-    public static double grassRegrowth = 0.3;
-    public static double grazePerRabbit = 0.004;
+    // Game (17.4, 17.5): abundance 0 to 1 that refills toward a cap. Rates are per ecological day.
+    /** Refill rate toward the cap: about 95% of the way in 3 days. */
+    public static double gameRefill = 1.0;
+    /** Foxes follow small game this fast: a few days behind. */
+    public static double gameLagRate = 0.35;
+    /** Abundance one rabbit kill takes off its patch. */
+    public static double gamePerKill = 0.06;
+    /** Daily step toward the average of open neighbours, and from a Good or Remnant neighbour. */
+    public static double neighbourStep = 0.15;
+    public static double neighbourStepGood = 0.3;
+    /** A patch closed off on all four sides holds this share of its normal cap. */
+    public static double isolatedCap = 0.6;
+    /** An edge is open if both patches are at least this easy to cross, or a corridor (hedges, trees) crosses it. */
+    public static double openEdge = 0.35;
+    public static double corridor = 0.15;
+    public static double forageRegrowth = 0.3;
     public static double grazePerGrazer = 0.03;
-    public static double rabbitR = 0.25;
-    public static double rabbitK = 40;
-    public static double mouseR = 0.4;
-    public static double mouseK = 60;
-    /** Fox attack rate and handling time. Raised from the doc's 0.05 anchor so foxes run near 1 per 6 rabbits. */
-    public static double foxA = 0.5;
-    public static double foxH = 0.4;
-    public static double foxEfficiency = 0.08;
-    /** Fox background death. Raised from the doc's 0.02 anchor, which let foxes eat rabbits out. */
-    public static double foxDeath = 0.1;
-    /** Below this many rabbits per hectare, foxes switch to mice (Type III). */
-    public static double foxSwitch = 8;
-    // Pest and bats (17.7)
-    public static double pestR = 0.5;
-    public static double pestK = 1000;
-    public static double pestImmigration = 2;
-    public static double batAttack = 0.1;
-    public static double batHandling = 0.005;
-    public static double batRecovery = 0.05;
+    // Soil (17.6), fertility 0 to 100.
+    public static double fertilityBaseline = 50;
+    /** Unfarmed ground creeps back toward the baseline this slowly. */
+    public static double fertilityRecovery = 0.01;
+    /** Fertility a crop takes per growth stage. */
+    public static double uptake = 0.01;
+    /** Fertilizer breaks down at this rate per day (most of it in a day or two). */
+    public static double fertilizerRelease = 1.0;
+    public static double boneMeal = 1.0;
+    public static double guano = 5;
+    public static double rottenFlesh = 2;
+    /** Leadplant adds this much a day at full share of the plant sample. */
+    public static double leadplantFixation = 2;
+    /** Above this, fertility washes out to the water downhill, at leachRate of the excess a day. */
+    public static double leachAbove = 80;
+    public static double leachRate = 0.2;
+    /** Over this, the patch counts as over-fertilized (quality, prairie plants). */
+    public static double overFertilized = 75;
+    // Pests (17.7): a level 0 to 1 per patch.
+    public static double pestGrowth = 0.5;
+    /** Natural enemies within one patch cut pest growth by this share. */
+    public static double enemyCut = 0.33;
     public static double insecticideKill = 0.9;
-    public static double insecticideBatKill = 0.8;
     public static double resistanceStep = 0.1;
     public static double resistanceMax = 0.9;
-    // Soil (17.6), per crop growth stage for uptake
-    public static double uptakeN = 0.004;
-    public static double uptakeP = 0.0012;
-    public static double decayFast = 0.15;
-    public static double decaySlow = 0.01;
-    public static double releaseN = 0.5;
-    public static double releaseP = 0.1;
-    public static double weatheringP = 0.05;
-    public static double backgroundN = 0.2;
-    public static double leachAbove = 120;
-    public static double baselineN = 60;
-    public static double baselineP = 25;
-    public static double vegetationUptake = 0.05;
-    public static double leachRate = 0.1;
-    public static double leadplantFixation = 3;
-    public static double bluestemCarbon = 2;
-    public static double guanoOrganic = 6;
-    public static double boneMealOrganic = 1.5;
-    // Water (phase 2, 17.6). Load is in soil nutrient units; phosphorus counts more, since it drives algae in fresh water.
-    public static double leachAboveP = 50;
-    public static double phosphorusLoadWeight = 3;
-    /** Water share a patch needs to count as holding water. */
+    /** Days insecticide switches off the natural-enemy bonus. */
+    public static double enemiesOffDays = 7;
+    /** Most of a wheat harvest pests can take, at full level. */
+    public static double pestLossMax = 0.6;
+    // Water (17.6): pollution 0 up.
     public static double waterMin = 0.03;
-    /** Share of the load a patch's water loses per day: to the next water downhill (flush), and to the sediment (settle). */
-    public static double flushRate = 0.1;
-    public static double settleRate = 0.08;
-    /** Load mixing between neighbouring water patches per day. */
-    public static double waterMixing = 0.1;
-    public static double algaeR = 0.4;
-    /** Concentration (load per quarter-patch of water) at which algae grow at half speed. */
-    public static double algaeHalf = 15;
-    public static double algaeDeath = 0.06;
-    /** Oxygen moves toward 1 - oxygenAlgae x algae at this rate per day. */
-    public static double oxygenRate = 0.6;
-    public static double oxygenAlgae = 1.0;
-    /** Below this oxygen fish start dying, at up to fishSuffocation of them a day. */
-    public static double lowOxygen = 0.35;
-    public static double fishSuffocation = 1.5;
-    /** Fish that find their way in from elsewhere per day, as a share of what the water can hold, while it has oxygen. */
-    public static double fishImmigration = 0.01;
-    public static double fishR = 0.15;
-    /** Fish per hectare of open water. */
-    public static double fishK = 60;
-    /** Below this many fish per hectare of water, catches start getting away (yields fall as the stock thins). */
-    public static double fishFull = 30;
-    /** Share of runoff a Fair or better strip between field and water stops, and a grassy patch on the way. */
+    /** Pollution per unit of fertility leached, for a patch a quarter water; bigger water dilutes it. */
+    public static double pollutionPerUnit = 0.02;
+    /** Pollution clears this fast a day; half of what clears flows on to the water downhill. */
+    public static double pollutionDecay = 0.1;
+    public static double greenAt = 0.3;
+    public static double deadAt = 0.6;
+    public static double fishRefill = 0.15;
+    public static double fishDie = 0.5;
+    public static double fishPerCatch = 0.03;
+    /** Share of runoff a 4+ block grass strip stops in a Fair or better patch (17.16.2). */
     public static double stripIntercept = 0.8;
-    public static double landIntercept = 0.4;
-    // Space (phase 2, 17.5): share of the difference that moves between neighbours per day, at full permeability.
-    public static double rabbitDispersal = 0.08;
-    public static double foxDispersal = 0.15;
-    public static double fishDispersal = 0.1;
     /** Chance per random tick an isolated conservative plant (C 7+) dies back: the extinction debt. */
     public static double isolationLoss = 0.003;
-    // Quality (17.16). The doc benchmarks FQI against 40; with the plants a Minecraft patch can hold, 20 is reachable.
-    public static double fqiBenchmark = 20;
-    public static double excessNitrogen = 90;
+    // Quality (17.16).
+    public static double varietyCap = 40;
     public static double disturbanceMin = 5;
     public static double disturbanceMax = 40;
-    // Visible animals per hectare of density, and caps (17.3)
-    public static double rabbitsShown = 0.3;
-    public static double foxesShown = 0.6;
+    // Visible animals at full abundance, and caps (17.3).
     public static int rabbitCap = 6;
     public static int foxCap = 3;
 

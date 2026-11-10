@@ -7,11 +7,11 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
@@ -19,9 +19,11 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -34,14 +36,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.Chicken;
 import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.entity.animal.Fox;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.entity.animal.Rabbit;
 import net.minecraft.world.entity.animal.Sheep;
 import net.minecraft.world.entity.animal.goat.Goat;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -55,22 +60,24 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 /**
- * Ecology (design doc 17): phase 1, the grassland loop, and phase 2, water and space. The world is split into patches of Ecology.PatchChunks
- * chunks a side, each holding populations, soil and pest pressure as numbers; the animals players see are samples of
- * them (17.3). Loaded patches step forward within Ecology.TickBudgetMs a tick, and a patch that was away catches up
- * when it loads again (17.2). Phase 2: leached nutrients run downhill to the nearest water (17.6), where they feed
- * algae, starve the water of oxygen and kill fish; animals and fish disperse between neighbouring patches at a rate set
- * by the land between (17.5).
+ * Ecology (design doc 17), phases 1 and 2, kept to what players can see within a session or two (17.1). The world is
+ * split into patches of Ecology.PatchChunks chunks a side, each holding a few numbers (Patch). Loaded patches update
+ * once per in-game day, round-robin within Ecology.TickBudgetMs, and at once on the player actions that change them:
+ * harvesting, hunting, fertilizing, spraying and burning (17.2). A patch that was away jumps to where it was heading in
+ * one calculation. Animals, fish, green water, dead fish, chewed wheat and bare dirt are the model showing itself.
  */
 public final class Ecology {
     public static final String SAMPLE_TAG = "seancraft_eco";
-    private static final int SAMPLE_COLUMNS = 64;
-    /** Ticks between re-samples of a loaded patch after its blocks change, and at most. */
+    /** Columns read when a patch is first seen (17.16.4). */
+    private static final int SAMPLE_COLUMNS = 16;
+    /** Ticks between land cover re-reads of a patch after its blocks change. */
     private static final int RESAMPLE_AFTER_CHANGE = 600;
-    private static final int RESAMPLE_EVERY = 24000;
 
     /** Per dimension: loaded chunks per patch, patches due a sample, and the round-robin queue. */
     private static final class LevelState {
@@ -80,6 +87,8 @@ public final class Ecology {
     }
 
     private static final Map<ServerLevel, LevelState> STATES = new WeakHashMap<>();
+    /** The patch each player was last in, for the quality banner (17.11). */
+    private static final Map<UUID, Long> LAST_PATCH = new HashMap<>();
 
     private Ecology() {}
 
@@ -138,7 +147,7 @@ public final class Ecology {
         return level.getGameTime() / 24000.0 * Cfg.ecoDayScale;
     }
 
-    /** The patch at a position, created if new and caught up to today. */
+    /** The patch at a position, created if new. It isn't stepped here: see {@link #update}. */
     public static Patch patchAt(ServerLevel level, BlockPos pos) {
         return patch(level, keyAt(pos));
     }
@@ -154,23 +163,30 @@ public final class Ecology {
             d.setDirty();
             state(level).toSample.add(key);
         }
-        catchUp(level, key, p);
+        if (Double.isNaN(p.day)) {
+            p.day = today(level);
+        }
         return p;
     }
 
-    /** Patch at an offset from another, only if it exists already (for the threat layer and neighbours). */
+    /** Patch at an offset from another, only if it exists already. */
     static Patch existing(ServerLevel level, long key, int dx, int dz) {
         return data(level).patches.get(key(ChunkPos.getX(key) + dx, ChunkPos.getZ(key) + dz));
     }
 
-    /** Steps a patch from its last day to today, at most Ecology.CatchUpMaxDays at once (17.2). */
-    static void catchUp(ServerLevel level, long key, Patch p) {
+    /** Brings a patch up to today, at most Ecology.CatchUpMaxDays at once (17.2). Used before any player action on it. */
+    public static Patch update(ServerLevel level, BlockPos pos) {
+        long key = keyAt(pos);
+        Patch p = patch(level, key);
+        update(level, key, p, 0);
+        return p;
+    }
+
+    /** Steps the patch if at least {@code minDays} have passed since it was last stepped. */
+    static void update(ServerLevel level, long key, Patch p, double minDays) {
         double now = today(level);
-        if (Double.isNaN(p.day)) {
-            p.day = now;
-        }
         double days = now - p.day;
-        if (days < 0.02) {
+        if (days < Math.max(minDays, 1.0e-3)) {
             return;
         }
         if (days > Cfg.ecoCatchUpMaxDays) {
@@ -181,20 +197,25 @@ public final class Ecology {
     }
 
     static void stepPatch(ServerLevel level, long key, Patch p, double days) {
-        double best = bestQualityNear(level, key, 2);
-        // Good habitat holds more game (17.16.2); natural enemies from good habitat nearby slow pests.
-        Model.step(p, days, Seasons.of(level), p.quality >= 60 ? 0.25 : 0, best >= 60);
+        Model.Outflow out = Model.step(p, days, Seasons.of(level), enemiesNear(level, key));
         if (p.sampled) {
-            route(level, key, p);
-            exchangeWater(level, key, p, days);
-            disperse(level, key, p, days);
-            p.connectivity = connectivity(level, key);
+            if (out.leached() > 0) {
+                leach(level, key, p, out.leached());
+            }
+            if (out.cleared() > 0) {
+                // Half of what clears flows on to the next water downhill (17.6).
+                Patch next = downstream(level, key, p);
+                if (next != null && next != p && next.holdsWater()) {
+                    next.pollution += out.cleared() * 0.5 * Math.max(Params.waterMin, p.water) / Math.max(Params.waterMin, next.water);
+                }
+            }
+            neighbours(level, key, p, days);
         }
         Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
         markDirty(level);
     }
 
-    // ================================================================== water and space (phase 2)
+    // ================================================================== water and space (17.5, 17.6)
 
     private static final int[][] SIDES = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -207,155 +228,122 @@ public final class Ecology {
     }
 
     public static boolean holdsWater(Patch p) {
-        return p != null && p.sampled && p.water >= Params.waterMin;
-    }
-
-    /** The lowest neighbour (of 8) that is lower than this patch, optionally only one holding water; null at the bottom. */
-    static long downhill(ServerLevel level, long key, Patch p, boolean waterOnly) {
-        if (Double.isNaN(p.elevation)) {
-            return Long.MIN_VALUE;
-        }
-        long best = Long.MIN_VALUE;
-        double low = p.elevation - 0.5;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                if (dx == 0 && dz == 0) {
-                    continue;
-                }
-                Patch n = existing(level, key, dx, dz);
-                if (n == null || !n.sampled || Double.isNaN(n.elevation) || n.elevation >= low || waterOnly && !holdsWater(n)) {
-                    continue;
-                }
-                low = n.elevation;
-                best = key(ChunkPos.getX(key) + dx, ChunkPos.getZ(key) + dz);
-            }
-        }
-        return best;
+        return p != null && p.holdsWater();
     }
 
     /**
-     * Sends what leached out of this patch's soil downhill to the first patch that holds water (17.6). A Fair or better
-     * strip between the field and the water stops most of it, and good grassy land on the way stops some.
+     * Where this patch's runoff goes: itself if it holds water, else the first water patch downhill (lowest of the 8
+     * neighbours each step, up to 8 steps). Worked out once and stored (17.6); patches not seen yet are skipped, so it
+     * tries again later if it found nothing.
      */
-    static void route(ServerLevel level, long key, Patch p) {
-        double amount = p.leached;
-        p.leached = 0;
-        if (amount <= 1e-6) {
-            return;
+    static Patch downstream(ServerLevel level, long key, Patch p) {
+        if (p.holdsWater()) {
+            return p;
         }
-        if (p.quality >= 40) {
-            amount *= 1 - Params.stripIntercept * p.strip;
-        }
-        if (holdsWater(p)) {
-            p.load += amount;
-            return;
+        if (p.downhillKnown) {
+            return p.downhill == Long.MIN_VALUE ? null : data(level).patches.get(p.downhill);
         }
         long at = key;
         Patch cur = p;
         for (int hop = 0; hop < 8; hop++) {
-            long next = downhill(level, at, cur, false);
+            long next = Long.MIN_VALUE;
+            double low = cur.elevation - 0.5;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    Patch n = (dx == 0 && dz == 0) ? null : existing(level, at, dx, dz);
+                    if (n != null && n.sampled && !Double.isNaN(n.elevation) && n.elevation < low) {
+                        low = n.elevation;
+                        next = key(ChunkPos.getX(at) + dx, ChunkPos.getZ(at) + dz);
+                    }
+                }
+            }
             if (next == Long.MIN_VALUE) {
-                return; // a basin with no water: it soaks in
+                break;
             }
             Patch n = data(level).patches.get(next);
-            if (holdsWater(n)) {
-                n.load += amount;
-                return;
-            }
-            if (n.quality >= 40 && n.grass + n.shrub >= 0.5) {
-                amount *= 1 - Params.landIntercept;
+            if (n.holdsWater()) {
+                p.downhill = next;
+                p.downhillKnown = true;
+                return n;
             }
             at = next;
             cur = n;
         }
+        return null;
     }
 
-    /** Load flows on downhill and mixes with neighbouring water; fish swim between them (17.5, 17.6). */
-    static void exchangeWater(ServerLevel level, long key, Patch p, double days) {
-        if (!holdsWater(p)) {
-            return;
+    /** Fertility that washed out lands in the water downhill as pollution; a grass strip in a Fair patch stops most. */
+    static void leach(ServerLevel level, long key, Patch p, double amount) {
+        if (p.quality >= 40) {
+            amount *= 1 - Params.stripIntercept * p.strip;
         }
-        long down = downhill(level, key, p, true);
-        if (down != Long.MIN_VALUE) {
-            double move = p.load * (1 - Math.exp(-Params.flushRate * days));
-            p.load -= move;
-            data(level).patches.get(down).load += move;
-        }
-        double mix = 1 - Math.exp(-Params.waterMixing * days);
-        double swim = 1 - Math.exp(-Params.fishDispersal * days);
-        for (int[] d : SIDES) {
-            Patch n = existing(level, key, d[0], d[1]);
-            if (!holdsWater(n)) {
-                continue;
-            }
-            double dl = (n.load - p.load) / 2 * mix;
-            p.load += dl;
-            n.load -= dl;
-            // Fish move toward the emptier water, by density per hectare of water.
-            double df = (n.fish / n.water - p.fish / p.water) / 2 * swim * Math.min(p.water, n.water);
-            df = Math.max(-p.fish, Math.min(n.fish, df));
-            p.fish += df;
-            n.fish -= df;
-        }
-    }
-
-    /** Rabbits and foxes spread between neighbouring patches, easily over grass and hedges, barely over roads and fields (17.5). */
-    static void disperse(ServerLevel level, long key, Patch p, double days) {
-        for (int[] d : SIDES) {
-            Patch n = existing(level, key, d[0], d[1]);
-            if (n == null || !n.sampled) {
-                continue;
-            }
-            double perm = (Model.permeability(p) + Model.permeability(n)) / 2;
-            double fr = (1 - Math.exp(-Params.rabbitDispersal * perm * days)) / 2;
-            double ff = (1 - Math.exp(-Params.foxDispersal * perm * days)) / 2;
-            double dr = (n.rabbits - p.rabbits) * fr;
-            double dfx = (n.foxes - p.foxes) * ff;
-            p.rabbits = Math.max(0.05, p.rabbits + dr);
-            n.rabbits = Math.max(0.05, n.rabbits - dr);
-            p.foxes = Math.max(0.02, p.foxes + dfx);
-            n.foxes = Math.max(0.02, n.foxes - dfx);
+        Patch water = downstream(level, key, p);
+        if (water != null) {
+            water.pollution += Model.pollutionFrom(water, amount);
         }
     }
 
     /**
-     * 0..1: how many of the 8 patches around are good grassland or an easy corridor (hedges, trees). Unexplored
-     * neighbours count as connected. Low connectivity runs the extinction debt on conservative plants (17.5, 17.16.1).
+     * Once a day, small game moves a step toward the average of the open neighbours (17.5); Good and Remnant ones push
+     * harder. An edge is closed by walls, roads and open farmland unless a corridor (hedges, trees) crosses it.
      */
-    static double connectivity(ServerLevel level, long key) {
-        double good = 0;
+    static void neighbours(ServerLevel level, long key, Patch p, double days) {
+        double sum = 0;
+        double weight = 0;
+        int open = 0;
+        for (int[] d : SIDES) {
+            Patch n = existing(level, key, d[0], d[1]);
+            if (n == null || !n.sampled) {
+                open++; // unexplored ground counts as open
+                continue;
+            }
+            boolean corridor = p.shrub + p.forest >= Params.corridor || n.shrub + n.forest >= Params.corridor;
+            if (!corridor && (Model.permeability(p) < Params.openEdge || Model.permeability(n) < Params.openEdge)) {
+                continue;
+            }
+            open++;
+            double w = n.quality >= 60 ? Params.neighbourStepGood / Params.neighbourStep : 1;
+            sum += n.game * w;
+            weight += w;
+        }
+        p.openEdges = open;
+        if (weight > 0) {
+            double step = 1 - Math.exp(-Params.neighbourStep * Math.min(weight, 2) * days);
+            p.game += (sum / weight - p.game) * step;
+        }
+    }
+
+    /** A cave, roost, hedgerow or tree cover in this patch or one next to it (17.7). */
+    static boolean enemiesNear(ServerLevel level, long key) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
-                if (dx == 0 && dz == 0) {
-                    continue;
-                }
                 Patch n = existing(level, key, dx, dz);
-                if (n == null || !n.sampled || n.quality >= 40 && n.grass + n.shrub >= 0.3 || Model.permeability(n) >= 0.7) {
-                    good++;
+                if (n != null && n.enemies) {
+                    return true;
                 }
             }
         }
-        return Math.min(1, good / 3);
+        return false;
     }
 
-    /** A fish bit: whether it lands, given the stock here, and if it does, one fewer in the patch (17.3). */
+    /** A fish bit: whether it lands, given the fish here, and if it does, a little fewer in the patch (17.3). */
     public static boolean fishBite(ServerLevel level, BlockPos pos, RandomSource random) {
         if (!enabled()) {
             return true;
         }
-        Patch p = patchAt(level, pos);
-        if (!holdsWater(p)) {
+        Patch p = update(level, pos);
+        if (!p.holdsWater()) {
             return true;
         }
         if (random.nextDouble() >= Model.fishAvailability(p)) {
             return false;
         }
-        p.fish = Math.max(0, p.fish - 1 / hectares());
+        p.fish = Math.max(0, p.fish - Params.fishPerCatch);
         markDirty(level);
         return true;
     }
 
-    /** Fish spawn to match the stock (17.3): a thin stock shows fewer fish. */
+    /** Fish spawn to match the fish left (17.3). */
     public static boolean fishSpawnAllowed(ServerLevel level, BlockPos pos, RandomSource random) {
         if (!enabled()) {
             return true;
@@ -404,15 +392,11 @@ public final class Ecology {
             s.loaded.computeIfPresent(key, (k, n) -> n <= 1 ? null : n - 1);
         });
         ServerTickEvents.END_WORLD_TICK.register(Ecology::tick);
-        // Feedback (17.3): a rabbit or fox killed is one fewer in its patch.
+        // Hunting (17.3, 17.4): a rabbit killed takes a step off its patch's small game.
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> {
-            if (enabled() && entity.level() instanceof ServerLevel level && (entity instanceof Rabbit || entity instanceof Fox)) {
-                Patch p = patchAt(level, entity.blockPosition());
-                if (entity instanceof Rabbit) {
-                    p.rabbits = Math.max(0.05, p.rabbits - 1 / hectares());
-                } else {
-                    p.foxes = Math.max(0.02, p.foxes - 1 / hectares());
-                }
+            if (enabled() && entity.level() instanceof ServerLevel level && entity instanceof Rabbit) {
+                Patch p = update(level, entity.blockPosition());
+                p.game = Math.max(0.02, p.game - Params.gamePerKill);
                 markDirty(level);
             }
         });
@@ -424,6 +408,7 @@ public final class Ecology {
         });
         PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, be) -> {
             if (level instanceof ServerLevel sl) {
+                plantChanged(sl, pos, state, -1);
                 changed(sl, pos);
             }
         });
@@ -431,17 +416,49 @@ public final class Ecology {
             if (level instanceof ServerLevel sl && enabled()) {
                 ItemStack held = player.getItemInHand(hand);
                 BlockState at = level.getBlockState(hit.getBlockPos());
-                if (held.is(Items.BONE_MEAL) && (at.getBlock() instanceof CropBlock || at.getBlock() instanceof FarmBlock)) {
-                    // Compost and bone meal go through the decomposer pool (17.6).
-                    patchAt(sl, hit.getBlockPos()).organicFast += Params.boneMealOrganic;
+                boolean field = at.getBlock() instanceof CropBlock || at.getBlock() instanceof FarmBlock;
+                if (field && (held.is(Items.BONE_MEAL) || held.is(Items.ROTTEN_FLESH))) {
+                    // Fertilizer works over the next day or two, not at once (17.6).
+                    Patch p = update(sl, hit.getBlockPos());
+                    p.pendingFast += held.is(Items.BONE_MEAL) ? Params.boneMeal : Params.rottenFlesh;
                     markDirty(sl);
+                    if (held.is(Items.ROTTEN_FLESH)) {
+                        held.consume(1, player);
+                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, hit.getBlockPos().getX() + 0.5, hit.getBlockPos().getY() + 1,
+                                hit.getBlockPos().getZ() + 0.5, 6, 0.3, 0.2, 0.3, 0);
+                        return InteractionResult.SUCCESS;
+                    }
                 }
-                if (held.getItem() instanceof net.minecraft.world.item.BlockItem) {
+                if (held.getItem() instanceof BlockItem bi) {
+                    // Placing a plant counts it in the patch's plant sample (17.16.4).
+                    plantChanged(sl, hit.getBlockPos().relative(hit.getDirection()), bi.getBlock().defaultBlockState(), 1);
                     changed(sl, hit.getBlockPos());
                 }
             }
             return InteractionResult.PASS;
         });
+    }
+
+    /** A plant placed (+1) or broken (-1) by a player, or spreading or dying back: the plant sample follows. */
+    static void plantChanged(ServerLevel level, BlockPos pos, BlockState state, int delta) {
+        if (!enabled()) {
+            return;
+        }
+        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        if (!Params.PLANTS.containsKey(id)) {
+            return;
+        }
+        Patch p = data(level).patches.get(keyAt(pos));
+        if (p == null || !p.sampled) {
+            return;
+        }
+        int n = p.plants.getOrDefault(id, 0) + delta;
+        if (n <= 0) {
+            p.plants.remove(id);
+        } else {
+            p.plants.put(id, n);
+        }
+        markDirty(level);
     }
 
     public static void registerCommands(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -451,7 +468,10 @@ public final class Ecology {
                     ServerLevel level = player.serverLevel();
                     long key = keyAt(player.blockPosition());
                     Patch p = patch(level, key);
-                    sample(level, key, p);
+                    if (!p.sampled) {
+                        sample(level, key, p);
+                    }
+                    update(level, key, p, 0);
                     for (String line : describe(level, key, p)) {
                         ctx.getSource().sendSuccess(() -> Component.literal(line), false);
                     }
@@ -459,9 +479,9 @@ public final class Ecology {
                 }))
                 .then(Commands.literal("set").then(Commands.argument("field", com.mojang.brigadier.arguments.StringArgumentType.word())
                         .then(Commands.argument("value", DoubleArgumentType.doubleArg()).executes(ctx -> {
-                            // Testing: set one number on the patch you're in (rabbits, foxes, nitrogen, pest...).
+                            // Testing: set one number on the patch you're in (game, fertility, pest, pollution, fish...).
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            Patch p = patchAt(player.serverLevel(), player.blockPosition());
+                            Patch p = update(player.serverLevel(), player.blockPosition());
                             String field = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "field");
                             try {
                                 Patch.class.getField(field).setDouble(p, DoubleArgumentType.getDouble(ctx, "value"));
@@ -478,12 +498,13 @@ public final class Ecology {
                     ServerLevel level = player.serverLevel();
                     long key = keyAt(player.blockPosition());
                     Patch p = patch(level, key);
+                    update(level, key, p, 0);
                     double days = DoubleArgumentType.getDouble(ctx, "days");
                     stepPatch(level, key, p, days);
                     // The patch is now ahead of the clock; the clock catches up before it steps again.
                     ctx.getSource().sendSuccess(() -> Component.literal(String.format(Locale.ROOT,
-                            "Stepped this patch %.1f days: rabbits %.1f, foxes %.2f per ha, N %.0f, quality %.0f", days, p.rabbits, p.foxes,
-                            p.nitrogen, p.quality)), false);
+                            "Stepped this patch %.1f days: game %.2f, fertility %.0f, pests %.2f, pollution %.2f, quality %.0f", days, p.game,
+                            p.fertility, p.pest, p.pollution, p.quality)), false);
                     return 1;
                 })))));
     }
@@ -493,23 +514,21 @@ public final class Ecology {
         out.add(String.format(Locale.ROOT, "Patch %d, %d (day %.1f, season %s)", ChunkPos.getX(key), ChunkPos.getZ(key), p.day, Seasons.of(level).name()));
         out.add(String.format(Locale.ROOT, "Cover: grass %.0f%% crop %.0f%% (wheat %.0f%%) shrub %.0f%% forest %.0f%% water %.0f%% built %.0f%% path %.0f%% bare %.0f%%",
                 p.grass * 100, p.crop * 100, p.wheat * 100, p.shrub * 100, p.forest * 100, p.water * 100, p.built * 100, p.path * 100, p.bare * 100));
-        out.add(String.format(Locale.ROOT, "Per ha: grass %.2f, rabbits %.1f, mice %.1f, foxes %.2f, bats %.1f (roost %.1f), aphids %.0f (resistance %.0f%%)",
-                p.grassBiomass, p.rabbits, p.mice, p.foxes, p.bats, p.roost, p.pest, p.resistance * 100));
-        out.add(String.format(Locale.ROOT, "Soil: N %.1f, P %.1f, OM fast %.1f slow %.1f, moisture %.0f%%; crops limited by %s",
-                p.nitrogen, p.phosphorus, p.organicFast, p.organicSlow, p.moisture * 100, Model.limiting(p, p.wheat > 0)));
-        out.add(String.format(Locale.ROOT, "Habitat H %.2f, threats D %.2f (most from %s), Q %.2f; layers %s%s%s%s", Quality.habitat(p), p.threat, p.worstThreat, p.habitatQ,
-                p.layerGround ? "ground " : "", p.layerHerbs ? "herbs " : "", p.layerShrubs ? "shrubs " : "", p.layerCanopy ? "canopy" : ""));
-        out.add(String.format(Locale.ROOT, "Quality %.0f %s, FQI %.1f from %d species%s; %.0f days since fire or grazing; grazers %d, villagers %d",
-                p.quality, Quality.band(p.quality), Quality.fqi(p), p.plants.size(), p.limitedBy.isEmpty() ? "" : ", held back by " + p.limitedBy,
-                p.daysUndisturbed(), p.grazers, p.villagers));
-        long down = downhill(level, key, p, false);
-        out.add(String.format(Locale.ROOT, "Space: height %.0f, downhill %s, connectivity %.2f, permeability %.2f; crops near water %d, buffered %.0f%%",
-                p.elevation, down == Long.MIN_VALUE ? "none" : ChunkPos.getX(down) + ", " + ChunkPos.getZ(down), p.connectivity,
-                Model.permeability(p), p.cropNearWater, p.strip * 100));
-        if (holdsWater(p)) {
-            out.add(String.format(Locale.ROOT, "Water: nutrients %.1f, algae %.0f%%, oxygen %.0f%%, fish %.1f per ha (%.0f%% of bites land), dying %.2f a day",
-                    Model.concentration(p), p.algae * 100, p.oxygen * 100, p.fish, Model.fishAvailability(p) * 100, p.fishKill));
+        out.add(String.format(Locale.ROOT, "Game %.2f (cap %.2f, foxes follow %.2f), forage %.2f; open edges %d; natural enemies %s",
+                p.game, Model.gameCap(p), p.gameLag, p.forage, p.openEdges, enemiesNear(level, key) ? (p.day < p.enemiesOffUntil ? "sprayed off" : "yes") : "no"));
+        out.add(String.format(Locale.ROOT, "Soil: fertility %.0f (+%.1f breaking down), moisture %.0f%%; pests %.2f (resistance %.0f%%); crops held back by %s",
+                p.fertility, p.pendingFast, p.moisture * 100, p.pest, p.resistance * 100, Model.limiting(p, p.wheat > 0)));
+        Patch water = downstream(level, key, p);
+        out.add(String.format(Locale.ROOT, "Runoff goes to %s; crops near water %d, %.0f%% behind a grass strip",
+                water == null ? "nowhere yet" : water == p ? "this patch's water" : "water downhill", p.cropNearWater, p.strip * 100));
+        if (p.holdsWater()) {
+            out.add(String.format(Locale.ROOT, "Water: pollution %.2f (green at %.1f, fish die at %.1f), fish %.2f (%.0f%% of bites land)",
+                    p.pollution, Params.greenAt, Params.deadAt, p.fish, Model.fishAvailability(p) * 100));
         }
+        out.add(String.format(Locale.ROOT, "Quality %.0f %s: variety %.0f/%.0f, threats %.2f%s; %.0f days since fire or grazing%s",
+                p.quality, Quality.band(p.quality), Quality.variety(p), Params.varietyCap, p.threat,
+                p.worstThreat.isEmpty() ? "" : " (most from " + p.worstThreat + ")", p.daysUndisturbed(),
+                p.limitedBy.isEmpty() ? "" : "; held back by " + p.limitedBy));
         if (!p.builtSeen.isEmpty()) {
             out.add("Counted as built: " + String.join(", ", p.builtSeen));
         }
@@ -524,8 +543,7 @@ public final class Ecology {
         }
         LevelState s = state(level);
         long deadline = System.nanoTime() + (long) (Cfg.ecoTickBudgetMs * 1_000_000);
-        // Samples first: a new or changed patch reads its blocks (cheap, 64 columns).
-        // One key at a time: sampling a patch can queue its neighbours.
+        // Samples first: a new or changed patch reads its blocks. One key at a time: sampling can queue neighbours.
         while (!s.toSample.isEmpty() && System.nanoTime() < deadline) {
             long key = s.toSample.iterator().next();
             s.toSample.remove(key);
@@ -533,7 +551,7 @@ public final class Ecology {
                 sample(level, key, patch(level, key));
             }
         }
-        // Then step loaded patches round-robin until the budget runs out.
+        // Then the daily pass: each loaded patch steps once a day has gone by since its last update (17.2).
         int n = s.queue.size();
         while (n-- > 0 && System.nanoTime() < deadline) {
             long key = s.queue.poll();
@@ -542,16 +560,17 @@ public final class Ecology {
             }
             s.queue.add(key);
             Patch p = patch(level, key);
-            if (p.sampled && level.getGameTime() - p.sampledAt > RESAMPLE_EVERY) {
-                s.toSample.add(key);
+            if (p.sampled) {
+                update(level, key, p, 1);
             }
         }
-        if (level.getGameTime() % 40 == 0) {
+        long time = level.getGameTime();
+        if (time % 40 == 0) {
             for (ServerPlayer player : level.players()) {
-                algaeSigns(level, player);
+                signs(level, player);
             }
         }
-        if (level.getGameTime() % 400 == 0) {
+        if (time % 400 == 0) {
             for (ServerPlayer player : level.players()) {
                 if (!player.isSpectator()) {
                     wildlife(level, player);
@@ -560,7 +579,7 @@ public final class Ecology {
         }
     }
 
-    /** A block changed: the patch reads its land cover again soon. */
+    /** A block changed: the patch reads its land cover again soon (not its plant sample, 17.16.4). */
     static void changed(ServerLevel level, BlockPos pos) {
         if (!enabled()) {
             return;
@@ -577,8 +596,9 @@ public final class Ecology {
         if (!enabled()) {
             return;
         }
-        Patch p = patchAt(level, pos);
-        p.lastDisturbance = p.day;
+        Patch p = update(level, pos);
+        p.disturb();
+        markDirty(level);
     }
 
     // ================================================================== sampling (17.2, 17.16.4)
@@ -593,11 +613,10 @@ public final class Ecology {
         int caves = 0;
         double height = 0;
         BlockPos lastLoaded = null;
-        int nearWater = 0, buffered = 0;
         Map<String, Integer> plants = new HashMap<>();
         Set<String> builtSeen = new java.util.TreeSet<>();
-        boolean ground = false, herbs = false;
-        for (int i = 0; i < SAMPLE_COLUMNS; i++) {
+        int tries = 0;
+        while (cols < SAMPLE_COLUMNS && tries++ < SAMPLE_COLUMNS * 3) {
             int x = x0 + random.nextInt(size);
             int z = z0 + random.nextInt(size);
             if (!ready(level, x >> 4, z >> 4)) {
@@ -620,7 +639,6 @@ public final class Ecology {
                 if (above.is(Blocks.WHEAT) || gs.is(Blocks.WHEAT)) {
                     wheat++;
                 }
-
             } else if (gs.is(BlockTags.LOGS) || canopy >= 4) {
                 forest++;
             } else if (canopy >= 1 || gs.is(BlockTags.LEAVES) || above.is(Blocks.SWEET_BERRY_BUSH) || gs.is(Blocks.AZALEA)
@@ -628,7 +646,6 @@ public final class Ecology {
                 shrub++;
             } else if (gs.is(Blocks.GRASS_BLOCK) || gs.is(Blocks.PODZOL) || gs.is(Blocks.MOSS_BLOCK) || gs.is(Blocks.MYCELIUM)) {
                 grass++;
-                ground = true;
             } else if (gs.is(Blocks.DIRT_PATH)) {
                 path++;
             } else if (natural(gs)) {
@@ -637,22 +654,23 @@ public final class Ecology {
                 built++;
                 builtSeen.add(BuiltInRegistries.BLOCK.getKey(gs.getBlock()).getPath());
             }
-            // Plants in a 3 x 3 around the column (17.16). Only in loaded chunks: reading an unloaded one would make
-            // the server load (or generate) it on the spot.
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    if (!ready(level, (x + dx) >> 4, (z + dz) >> 4)) {
-                        continue;
-                    }
-                    BlockPos at = new BlockPos(x + dx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz), z + dz);
-                    String id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(at).getBlock()).toString();
-                    if (Params.PLANTS.containsKey(id)) {
-                        plants.merge(id, 1, Integer::sum);
-                        herbs = true;
+            if (!p.sampled) {
+                // The plant sample is read once, when the patch is first seen; after that it follows plants placed,
+                // broken, spreading and dying (17.16.4). A 3 x 3 around each column, in loaded chunks only.
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (!ready(level, (x + dx) >> 4, (z + dz) >> 4)) {
+                            continue;
+                        }
+                        BlockPos at = new BlockPos(x + dx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz), z + dz);
+                        String id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(at).getBlock()).toString();
+                        if (Params.PLANTS.containsKey(id)) {
+                            plants.merge(id, 1, Integer::sum);
+                        }
                     }
                 }
             }
-            // Caves under the column hold bat roosts.
+            // Caves under the column: bats, a natural enemy of crop pests (17.7).
             for (int y = gy - 4; y > Math.max(level.getMinBuildHeight(), gy - 44); y -= 2) {
                 BlockPos at = new BlockPos(x, y, z);
                 if (level.getBlockState(at).isAir() && level.getBrightness(LightLayer.SKY, at) == 0 && level.getBrightness(LightLayer.BLOCK, at) == 0) {
@@ -661,12 +679,12 @@ public final class Ecology {
                 }
             }
         }
-        if (cols < 16) {
+        if (cols < SAMPLE_COLUMNS / 2) {
             // Too few chunks loaded to say; try again later.
             return;
         }
-        // Fields by the water (17.16.2): every second column, so small fields count. From each crop column, is there
-        // water within 10 blocks, and a grass strip of 4+ blocks before it?
+        // Fields by the water (17.16.2): every second column, so small fields count.
+        int nearWater = 0, buffered = 0;
         for (int x = x0; x < x0 + size; x += 2) {
             for (int z = z0; z < z0 + size; z += 2) {
                 if (!ready(level, x >> 4, z >> 4)) {
@@ -698,33 +716,24 @@ public final class Ecology {
         p.elevation = height / cols;
         p.cropNearWater = nearWater;
         p.strip = nearWater == 0 ? 0 : (double) buffered / nearWater;
-        p.plants = plants;
         p.builtSeen = builtSeen;
-        p.layerGround = ground;
-        p.layerHerbs = herbs;
-        p.layerShrubs = p.shrub > 0.03;
-        p.layerCanopy = p.forest > 0.08;
-        p.roost = p.forest * 4 + (double) caves / cols * 15;
-        // Rain where we last looked (a loaded column), not the patch centre, which may not be loaded.
+        p.enemies = caves > 0 || p.forest >= 0.05 || p.shrub >= 0.05;
         p.moisture = Model.clamp(0.35 + p.water * 1.5 + (lastLoaded != null && level.isRainingAt(lastLoaded) ? 0.15 : 0), 0, 1);
         AABB box = new AABB(x0, level.getMinBuildHeight(), z0, x0 + size, level.getMaxBuildHeight(), z0 + size);
         // Wild herds count as grazing; a pen (animals plus fences or buildings) also counts as a threat (17.16.1).
         p.grazers = level.getEntitiesOfClass(Mob.class, box, e -> e instanceof Sheep || e instanceof Cow || e instanceof Goat).size();
         p.villagers = level.getEntitiesOfClass(Villager.class, box).size();
         if (p.grazers >= 2) {
-            p.lastDisturbance = p.day;
+            p.disturb();
         }
         if (first) {
-            // Fresh ground: carbon from trees and prairie roots, animals near what the land can hold.
-            int bluestem = plants.getOrDefault(EcoContent.id(EcoContent.Prairie.BIG_BLUESTEM), 0);
-            p.organicSlow = 40 + 30 * p.forest + Math.min(40, bluestem * 4);
-            p.grassBiomass = Math.max(0.05, p.grass);
-            p.rabbits = Math.max(0.5, Params.rabbitK * p.grassBiomass * 0.4);
-            p.mice = Math.max(1, Params.mouseK * 0.5 * Math.max(0.1, p.grass * 0.4 + p.crop + p.shrub * 0.5));
-            p.foxes = Math.max(0.05, p.rabbits / 8);
-            p.bats = p.roost;
-            p.fish = Params.fishK * p.water * 0.8;
+            p.plants = plants;
+            p.forage = Math.max(0.05, p.grass);
             p.sampled = true;
+            Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
+            p.game = Model.gameCap(p) * 0.8;
+            p.gameLag = p.game;
+            p.fish = 0.8;
         }
         p.sampledAt = level.getGameTime();
         Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
@@ -775,20 +784,20 @@ public final class Ecology {
         if (!enabled()) {
             return true;
         }
-        Patch p = patchAt(level, pos);
-        double f = Model.soilFactor(p);
-        return random.nextDouble() < 0.5 + 0.5 * f;
+        Patch p = data(level).patches.get(keyAt(pos));
+        return p == null || random.nextDouble() < 0.5 + 0.5 * Model.soilFactor(p);
     }
 
-    /** A crop grew a stage: it takes nitrogen and phosphorus from the patch. */
+    /** A crop grew a stage: it takes fertility from the field (17.6). */
     public static void cropGrew(ServerLevel level, BlockPos pos) {
         if (!enabled()) {
             return;
         }
-        Patch p = patchAt(level, pos);
-        p.nitrogen = Math.max(0, p.nitrogen - Params.uptakeN / hectares());
-        p.phosphorus = Math.max(0, p.phosphorus - Params.uptakeP / hectares());
-        markDirty(level);
+        Patch p = data(level).patches.get(keyAt(pos));
+        if (p != null) {
+            p.fertility = Math.max(0, p.fertility - Params.uptake / hectares());
+            markDirty(level);
+        }
     }
 
     /** Harvest yield multiplier for a crop here: soil, pests on wheat, and pollinators from good habitat nearby. */
@@ -796,23 +805,23 @@ public final class Ecology {
         if (!enabled()) {
             return 1;
         }
-        Patch p = patchAt(level, pos);
+        Patch p = update(level, pos);
         double best = bestQualityNear(level, keyAt(pos), 2);
         double pollinators = best >= 80 ? 0.25 : best >= 60 ? 0.15 : 0;
         double pests = crop == Blocks.WHEAT ? 1 - Model.pestLoss(p) : 1;
         return (0.4 + 0.6 * Model.soilFactor(p)) * pests * (1 + pollinators);
     }
 
-    /** Insecticide on a patch (17.7): pests and bats both drop; the pest builds resistance. */
+    /** Insecticide (17.7): pests drop, the natural-enemy bonus is off for a week, and the pests build resistance. */
     static void spray(Patch p) {
         p.pest *= 1 - Params.insecticideKill * (1 - p.resistance);
-        p.bats *= 1 - Params.insecticideBatKill;
+        p.enemiesOffUntil = p.day + Params.enemiesOffDays;
         p.resistance = Math.min(Params.resistanceMax, p.resistance + Params.resistanceStep);
     }
 
-    // ================================================================== hideouts
+    // ================================================================== home bases
 
-    /** Built ground inside a hideout never changes through succession or grazing (17.8). */
+    /** Built ground inside a home base never changes through succession or grazing (17.8). */
     static boolean protectedGround(ServerLevel level, BlockPos pos) {
         return Hideouts.at(level, Vec3.atCenterOf(pos)) != null;
     }
@@ -828,7 +837,70 @@ public final class Ecology {
 
     // ================================================================== what players see (17.3, 17.11)
 
-    /** Every 20 seconds per player: rabbits and foxes to match the patch, guano under roosting bats, pest signs. */
+    /** Algal scum: a dull green dust. */
+    private static final DustParticleOptions ALGAE = new DustParticleOptions(new Vector3f(0.35f, 0.55f, 0.12f), 1.6f);
+    /** Butterflies over good ground: small pale wings. */
+    private static final DustParticleOptions WINGS = new DustParticleOptions(new Vector3f(0.98f, 0.92f, 0.55f), 0.7f);
+
+    /**
+     * Every 2 seconds per player: green water over a polluted patch, butterflies over good ground, the quality band
+     * when they walk into a Good or Remnant patch, and what's holding back the crop they look at (17.11).
+     */
+    private static void signs(ServerLevel level, ServerPlayer player) {
+        if (!ready(level, player.chunkPosition().x, player.chunkPosition().z)) {
+            return;
+        }
+        long key = keyAt(player.blockPosition());
+        Patch p = data(level).patches.get(key);
+        if (p == null || !p.sampled) {
+            return;
+        }
+        RandomSource random = level.getRandom();
+        if (p.holdsWater() && p.pollution >= Params.greenAt) {
+            int spots = (int) Math.min(30, 10 + p.pollution * 20);
+            for (int i = 0; i < spots; i++) {
+                BlockPos top = surface(level, player.blockPosition().offset(random.nextInt(25) - 12, 0, random.nextInt(25) - 12));
+                if (level.getFluidState(top).is(Fluids.WATER) && level.getBlockState(top.above()).isAir()) {
+                    level.sendParticles(ALGAE, top.getX() + 0.5, top.getY() + 0.95, top.getZ() + 0.5, 6, 0.45, 0, 0.45, 0);
+                }
+            }
+        }
+        if (p.quality >= 60 && level.isDay()) {
+            for (int i = 0; i < 4; i++) {
+                BlockPos top = surface(level, player.blockPosition().offset(random.nextInt(17) - 8, 0, random.nextInt(17) - 8));
+                if (level.getBlockState(top).is(BlockTags.FLOWERS) || Params.PLANTS.getOrDefault(
+                        BuiltInRegistries.BLOCK.getKey(level.getBlockState(top).getBlock()).toString(), 0.0) >= 3) {
+                    level.sendParticles(WINGS, top.getX() + 0.5, top.getY() + 1.2, top.getZ() + 0.5, 2, 0.4, 0.3, 0.4, 0.02);
+                }
+            }
+        }
+        // Walking into good ground shows its band, the way a biome name would (17.11).
+        Long last = LAST_PATCH.put(player.getUUID(), key);
+        if (last != null && last != key && p.quality >= 60) {
+            Patch before = data(level).patches.get(last);
+            if (before == null || !Quality.band(before.quality).equals(Quality.band(p.quality))) {
+                ServerPlayNetworking.send(player, new com.cavmkii.seancraft.tarkov.TarkovNet.Banner(Quality.band(p.quality) + " ground",
+                        p.quality >= 80 ? "Old prairie: seed comes from here" : "Rich, varied grassland", 0xFF000000 | Quality.color(p.quality)));
+            }
+        }
+        // The crop the player is looking at: what's holding its yield back, and pest resistance (17.7, 17.11).
+        HitResult hit = player.pick(5, 0, false);
+        if (hit instanceof BlockHitResult bh && hit.getType() == HitResult.Type.BLOCK) {
+            BlockState crop = level.getBlockState(bh.getBlockPos());
+            if (crop.getBlock() instanceof CropBlock) {
+                boolean wheat = crop.is(Blocks.WHEAT);
+                String line = crop.getBlock().getName().getString() + ": held back by " + Model.limiting(p, wheat)
+                        + (wheat && p.resistance > 0.05 ? String.format(Locale.ROOT, "  (pests %.0f%% resistant)", p.resistance * 100) : "");
+                player.displayClientMessage(Component.literal(line).withColor(0xD9CBB0), true);
+            }
+        }
+    }
+
+    private static BlockPos surface(ServerLevel level, BlockPos at) {
+        return level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, at).below();
+    }
+
+    /** Every 20 seconds per player: rabbits and foxes to match the patch, guano, pest signs, dead fish, fox raids, bare dirt. */
     private static void wildlife(ServerLevel level, ServerPlayer player) {
         BlockPos at = player.blockPosition();
         long key = keyAt(at);
@@ -840,74 +912,89 @@ public final class Ecology {
             return;
         }
         RandomSource random = level.getRandom();
-        double area = hectares();
-        sampleAnimals(level, player, EntityType.RABBIT, Rabbit.class,
-                Math.min(Params.rabbitCap, (int) Math.round(p.rabbits * area * Params.rabbitsShown)));
-        sampleAnimals(level, player, EntityType.FOX, Fox.class, Math.min(Params.foxCap, (int) Math.round(p.foxes * area * Params.foxesShown)));
+        double coverShown = Math.min(1, p.grass * 1.5 + p.shrub);
+        sampleAnimals(level, player, EntityType.RABBIT, Rabbit.class, (int) Math.round(Params.rabbitCap * p.game * coverShown));
+        // Foxes have no population of their own: they follow the rabbits a few days behind (17.4).
+        sampleAnimals(level, player, EntityType.FOX, Fox.class, (int) Math.round(Params.foxCap * Math.max(0, p.gameLag - 0.2) * coverShown));
         // Guano under resting bats (17.7).
-        for (Bat bat : level.getEntitiesOfClass(Bat.class, player.getBoundingBox().inflate(48))) {
+        for (net.minecraft.world.entity.ambient.Bat bat : level.getEntitiesOfClass(net.minecraft.world.entity.ambient.Bat.class, player.getBoundingBox().inflate(48))) {
             if (bat.isResting() && random.nextInt(8) == 0) {
                 level.addFreshEntity(new ItemEntity(level, bat.getX(), bat.getY() - 0.2, bat.getZ(), new ItemStack(EcoContent.BAT_GUANO)));
             }
         }
         // Aphids on wheat show as specks over the crop.
-        if (p.wheat > 0 && p.pest > 120) {
+        if (p.wheat > 0 && p.pest > 0.15) {
             for (int i = 0; i < 20; i++) {
                 BlockPos c = at.offset(random.nextInt(25) - 12, random.nextInt(7) - 3, random.nextInt(25) - 12);
                 if (level.getBlockState(c).is(Blocks.WHEAT)) {
-                    level.sendParticles(ParticleTypes.MYCELIUM, c.getX() + 0.5, c.getY() + 0.6, c.getZ() + 0.5,
-                            (int) Math.min(12, p.pest / 60), 0.3, 0.2, 0.3, 0);
+                    level.sendParticles(ParticleTypes.MYCELIUM, c.getX() + 0.5, c.getY() + 0.6, c.getZ() + 0.5, (int) Math.min(12, p.pest * 15), 0.3, 0.2, 0.3, 0);
                 }
             }
         }
-        // Algae shows as green specks on the water; a fish kill as dead fish floating (17.11).
-        if (holdsWater(p) && p.fishKill > 0.3) {
+        // A fish kill: dead fish floating (17.6).
+        if (p.holdsWater() && p.pollution > Params.deadAt && p.fish > 0.05) {
             int dead = 1 + random.nextInt(3);
             for (int i = 0; i < 24 && dead > 0; i++) {
-                BlockPos c = at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16);
-                BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, c).below();
+                BlockPos top = surface(level, at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16));
                 if (!level.getFluidState(top).is(Fluids.WATER) || !level.getBlockState(top.above()).isAir()) {
                     continue;
                 }
-                if (dead > 0) {
-                    dead--;
-                    ItemEntity fish = new ItemEntity(level, top.getX() + 0.5, top.getY() + 0.9, top.getZ() + 0.5, new ItemStack(Items.COD));
-                    fish.getItem().set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("Dead fish"));
-                    fish.setNeverPickUp();
-                    ((com.cavmkii.seancraft.mixin.ItemEntityAgeAccessor) fish).seancraft$setAge(6000 - 1200);
-                    level.addFreshEntity(fish);
-                }
+                dead--;
+                ItemEntity fish = new ItemEntity(level, top.getX() + 0.5, top.getY() + 0.9, top.getZ() + 0.5, new ItemStack(Items.COD));
+                fish.getItem().set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("Dead fish"));
+                fish.setNeverPickUp();
+                ((com.cavmkii.seancraft.mixin.ItemEntityAgeAccessor) fish).seancraft$setAge(6000 - 1200);
+                level.addFreshEntity(fish);
             }
         }
-        // Overgrazed grass turns to dirt (17.11), never inside a hideout.
-        if (p.grassBiomass < 0.15) {
-            BlockPos c = at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16);
-            BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, c).below();
+        foxRaid(level, player, p);
+        // Overgrazed grass turns to dirt (17.11), never inside a home base.
+        if (p.forage < 0.15) {
+            BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.offset(random.nextInt(33) - 16, 0, random.nextInt(33) - 16)).below();
             if (level.getBlockState(top).is(Blocks.GRASS_BLOCK) && !protectedGround(level, top)) {
                 level.setBlockAndUpdate(top, Blocks.DIRT.defaultBlockState());
             }
         }
     }
 
-    /** Algal scum: a dull green dust. */
-    private static final net.minecraft.core.particles.DustParticleOptions ALGAE =
-            new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(0.35f, 0.55f, 0.12f), 1.6f);
-
-    /** Every 2 seconds: green algae on the water around a player in a blooming patch (17.11). */
-    private static void algaeSigns(ServerLevel level, ServerPlayer player) {
-        Patch p = ready(level, player.chunkPosition().x, player.chunkPosition().z)
-                ? data(level).patches.get(keyAt(player.blockPosition())) : null;
-        if (!holdsWater(p) || p.algae <= 0.3) {
+    /**
+     * Fox raids on dense pens (17.4): at night, where foxes are about, a crowded pen with no cover and no fence ring
+     * loses a few animals. The fix is the ecological one: cover, fencing, room.
+     */
+    private static void foxRaid(ServerLevel level, ServerPlayer player, Patch p) {
+        RandomSource random = level.getRandom();
+        if (level.isDay() || p.gameLag < 0.35 || p.shrub + p.forest >= 0.1 || random.nextInt(30) != 0) {
             return;
         }
-        RandomSource random = level.getRandom();
-        int spots = (int) (p.algae * 30);
-        for (int i = 0; i < spots; i++) {
-            BlockPos c = player.blockPosition().offset(random.nextInt(25) - 12, 0, random.nextInt(25) - 12);
-            BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, c).below();
-            if (level.getFluidState(top).is(Fluids.WATER) && level.getBlockState(top.above()).isAir()) {
-                level.sendParticles(ALGAE, top.getX() + 0.5, top.getY() + 0.95, top.getZ() + 0.5, 6, 0.45, 0, 0.45, 0);
+        List<Animal> stock = level.getEntitiesOfClass(Animal.class, player.getBoundingBox().inflate(32, 8, 32),
+                a -> a instanceof Chicken || a instanceof Sheep || a instanceof Pig || a instanceof Cow);
+        for (Animal a : stock) {
+            List<Animal> crowd = level.getEntitiesOfClass(Animal.class, a.getBoundingBox().inflate(3),
+                    b -> b instanceof Chicken || b instanceof Sheep || b instanceof Pig || b instanceof Cow);
+            if (crowd.size() < 6) {
+                continue;
             }
+            int fences = 0;
+            for (BlockPos b : BlockPos.betweenClosed(a.blockPosition().offset(-6, -1, -6), a.blockPosition().offset(6, 1, 6))) {
+                if (level.getBlockState(b).is(BlockTags.FENCES) || level.getBlockState(b).is(BlockTags.WALLS)) {
+                    fences++;
+                }
+            }
+            if (fences >= 16) {
+                return; // a fenced pen keeps them out
+            }
+            crowd.sort(java.util.Comparator.comparingDouble(Animal::getMaxHealth));
+            Fox fox = EntityType.FOX.create(level);
+            if (fox != null) {
+                fox.moveTo(a.getX() + 4, a.getY(), a.getZ() + 4, random.nextFloat() * 360, 0);
+                fox.addTag(SAMPLE_TAG);
+                level.addFreshEntity(fox);
+            }
+            int killed = 2 + random.nextInt(2);
+            for (int i = 0; i < killed && i < crowd.size(); i++) {
+                crowd.get(i).hurt(fox != null ? level.damageSources().mobAttack(fox) : level.damageSources().generic(), 10000);
+            }
+            return;
         }
     }
 
@@ -963,8 +1050,8 @@ public final class Ecology {
     /** One rabbit born in a patch (breeding feedback, 17.3). */
     public static void born(ServerLevel level, Entity child) {
         if (enabled() && child instanceof Rabbit) {
-            Patch p = patchAt(level, child.blockPosition());
-            p.rabbits += 1 / hectares();
+            Patch p = update(level, child.blockPosition());
+            p.game = Math.min(1, p.game + Params.gamePerKill * 0.5);
             markDirty(level);
         }
     }

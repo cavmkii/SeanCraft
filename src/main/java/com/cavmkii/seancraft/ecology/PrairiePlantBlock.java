@@ -15,7 +15,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 /**
  * A prairie plant (17.16). Placed by hand or at world generation in remnant prairie. It spreads into nearby grass
  * while its patch is disturbed often enough but not too often, and dies back when shrubs would move in (no fire or
- * grazing for too long) or when nitrogen runs too high (17.16.1). The most conservative ones also die out slowly in a
+ * grazing for too long) or when the ground is over-fertilized (17.16.1). The most conservative ones also die out slowly in a
  * small patch cut off from other good grassland (the extinction debt, 17.5).
  */
 public class PrairiePlantBlock extends BushBlock {
@@ -42,15 +42,19 @@ public class PrairiePlantBlock extends BushBlock {
             return;
         }
         Patch p = Ecology.patchAt(level, pos);
+        if (!p.sampled) {
+            return;
+        }
         if (p == null || Double.isNaN(p.day)) {
             return;
         }
         boolean protectedGround = Ecology.protectedGround(level, pos);
         double undisturbed = p.daysUndisturbed();
-        if (!protectedGround && (undisturbed > Params.disturbanceMax || p.nitrogen > Params.excessNitrogen)) {
+        if (!protectedGround && (undisturbed > Params.disturbanceMax || p.fertility > Params.overFertilized)) {
             // Shrubs and weeds crowd it out.
             if (random.nextInt(8) == 0) {
                 level.setBlock(pos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
+                Ecology.plantChanged(level, pos, state, -1);
             }
             return;
         }
@@ -58,9 +62,10 @@ public class PrairiePlantBlock extends BushBlock {
         // Extinction debt (17.5, 17.16.1): a conservative plant in a small, cut-off patch slowly dies out. Corridors
         // and good grassland next door raise connectivity and stop it.
         if (!protectedGround && c >= 7) {
-            double risk = (1 - p.connectivity) * (1 - Math.min(1, p.grass / 0.5));
+            double risk = (p.openEdges == 0 ? 1 : p.openEdges == 1 ? 0.5 : 0) * (1 - Math.min(1, p.grass / 0.5));
             if (random.nextDouble() < Params.isolationLoss * risk) {
                 level.setBlock(pos, Blocks.SHORT_GRASS.defaultBlockState(), 3);
+                Ecology.plantChanged(level, pos, state, -1);
                 return;
             }
         }
@@ -72,6 +77,7 @@ public class PrairiePlantBlock extends BushBlock {
         BlockState there = level.getBlockState(to);
         if ((there.isAir() || there.is(Blocks.SHORT_GRASS)) && level.getBlockState(to.below()).is(Blocks.GRASS_BLOCK)) {
             level.setBlock(to, state, 3);
+            Ecology.plantChanged(level, to, state, 1);
         }
     }
 }

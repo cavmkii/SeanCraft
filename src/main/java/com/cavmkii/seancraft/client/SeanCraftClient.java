@@ -97,9 +97,9 @@ public final class SeanCraftClient implements ClientModInitializer {
                 if (inf != null && part.def.kind() == com.cavmkii.seancraft.parts.PartKind.CRYSTAL) {
                     lines.add(Math.min(lines.size(), 3), Component.literal("Element: " + inf).withStyle(ChatFormatting.AQUA));
                 } else if (inf != null) {
-                    lines.add(Math.min(lines.size(), 3), Component.literal(Character.toUpperCase(inf.charAt(0)) + inf.substring(1)
-                            + " infusion: shifts 25% of a weapon's scaling to " + (inf.equals("heavy") ? "STR" : inf.equals("keen") ? "AGI" : "INT"))
-                            .withStyle(ChatFormatting.AQUA));
+                    lines.add(Math.min(lines.size(), 3), Component.literal(Character.toUpperCase(inf.charAt(0)) + inf.substring(1) + " infusion: "
+                            + (inf.equals("heavy") ? "all scaling to STR, +50% poise damage" : inf.equals("keen") ? "all scaling to AGI, +50% bleed"
+                                    : "half the scaling to INT, +2 mana per hit")).withStyle(ChatFormatting.AQUA));
                 }
             } else if (com.cavmkii.seancraft.parts.Parts.modular(stack)) {
                 com.cavmkii.seancraft.parts.Family family = com.cavmkii.seancraft.parts.Family.stock(stack).family();

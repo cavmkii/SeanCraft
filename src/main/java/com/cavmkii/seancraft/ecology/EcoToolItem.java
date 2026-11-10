@@ -43,7 +43,7 @@ public class EcoToolItem extends Item {
         }
         BlockPos pos = ctx.getClickedPos();
         BlockState state = level.getBlockState(pos);
-        Patch p = Ecology.patchAt(level, pos);
+        Patch p = Ecology.update(level, pos);
         if (p == null) {
             return InteractionResult.FAIL;
         }
@@ -60,8 +60,8 @@ public class EcoToolItem extends Item {
                 level.sendParticles(ParticleTypes.WHITE_ASH, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, 30, 2, 0.5, 2, 0.01);
                 level.playSound(null, pos, SoundEvents.SPLASH_POTION_BREAK, SoundSource.PLAYERS, 0.6f, 1.4f);
                 player.displayClientMessage(Component.literal(String.format(Locale.ROOT,
-                        "Sprayed the patch: pests %.0f -> %.0f per ha, bats hit too. Resistance now %.0f%%.",
-                        before, p.pest, p.resistance * 100)).withStyle(ChatFormatting.GRAY), true);
+                        "Sprayed: pests %.0f%% -> %.0f%%. Natural enemies off for a week; resistance now %.0f%%.",
+                        before * 100, p.pest * 100, p.resistance * 100)).withStyle(ChatFormatting.GRAY), true);
                 stack.consume(1, player);
             }
             case BAT_GUANO -> {
@@ -70,7 +70,7 @@ public class EcoToolItem extends Item {
                     player.displayClientMessage(Component.literal("Spread it on farmland, crops or soil.").withStyle(ChatFormatting.GRAY), true);
                     return InteractionResult.FAIL;
                 }
-                p.organicFast += Params.guanoOrganic;
+                p.pendingFast += Params.guano;
                 Ecology.markDirty(level);
                 level.sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5, 8, 0.4, 0.2, 0.4, 0);
                 player.displayClientMessage(Component.literal("Guano in the soil: it'll feed the crops over the next few days.")
@@ -96,22 +96,24 @@ public class EcoToolItem extends Item {
         int ash = 0x8F8371;
         int bone = 0xD9CBB0;
         player.sendSystemMessage(Component.literal("Soil kit").withColor(0xE0BC62));
-        player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Nitrogen %.0f   Phosphorus %.0f   Organic matter %.0f   Moisture %.0f%%",
-                p.nitrogen, p.phosphorus, p.organicFast + p.organicSlow, p.moisture * 100)).withColor(bone));
+        player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Fertility %.0f%s   Moisture %.0f%%",
+                p.fertility, p.fertility > Params.overFertilized ? " (too much: it'll wash into the water)" : p.fertility < 25 ? " (worn out)" : "",
+                p.moisture * 100)).withColor(bone));
         boolean wheat = crop == Blocks.WHEAT;
         String what = crop == null ? "A crop here" : crop.getName().getString();
         String lim = Model.limiting(p, wheat || crop == null && p.wheat > 0);
         player.sendSystemMessage(Component.literal(what + " is held back by: " + lim
-                + (p.wheat > 0 && p.pest > 20 ? String.format(Locale.ROOT, "  (aphids %.0f per ha)", p.pest) : "")).withColor(bone));
+                + (p.wheat > 0 && p.pest > 0.05 ? String.format(Locale.ROOT, "  (aphids %.0f%%, resistance %.0f%%)", p.pest * 100, p.resistance * 100) : ""))
+                .withColor(bone));
         player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Ecosystem quality: %s (%.0f)%s", Quality.band(p.quality),
                 p.quality, p.limitedBy.isEmpty() ? "" : ": " + p.limitedBy)).withColor(Quality.color(p.quality)));
         if (Ecology.holdsWater(p)) {
             // Water (17.6, 17.11): what's in it and what it's doing to the fish.
-            String state = p.oxygen < Params.lowOxygen ? "dead zone: too little oxygen for fish"
-                    : p.algae > 0.3 ? "algae bloom: too many nutrients coming in" : Model.concentration(p) > Params.algaeHalf ? "nutrients building up" : "clear";
-            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Water: %s (nutrients %.0f, oxygen %.0f%%, fish %s)", state, Model.concentration(p),
-                    p.oxygen * 100, p.fish / Math.max(0.01, p.water) >= Params.fishFull ? "plenty" : p.fish < 1 ? "almost none" : "thin"))
-                    .withColor(p.oxygen < Params.lowOxygen ? 0xC8402E : p.algae > 0.3 ? 0xC8662A : bone));
+            String state = p.pollution > Params.deadAt ? "dead zone: fish are dying" : p.pollution >= Params.greenAt ? "green: runoff coming in"
+                    : p.pollution > Params.greenAt / 2 ? "some runoff coming in" : "clear";
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Water: %s (pollution %.0f%%, fish %s)", state, p.pollution * 100,
+                    p.fish >= 0.6 ? "plenty" : p.fish < 0.15 ? "almost none" : "thin"))
+                    .withColor(p.pollution > Params.deadAt ? 0xC8402E : p.pollution >= Params.greenAt ? 0xC8662A : bone));
         }
         if (p.cropNearWater > 0) {
             player.sendSystemMessage(Component.literal(String.format(Locale.ROOT, "Fields by the water: %.0f%% have a grass strip 4+ blocks wide before it",
@@ -124,7 +126,7 @@ public class EcoToolItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext ctx, List<Component> lines, TooltipFlag flag) {
         String text = switch (kind) {
             case SOIL_KIT -> "Use on the ground: soil, water and habitat.";
-            case INSECTICIDE -> "Kills crop pests, and the bats too.";
+            case INSECTICIDE -> "Kills crop pests; natural enemies off for a week.";
             case BAT_GUANO -> "Fast fertilizer for farmland.";
         };
         lines.add(Component.literal(text).withColor(0xD9CBB0));

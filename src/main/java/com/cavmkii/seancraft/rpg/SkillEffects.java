@@ -1090,6 +1090,9 @@ public final class SkillEffects {
             return;
         }
         double longer = 1 + Rpg.stats(owner).get(Stat.BLEED_DURATION) / 100;
+        if ("keen".equals(Scaling.infusionName(owner.getMainHandItem()))) {
+            perSecond *= 1.5f; // a Keen wrap's deeper bleeds (9.4.3)
+        }
         long until = target.level().getGameTime() + Math.round(seconds * 20 * longer);
         Bleed old = BLEEDS.get(target);
         BLEEDS.put(target, new Bleed(owner.getUUID(), Math.max(perSecond, old == null ? 0 : old.perSecond()), Math.max(until, old == null ? 0 : old.until())));
