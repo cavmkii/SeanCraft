@@ -30,7 +30,10 @@ public final class Scaling {
         return weights(weapon).getOrDefault(Attr.AGI, 0.0);
     }
 
-    /** Share of each attribute in the weapon's scaling, after its wrap's infusion (9.4.3) shifts 25% toward one. */
+    /**
+     * Share of each attribute in the weapon's scaling, after its wrap's infusion (9.4.3): Heavy moves all of it to STR,
+     * Keen all of it to AGI, Arcane half of it to INT.
+     */
     public static java.util.Map<Attr, Double> weights(ItemStack weapon) {
         java.util.Map<Attr, Double> w = new java.util.EnumMap<>(Attr.class);
         Attr[] s = of(weapon);
@@ -41,11 +44,24 @@ public final class Scaling {
             w.merge(s[1], 0.5, Double::sum);
         }
         Attr toward = infusion(weapon);
-        if (toward != null) {
-            w.replaceAll((a, v) -> v * 0.75);
-            w.merge(toward, 0.25, Double::sum);
+        if (toward == Attr.STR || toward == Attr.AGI) {
+            w.clear();
+            w.put(toward, 1.0);
+        } else if (toward == Attr.INT) {
+            w.replaceAll((a, v) -> v * 0.5);
+            w.merge(Attr.INT, 0.5, Double::sum);
         }
         return w;
+    }
+
+    /** The infusion on a weapon's wrap ("heavy", "keen", "arcane"), or null. */
+    public static String infusionName(ItemStack weapon) {
+        if (weapon == null || weapon.isEmpty()) {
+            return null;
+        }
+        com.cavmkii.seancraft.parts.Parts.Installed wrap = com.cavmkii.seancraft.parts.Parts.installed(weapon)
+                .get(com.cavmkii.seancraft.parts.PartSlot.WRAP);
+        return wrap == null ? null : wrap.infusion();
     }
 
     /** The attribute a weapon's infused wrap leans toward, or null. */

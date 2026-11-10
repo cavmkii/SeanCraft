@@ -244,9 +244,10 @@ public final class Damage {
                 blunt += dealt;
             }
         }
-        // Blunt hits build poise (9.6.1); a heavy attack builds twice as much (9.4.1).
+        // Blunt hits build poise (9.6.1); a heavy attack builds twice as much (9.4.1), a Heavy wrap half again (9.4.3).
         Poise.add(victim, blunt * (source.getEntity() instanceof ServerPlayer attacker && source.getDirectEntity() == attacker
-                && Combat.heavySwing(attacker) ? 2 : 1));
+                && Combat.heavySwing(attacker) ? 2 : 1) * (source.getEntity() instanceof ServerPlayer holder && source.getDirectEntity() == holder
+                && "heavy".equals(com.cavmkii.seancraft.rpg.Scaling.infusionName(holder.getMainHandItem())) ? 1.5f : 1));
         if (victim instanceof ServerPlayer player) {
             float points = sourcePoints(player, source);
             if (points > 0) {

@@ -21,8 +21,8 @@ public final class Traits {
     static final float MAX_PENETRATION = 0.75f;
     static final float SHIELD_BREACH_CHANCE = 0.35f;
     static final float BACKSTAB = 1.5f;
-    /** Quick strike: a dagger leaves the target open again after this many ticks instead of vanilla's 10. */
-    static final int QUICK_STRIKE_TICKS = 4;
+    /** Quick strike: a dagger leaves the target open again after this many ticks (0.1 s) instead of vanilla's 10 (9.6). */
+    static final int QUICK_STRIKE_TICKS = 2;
 
     private Traits() {}
 
@@ -32,6 +32,12 @@ public final class Traits {
                     && com.cavmkii.seancraft.rpg.Rpg.stats(sp).has(com.cavmkii.seancraft.rpg.Stat.QUICK_STRIKES)) {
                 // Hurt time runs from 20 and blocks hits while above 10; a dagger leaves only a short window.
                 entity.invulnerableTime = Math.min(entity.invulnerableTime, 10 + QUICK_STRIKE_TICKS);
+            }
+            // An Arcane wrap (9.4.3): each melee hit restores 2 mana.
+            if (source.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp && source.getDirectEntity() == sp
+                    && "arcane".equals(com.cavmkii.seancraft.rpg.Scaling.infusionName(sp.getMainHandItem()))) {
+                com.cavmkii.seancraft.rpg.PlayerData d = com.cavmkii.seancraft.rpg.Rpg.data(sp);
+                d.mana = (float) Math.min(com.cavmkii.seancraft.rpg.Rpg.stats(sp).maxMana(), d.mana + 2);
             }
         });
     }

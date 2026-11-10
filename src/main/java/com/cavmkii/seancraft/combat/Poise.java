@@ -47,6 +47,29 @@ public final class Poise {
             stagger(target);
         } else {
             METERS.put(target, new Meter(value, now));
+            if (value >= threshold * NEAR && !(target instanceof ServerPlayer)) {
+                crack(target);
+            }
+        }
+    }
+
+    /** Past this share of the threshold a target shows it's about to break (9.6.1). */
+    static final float NEAR = 0.7f;
+
+    /**
+     * Close to staggering: chips fly off the target's head and it flinches on the hit, so players can see a stagger
+     * coming and press for it. (There's no mob health bar to crack, so the cracks are on the mob.)
+     */
+    static void crack(LivingEntity target) {
+        if (target.level() instanceof ServerLevel level) {
+            level.sendParticles(new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK,
+                    net.minecraft.world.level.block.Blocks.CRACKED_STONE_BRICKS.defaultBlockState()),
+                    target.getX(), target.getY(1.05), target.getZ(), 10, 0.25, 0.1, 0.25, 0.05);
+            level.playSound(null, target.blockPosition(), net.minecraft.sounds.SoundEvents.SHIELD_BREAK, net.minecraft.sounds.SoundSource.HOSTILE, 0.5f, 1.6f);
+        }
+        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 4, 3, false, false));
+        if (target instanceof Mob mob) {
+            mob.getNavigation().stop();
         }
     }
 

@@ -156,6 +156,11 @@ public final class Health {
             // Broadheads make bleeds half again as bad (9.4.4).
             float bleed = com.cavmkii.seancraft.combat.Damage.arrowHas(source, com.cavmkii.seancraft.combat.Damage.BROADHEAD_TAG)
                     ? Math.min(1, severity * com.cavmkii.seancraft.combat.Damage.BROADHEAD_BLEED) : severity;
+            // A Keen wrap (9.4.3) on the attacker's weapon: bleeds half again as bad.
+            if (source.getEntity() instanceof net.minecraft.world.entity.LivingEntity attacker && source.getDirectEntity() == attacker
+                    && "keen".equals(com.cavmkii.seancraft.rpg.Scaling.infusionName(attacker.getMainHandItem()))) {
+                bleed = Math.min(1, bleed * 1.5f);
+            }
             inflict(player, bleed >= Body.HEAVY ? Body.HEAVY_BLEED : Body.LIGHT_BLEED, part, bleed);
         }
         if (part.limb() && player.getRandom().nextFloat() < chance * (1 - cut)) {
