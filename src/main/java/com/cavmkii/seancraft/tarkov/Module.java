@@ -50,7 +50,14 @@ public enum Module {
             new Level("Fermenter: sake, mead, tofu, soy sauce and Koji (about 10 minutes a batch).", 40,
                     List.of(Cost.logs(8), Cost.of(Items.COPPER_INGOT, 6), Cost.of(Items.GLASS_BOTTLE, 4), Cost.of(Items.BARREL, 2)), WORKSHOP, 1),
             new Level("Oven: pies, tarts and roasts.", 60,
-                    List.of(Cost.of(Items.BRICKS, 32), Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.FURNACE, 2)), WORKSHOP, 2)));
+                    List.of(Cost.of(Items.BRICKS, 32), Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.FURNACE, 2)), WORKSHOP, 2))),
+    LIVING_QUARTERS("Living quarters", Items.RED_BED, List.of(
+            new Level("+2 comfort at home, on top of the +1 every module gives.", 20,
+                    List.of(Cost.planks(32), Cost.tag(net.minecraft.tags.ItemTags.WOOL, 8, "Any wool"), Cost.tag(net.minecraft.tags.ItemTags.BEDS, 1, "Any bed"))),
+            new Level("+4 comfort at home.", 40,
+                    List.of(Cost.logs(16), Cost.tag(net.minecraft.tags.ItemTags.WOOL_CARPETS, 8, "Any carpet"), Cost.of(Items.LANTERN, 4)), WORKSHOP, 1),
+            new Level("+6 comfort at home, and you wake up Rested after a night's sleep here.", 60,
+                    List.of(Cost.of(Items.BOOKSHELF, 4), Cost.of(Items.PAINTING, 2), Cost.of(Items.FLOWER_POT, 4)), WORKSHOP, 2)));
 
     /** One level of a module: what it does, how long it takes, what it costs, and what it needs first. */
     public record Level(String effect, int buildSeconds, List<Cost> costs, Module needs, int needsLevel) {

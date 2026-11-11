@@ -330,5 +330,10 @@
   "item.seancraft.soybeans.desc": "Plant it on farmland. Grows only in temperate biomes. Gives fertility back to the field as it grows.",
   "item.seancraft.koji.desc": "The culture the fermenter needs. The fermenter makes more from rice and Koji.",
   "item.seancraft.travel_grill.desc": "Use it anywhere to cook tier 1 and 2 pot dishes that need no fermenter or oven.",
-  "item.seancraft.kitchen.desc": "Home module: cooking pot, then fermenter, then oven. Place it at your home base and use it to cook and build."
+  "item.seancraft.kitchen.desc": "Home module: cooking pot, then fermenter, then oven. Place it at your home base and use it to cook and build.",
+  "block.seancraft.living_quarters": "Living Quarters",
+  "item.seancraft.living_quarters": "Living Quarters",
+  "item.seancraft.living_quarters.desc": "Home module: more comfort, so Rested lasts longer. At level 3 you wake up Rested. Place it at your home base and use it to build.",
+  "item.seancraft.fertile_mulch": "Fertile Mulch",
+  "item.seancraft.fertile_mulch.desc": "Use it on farmland at your home base: any crop grows on that block, whatever the climate."
 }

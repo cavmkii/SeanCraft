@@ -194,7 +194,9 @@ public final class Health {
             return;
         }
         for (BodyPart leg : new BodyPart[] {BodyPart.LEFT_LEG, BodyPart.RIGHT_LEG}) {
-            if (!Body.destroyed(d, leg) && player.getRandom().nextFloat() < Math.min(0.9f, severity * 1.5f)) {
+            // Climbing country (9.3.3): falls break legs more often.
+            float chance = severity * 1.5f * com.cavmkii.seancraft.hazard.Mobility.fallFactor(player);
+            if (!Body.destroyed(d, leg) && player.getRandom().nextFloat() < Math.min(0.95f, chance)) {
                 inflict(player, Body.FRACTURE, leg, severity);
             }
         }

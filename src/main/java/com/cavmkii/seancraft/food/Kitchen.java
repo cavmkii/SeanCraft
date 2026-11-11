@@ -406,6 +406,7 @@ public final class Kitchen {
     private Kitchen() {}
 
     public static void init() {
+        Mulch.init();
         // Foraging (11.2, 11.3): wild plants come from the patch's forage, so stripping one makes them scarce there.
         PlayerBlockBreakEvents.AFTER.register((level, player, pos, state, be) -> {
             if (level instanceof ServerLevel server && !player.isCreative()) {

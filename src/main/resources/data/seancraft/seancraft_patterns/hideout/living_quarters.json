@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Modules",
+  "pattern": [
+    "PPP",
+    "PBP",
+    "CCC"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "B": "#minecraft:beds",
+    "C": "minecraft:cobblestone"
+  },
+  "result": {
+    "id": "seancraft:living_quarters",
+    "count": 1
+  }
+}

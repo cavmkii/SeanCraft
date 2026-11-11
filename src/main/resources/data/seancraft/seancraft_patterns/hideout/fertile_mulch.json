@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Tools",
+  "pattern": [
+    "BRB",
+    "RDR",
+    "BRB"
+  ],
+  "key": {
+    "B": "minecraft:bone_meal",
+    "R": "minecraft:rotten_flesh",
+    "D": "minecraft:dirt"
+  },
+  "result": {
+    "id": "seancraft:fertile_mulch",
+    "count": 4
+  }
+}

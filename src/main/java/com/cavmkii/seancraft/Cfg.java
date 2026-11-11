@@ -111,6 +111,8 @@ public final class Cfg {
     public static double spawnDistance = 400;
     public static double spawnRadius = 24;
     public static double spawnRefillMinutes = 30;
+    /** Mountain-tagged biomes above this count as peaks for the Mobility hazard (9.3.3). */
+    public static double peakY = 180;
 
     // Combat
     public static double healthBase = 300;
@@ -222,6 +224,8 @@ public final class Cfg {
         d("Camp", "SafeRadius", "No hostile spawns within this many blocks of a lit camp.", v -> campSafeRadius = v, () -> campSafeRadius);
         d("Health", "SleepHealPercent", "Sleeping through the night heals each body part that isn't destroyed by this percent of its health.", v -> sleepHealPercent = v, () -> sleepHealPercent);
         i("Spawn", "Points", "Fixed spawn points (with a supply shelter) built in a new world. 0 turns them off. Only read when the world is first started.", v -> spawnPoints = v, () -> spawnPoints);
+        d("World", "PeakY", "Height above which mountain biomes count as high peaks: climbing costs heavy stamina and falls break legs more often.",
+                v -> peakY = v, () -> peakY);
         d("Spawn", "Distance", "How far the other spawn points are from world spawn (blocks).", v -> spawnDistance = v, () -> spawnDistance);
         d("Spawn", "Radius", "Safe radius around each spawn point: hostile mobs don't spawn inside it.", v -> spawnRadius = v, () -> spawnRadius);
         d("Spawn", "RefillMinutes", "Empty spawn chests are restocked after this long.", v -> spawnRefillMinutes = v, () -> spawnRefillMinutes);
