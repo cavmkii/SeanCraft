@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "minecraft:cooked_salmon",
+    "seancraft:rice"
+  ],
+  "result": {
+    "id": "seancraft:salmon_and_rice",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  },
+  "grill": true
+}

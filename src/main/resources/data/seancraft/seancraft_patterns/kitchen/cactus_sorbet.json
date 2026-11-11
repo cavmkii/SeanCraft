@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:cactus_fruit",
+    "minecraft:snowball",
+    "minecraft:honey_bottle"
+  ],
+  "result": {
+    "id": "seancraft:cactus_sorbet",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

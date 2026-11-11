@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "minecraft:chicken",
+    "seancraft:garlic"
+  ],
+  "result": {
+    "id": "seancraft:garlic_chicken",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  },
+  "grill": true
+}

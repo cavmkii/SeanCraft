@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:tofu",
+    "seancraft:garlic",
+    "seancraft:rice"
+  ],
+  "result": {
+    "id": "seancraft:tofu_stir_fry",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

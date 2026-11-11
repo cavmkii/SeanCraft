@@ -129,6 +129,10 @@ public final class Food {
         if (props == null) {
             return null;
         }
+        Def dish = Kitchen.def(stack.getItem());
+        if (dish != null) {
+            return dish;
+        }
         Kind kind = kind(stack);
         int n = props.nutrition();
         float s = props.saturation() / Math.max(1, 2f * n);

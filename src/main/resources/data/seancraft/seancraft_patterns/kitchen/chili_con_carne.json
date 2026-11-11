@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "minecraft:beef",
+    "seancraft:chili",
+    "seancraft:onion",
+    "seancraft:soybeans"
+  ],
+  "result": {
+    "id": "seancraft:chili_con_carne",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

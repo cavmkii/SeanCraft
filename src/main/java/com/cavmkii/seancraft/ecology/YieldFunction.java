@@ -38,6 +38,11 @@ public final class YieldFunction implements LootItemFunction {
                     builder.apply(() -> INSTANCE);
                 }
             }
+            for (Block crop : com.cavmkii.seancraft.food.Kitchen.CROPS) {
+                if (key.equals(crop.getLootTable())) {
+                    builder.apply(() -> INSTANCE);
+                }
+            }
         });
     }
 
@@ -51,7 +56,8 @@ public final class YieldFunction implements LootItemFunction {
         BlockState state = ctx.getParamOrNull(LootContextParams.BLOCK_STATE);
         Vec3 origin = ctx.getParamOrNull(LootContextParams.ORIGIN);
         if (state == null || origin == null || !(state.getBlock() instanceof CropBlock crop) || !crop.isMaxAge(state)
-                || !(stack.is(Items.WHEAT) || stack.is(Items.CARROT) || stack.is(Items.POTATO) || stack.is(Items.BEETROOT))) {
+                || !(stack.is(Items.WHEAT) || stack.is(Items.CARROT) || stack.is(Items.POTATO) || stack.is(Items.BEETROOT)
+                || com.cavmkii.seancraft.food.Kitchen.produce(stack))) {
             return stack;
         }
         double m = Ecology.yieldMultiplier(ctx.getLevel(), BlockPos.containing(origin), state.getBlock());

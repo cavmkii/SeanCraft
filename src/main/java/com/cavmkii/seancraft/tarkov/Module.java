@@ -43,7 +43,14 @@ public enum Module {
             new Level("Chest filters and ORGANIZE STASH; REFILL STACKS and auto-refill draw from the stash.", 40,
                     List.of(Cost.logs(16), Cost.of(Items.COPPER_INGOT, 8), Cost.of(Items.BARREL, 4)), WORKSHOP, 1),
             new Level("The stash at every station: crafting and furnaces draw straight from it.", 60,
-                    List.of(Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.HOPPER, 4), Cost.of(Items.REDSTONE, 16)), WORKSHOP, 2)));
+                    List.of(Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.HOPPER, 4), Cost.of(Items.REDSTONE, 16)), WORKSHOP, 2))),
+    KITCHEN("Kitchen", Items.SMOKER, List.of(
+            new Level("Hearth and cooking pot: pot dishes, any order.", 20,
+                    List.of(Cost.planks(16), Cost.of(Items.COBBLESTONE, 16), Cost.of(Items.CAMPFIRE, 1), Cost.of(Items.CAULDRON, 1))),
+            new Level("Fermenter: sake, mead, tofu, soy sauce and Koji (about 10 minutes a batch).", 40,
+                    List.of(Cost.logs(8), Cost.of(Items.COPPER_INGOT, 6), Cost.of(Items.GLASS_BOTTLE, 4), Cost.of(Items.BARREL, 2)), WORKSHOP, 1),
+            new Level("Oven: pies, tarts and roasts.", 60,
+                    List.of(Cost.of(Items.BRICKS, 32), Cost.of(Items.IRON_INGOT, 8), Cost.of(Items.FURNACE, 2)), WORKSHOP, 2)));
 
     /** One level of a module: what it does, how long it takes, what it costs, and what it needs first. */
     public record Level(String effect, int buildSeconds, List<Cost> costs, Module needs, int needsLevel) {

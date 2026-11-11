@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:snow_hare",
+    "seancraft:onion",
+    "seancraft:cloudberries",
+    "minecraft:potato"
+  ],
+  "result": {
+    "id": "seancraft:snow_hare_stew",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

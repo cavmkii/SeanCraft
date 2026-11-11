@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Fermenter",
+  "ingredients": [
+    "seancraft:soybeans",
+    "seancraft:soybeans",
+    "seancraft:koji"
+  ],
+  "ferment": 600,
+  "result": {
+    "id": "seancraft:tofu",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 2
+  }
+}

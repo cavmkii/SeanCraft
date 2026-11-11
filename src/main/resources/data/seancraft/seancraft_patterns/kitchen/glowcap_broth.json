@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:glowcap",
+    "minecraft:bone",
+    "seancraft:onion"
+  ],
+  "result": {
+    "id": "seancraft:glowcap_broth",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

@@ -37,6 +37,8 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
     private final DataSlot gated = DataSlot.standalone();
     /** Whose recipes this grid makes: 0 the Hideout Bench (ungated ones), else module ordinal + 1 (that module's). */
     private final DataSlot station = DataSlot.standalone();
+    /** 1 for the Travel Grill (11.4): pot dishes marked for it, anywhere, no module needed. */
+    private final DataSlot grill = DataSlot.standalone();
 
     public HideoutCraftMenu(int id, Inventory inventory) {
         this(id, inventory, ContainerLevelAccess.NULL);
@@ -62,6 +64,8 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
+                // A fermenter crock's clock starts when it's taken.
+                com.cavmkii.seancraft.food.Kitchen.start(stack, player.level());
                 consume(player);
                 super.onTake(player, stack);
             }
@@ -80,6 +84,7 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
         }
         addDataSlot(gated);
         addDataSlot(station);
+        addDataSlot(grill);
         access.execute((level, pos) -> {
             Hideouts.Hideout h = Hideouts.byPos((net.minecraft.server.level.ServerLevel) level, pos);
             for (Module m : Module.values()) {
@@ -117,13 +122,22 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
         return false;
     }
 
+    public boolean grill() {
+        return grill.get() == 1;
+    }
+
+    /** Whether this grid makes a recipe: the grill its marked pot dishes, otherwise as {@link #belongs(Pattern, Module)}. */
+    public boolean makes(Pattern p) {
+        return grill() ? p.grill : belongs(p, station());
+    }
+
     public boolean gated() {
         return gated.get() == 1;
     }
 
     /** True if this hideout's modules allow the recipe. */
     public boolean allowed(Pattern p) {
-        if (p.gateModule == null) {
+        if (p.gateModule == null || grill()) {
             return true;
         }
         try {
@@ -145,7 +159,7 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
         matchedAt = null;
         boolean blocked = false;
         for (Pattern p : Patterns.station("hideout")) {
-            if (!belongs(p, station())) {
+            if (!makes(p)) {
                 continue;
             }
             char[] at = p.place(cells, p::accepts);
@@ -160,14 +174,20 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
             }
         }
         gated.set(blocked && matched == null ? 1 : 0);
-        out.setItem(0, matched == null ? ItemStack.EMPTY : matched.resultStack());
+        out.setItem(0, matched == null ? ItemStack.EMPTY : result(matched));
+    }
+
+    /** What a recipe makes here: fermenter recipes come out in a crock that turns into the result. */
+    private static ItemStack result(Pattern p) {
+        ItemStack r = p.resultStack();
+        return p.ferment > 0 ? com.cavmkii.seancraft.food.Kitchen.fermenting(r, p.ferment) : r;
     }
 
     private void consume(Player player) {
         if (owner == null || matched == null) {
             return;
         }
-        ItemStack result = matched.resultStack();
+        ItemStack result = result(matched);
         for (int i = 0; i < 9; i++) {
             if (matchedAt[i] != 0) {
                 ItemStack s = grid.getItem(i);
@@ -222,10 +242,22 @@ public class HideoutCraftMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         // A module's station only needs you in its hideout; the bench's own grid needs the bench.
+        if (grill()) {
+            return player.getInventory().contains(new ItemStack(com.cavmkii.seancraft.food.Kitchen.TRAVEL_GRILL));
+        }
         return access.evaluate((level, pos) -> (station() != null || level.getBlockState(pos).is(TarkovContent.HIDEOUT_BENCH))
                 && (player.distanceToSqr(Vec3.atCenterOf(pos)) <= 64
                 || player instanceof ServerPlayer sp && Hideouts.at(sp.serverLevel(), sp.position()) instanceof Hideouts.Hideout h
                 && h.contains(Vec3.atCenterOf(pos))), true);
+    }
+
+    /** The Travel Grill's grid, wherever the player is. */
+    public static void openGrill(ServerPlayer player) {
+        player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, p) -> {
+            HideoutCraftMenu menu = new HideoutCraftMenu(id, inv, ContainerLevelAccess.create(player.level(), player.blockPosition()), null);
+            menu.grill.set(1);
+            return menu;
+        }, net.minecraft.network.chat.Component.literal("Travel Grill")));
     }
 
     public static void open(ServerPlayer player, BlockPos pos) {

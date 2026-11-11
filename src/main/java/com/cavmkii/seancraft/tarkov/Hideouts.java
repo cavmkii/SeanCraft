@@ -162,6 +162,23 @@ public final class Hideouts extends SavedData {
         return out;
     }
 
+    /** Admin and testing: set a module's level at the home base the player stands in. */
+    public static String setLevel(net.minecraft.server.level.ServerPlayer player, String module, int level) {
+        Module m;
+        try {
+            m = Module.valueOf(module.toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return "No module " + module + ".";
+        }
+        Hideout h = at(player.serverLevel(), player.position());
+        if (h == null) {
+            return "Stand in a home base.";
+        }
+        h.levels[m.ordinal()] = Math.min(level, m.max());
+        get(player.serverLevel()).setDirty();
+        return m.label + " is now level " + h.levels[m.ordinal()] + ".";
+    }
+
     void remove(BlockPos pos) {
         if (list.removeIf(h -> h.pos.equals(pos))) {
             setDirty();

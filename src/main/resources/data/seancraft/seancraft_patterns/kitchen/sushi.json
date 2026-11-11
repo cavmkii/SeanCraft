@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "#seancraft:raw_cod_or_salmon",
+    "seancraft:rice",
+    "minecraft:kelp"
+  ],
+  "result": {
+    "id": "seancraft:sushi",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

@@ -46,6 +46,7 @@ public final class SeanCraft implements ModInitializer {
         com.cavmkii.seancraft.combat.Damage.init();
         com.cavmkii.seancraft.food.Food.init();
         com.cavmkii.seancraft.food.Rest.init();
+        com.cavmkii.seancraft.food.Kitchen.init();
         com.cavmkii.seancraft.ecology.Ecology.init();
         com.cavmkii.seancraft.boss.BossContent.init();
         com.cavmkii.seancraft.hazard.Hazards.init();
