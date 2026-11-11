@@ -25,7 +25,7 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
     private static final int BOOK_W = 62;
     private static final int ROW = 10;
     private static final int ROWS = 10;
-    private static final List<String> ORDER = List.of("Meds", "Arrows", "Stations", "Modules", "Totems");
+    private static final List<String> ORDER = List.of("Meds", "Arrows", "Stations", "Modules", "Totems", "Pot", "Fermenter", "Oven");
 
     private int scroll;
     private Pattern ghost;
@@ -41,7 +41,7 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
     private List<Pattern> book() {
         List<Pattern> out = new ArrayList<>();
         for (Pattern p : Patterns.station("hideout")) {
-            if (HideoutCraftMenu.belongs(p, menu.station())) {
+            if (menu.makes(p)) {
                 out.add(p);
             }
         }
@@ -53,7 +53,7 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
     }
 
     private String stationKind() {
-        return menu.station() == null ? StationTabs.HIDEOUT : com.cavmkii.seancraft.tarkov.Stations.moduleKind(menu.station());
+        return menu.grill() ? "grill" : menu.station() == null ? StationTabs.HIDEOUT : com.cavmkii.seancraft.tarkov.Stations.moduleKind(menu.station());
     }
 
     /** On a module's station: UPGRADE goes to its build-and-upgrade screen. */
@@ -184,6 +184,18 @@ public class HideoutCraftScreen extends AbstractContainerScreen<HideoutCraftMenu
             if (p.previous != 0) {
                 lines.add(Component.literal("Upgrade: the empty " + p.example(p.previous).getHoverName().getString() + " goes in the centre")
                         .withStyle(ChatFormatting.GRAY));
+            }
+            if (p.shapeless) {
+                lines.add(Component.literal(p.category + ": ingredients in any order").withStyle(ChatFormatting.GRAY));
+            } else if (p.category.equals("Oven")) {
+                lines.add(Component.literal("Oven").withStyle(ChatFormatting.GRAY));
+            }
+            if (p.ferment > 0) {
+                lines.add(Component.literal("Ferments for " + Math.round(p.ferment / 60f) + " min in a crock you carry").withStyle(ChatFormatting.GRAY));
+            }
+            var dish = com.cavmkii.seancraft.food.Kitchen.DISHES.get(result.getItem());
+            if (dish != null) {
+                lines.add(Component.literal("Tier " + dish.tier() + " " + dish.kind().label.toLowerCase()).withStyle(ChatFormatting.GOLD));
             }
             if (!menu.allowed(p)) {
                 lines.add(Component.literal("Needs " + gateText(p) + " at this home base").withStyle(ChatFormatting.RED));

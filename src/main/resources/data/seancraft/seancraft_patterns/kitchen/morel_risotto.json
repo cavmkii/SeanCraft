@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:rice",
+    "seancraft:morels",
+    "minecraft:milk_bucket"
+  ],
+  "result": {
+    "id": "seancraft:morel_risotto",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  },
+  "grill": true
+}

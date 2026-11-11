@@ -1,0 +1,20 @@
+{
+  "station": "hideout",
+  "category": "Oven",
+  "pattern": [
+    "SPE"
+  ],
+  "key": {
+    "S": "minecraft:sugar",
+    "P": "minecraft:pumpkin",
+    "E": "minecraft:egg"
+  },
+  "result": {
+    "id": "minecraft:pumpkin_pie",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 3
+  }
+}

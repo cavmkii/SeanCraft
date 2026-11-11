@@ -43,6 +43,13 @@ public final class GoblinCommands {
                                         StringArgumentType.getString(ctx, "boss")) ? "Built." : "No such dungeon.")))))
                 .then(Commands.literal("reload").requires(src -> src.hasPermission(2))
                         .executes(ctx -> reply(ctx, Cfg.load() + "\n" + JoeLines.load())))
+                .then(Commands.literal("module").requires(src -> src.hasPermission(2))
+                        .then(Commands.argument("module", StringArgumentType.word())
+                                .suggests((ctx, b) -> SharedSuggestionProvider.suggest(java.util.Arrays.stream(com.cavmkii.seancraft.tarkov.Module.values())
+                                        .map(m -> m.name().toLowerCase(java.util.Locale.ROOT)), b))
+                                .then(Commands.argument("level", IntegerArgumentType.integer(0, 3))
+                                        .executes(ctx -> reply(ctx, com.cavmkii.seancraft.tarkov.Hideouts.setLevel(ctx.getSource().getPlayerOrException(),
+                                                StringArgumentType.getString(ctx, "module"), IntegerArgumentType.getInteger(ctx, "level")))))))
                 .then(Commands.literal("injure").requires(src -> src.hasPermission(2))
                         .then(Commands.argument("part", StringArgumentType.word())
                                 .suggests((ctx, b) -> SharedSuggestionProvider.suggest(

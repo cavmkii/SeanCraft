@@ -795,7 +795,10 @@ public final class Ecology {
         }
         Patch p = data(level).patches.get(keyAt(pos));
         if (p != null) {
-            p.fertility = Math.max(0, p.fertility - Params.uptake / hectares());
+            // Soybeans fix nitrogen (11.3): they give back half what another crop takes.
+            double uptake = Params.uptake / hectares();
+            p.fertility = com.cavmkii.seancraft.food.Kitchen.fixesNitrogen(level.getBlockState(pos))
+                    ? Math.min(Params.leachAbove, p.fertility + uptake * 0.5) : Math.max(0, p.fertility - uptake);
             markDirty(level);
         }
     }
@@ -889,7 +892,9 @@ public final class Ecology {
             BlockState crop = level.getBlockState(bh.getBlockPos());
             if (crop.getBlock() instanceof CropBlock) {
                 boolean wheat = crop.is(Blocks.WHEAT);
-                String line = crop.getBlock().getName().getString() + ": held back by " + Model.limiting(p, wheat)
+                String line = crop.getBlock() instanceof com.cavmkii.seancraft.food.Kitchen.ClimateCrop cc && !cc.inClimate(level, bh.getBlockPos())
+                        ? crop.getBlock().getName().getString() + ": won't grow here (needs a " + cc.climate.label + " biome, or fertile mulch)"
+                        : crop.getBlock().getName().getString() + ": held back by " + Model.limiting(p, wheat)
                         + (wheat && p.resistance > 0.05 ? String.format(Locale.ROOT, "  (pests %.0f%% resistant)", p.resistance * 100) : "");
                 player.displayClientMessage(Component.literal(line).withColor(0xD9CBB0), true);
             }

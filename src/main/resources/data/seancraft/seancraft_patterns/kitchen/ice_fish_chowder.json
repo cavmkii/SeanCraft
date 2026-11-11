@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:ice_fish",
+    "minecraft:potato",
+    "minecraft:milk_bucket",
+    "seancraft:onion"
+  ],
+  "result": {
+    "id": "seancraft:ice_fish_chowder",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

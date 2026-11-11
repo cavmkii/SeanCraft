@@ -1,0 +1,22 @@
+{
+  "station": "hideout",
+  "category": "Oven",
+  "pattern": [
+    "CGS",
+    ".H."
+  ],
+  "key": {
+    "C": "seancraft:chili",
+    "G": "seancraft:glowcap",
+    "S": "seancraft:soy_sauce",
+    "H": "seancraft:hoglin_chop"
+  },
+  "result": {
+    "id": "seancraft:hoglin_feast",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 3
+  }
+}

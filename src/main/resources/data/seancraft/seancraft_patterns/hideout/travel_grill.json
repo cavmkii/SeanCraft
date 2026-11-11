@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Stations",
+  "pattern": [
+    "III",
+    "IFI",
+    ".I."
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "F": "minecraft:campfire"
+  },
+  "result": {
+    "id": "seancraft:travel_grill",
+    "count": 1
+  }
+}

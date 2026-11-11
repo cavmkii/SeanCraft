@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "minecraft:carrot",
+    "minecraft:carrot",
+    "minecraft:honey_bottle"
+  ],
+  "result": {
+    "id": "seancraft:honey_glazed_carrots",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  },
+  "grill": true
+}

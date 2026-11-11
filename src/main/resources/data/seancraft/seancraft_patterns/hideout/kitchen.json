@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Modules",
+  "pattern": [
+    "PPP",
+    "PFP",
+    "CCC"
+  ],
+  "key": {
+    "P": "#minecraft:planks",
+    "F": "minecraft:campfire",
+    "C": "minecraft:cobblestone"
+  },
+  "result": {
+    "id": "seancraft:kitchen",
+    "count": 1
+  }
+}

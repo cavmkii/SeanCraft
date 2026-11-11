@@ -1,0 +1,19 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "#seancraft:raw_meat",
+    "minecraft:potato",
+    "minecraft:carrot",
+    "seancraft:onion"
+  ],
+  "result": {
+    "id": "seancraft:hunters_stew",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  },
+  "grill": true
+}

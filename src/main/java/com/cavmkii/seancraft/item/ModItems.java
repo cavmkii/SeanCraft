@@ -68,6 +68,7 @@ public final class ModItems {
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.HIDEOUT_BENCH_ITEM);
                         output.accept(com.cavmkii.seancraft.tarkov.TarkovContent.CAMP_KIT);
                         com.cavmkii.seancraft.ecology.EcoContent.ITEMS.forEach(output::accept);
+                        com.cavmkii.seancraft.food.Kitchen.ITEMS.forEach(output::accept);
                         output.accept(ModItems.FIRE_ARROW);
                         output.accept(ModItems.BROADHEAD_ARROW);
                         output.accept(ModItems.BODKIN_ARROW);

@@ -82,6 +82,7 @@ There's no raid timer any more. Danger comes from how far out you are, the time 
   | Medstation | Unlocks meds; bleeds stop and fractures heal at home; level 3 gives regen at home |
   | Perimeter | Bigger home radius: 48, 72, 96 |
   | Map room | 2: a season and weather forecast when you get home, and everyone hears when a hunting party is after a friend. Level 1 is meant to share maps through JourneyMap; that part isn't built |
+  | Kitchen | 1: cooking pot. 2: fermenter. 3: oven. Use the Kitchen block to cook (see Food and rest) |
 
 ### Combat
 
@@ -129,9 +130,18 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Meat and stews are health food: lots of health, a little stamina.
   - Bread, berries, fruit and honey are stamina food.
   - Fish, pumpkin pie and golden food are balanced.
-  - Better food lasts longer (up to about 20 minutes).
+  - Vanilla food lasts up to about 20 minutes.
+  - Kitchen dishes have fixed values by tier (1 to 4) and kind, and last 10 minutes off a campfire, 20 from the pot, 25 from the oven and 30 fermented. Three tier 4 dishes come close to doubling your health.
   - The bonus fades over the last quarter, and the bar turns amber, so you know it's time to eat again.
 - **Eating rules.** You can't have two of the same food at once. You can eat it again once it's half gone, which starts it over. With all 3 slots full, you wait for one to run out. You lose your meals when you die.
+- **Kitchen.** A home module (Home Bench: planks around a campfire over cobblestone). Use the block to cook.
+  - Level 1, the pot: pot dishes, 2 to 4 ingredients in any order. 2, the fermenter: mead, sake, tofu, soy sauce and more Koji (rice + Koji makes 2). What comes out is a Fermenting crock that turns into the drink after 10 minutes in your inventory. It doesn't ferment sitting in a chest. 3, the oven: pies, tarts and roasts, which do have patterns (the book shows them).
+  - Fried egg is just an egg on a campfire.
+  - **Travel Grill** (Home Bench: iron around a campfire, iron under). Use it anywhere for the tier 1 and 2 pot dishes that don't need the fermenter: garlic chicken, honey-glazed carrots, hunter's stew, morel risotto, salmon and rice.
+- **New crops.** Garlic (temperate), onion (cold), chili (warm), rice and soybeans (temperate) only grow in their climate, from the biome's temperature. Out of climate they sit at the first stage and bone meal does nothing; look at one and it tells you. Vanilla crops grow anywhere. Soybeans give fertility back to the field as they grow instead of taking it, so they're the rotation crop.
+- **Foraging.** Breaking grass and plants in the right biome sometimes turns up something: wild garlic in forests, onions in taiga, chili in badlands (grass or dead bushes), morels in dark forests (grass or mushrooms), cactus fruit in deserts (dead bushes and cactus), mango from jungle leaves, glowcap from sculk and glow lichen in the deep dark, frostmint on peaks and slopes, cloudberries in snowy biomes out in the far lands. The odds follow the patch's forage, and each find uses a bit of it, so picking a spot clean makes it dry up for a while. Not in creative.
+- **New drops.** Goats drop goat meat and hoglins drop hoglin chops. Rabbits in snowy far lands drop a snow hare too, and fish caught there are mostly ice fish.
+- **Rice, soybeans and Koji** are meant to come from beating Matt, who isn't in the game yet. Until then they show up in village house chests, and sake in village and desert temple chests.
 - **Rested.** Stay within 4 blocks of a lit campfire, fire or furnace, under a roof, for 20 seconds without getting hurt.
   - A Resting chip counts down while you wait.
   - Rested gives +50% health regen, +100% stamina regen and +50% skill XP.
@@ -445,6 +455,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `/seancraft summon joe|sean`, `/seancraft babywars start|stop`, `/seancraft pedestal` (puts a Summoning Pedestal under you), `/seancraft dungeons` (lists where the dungeons are; `/seancraft dungeons build <boss>` builds one now) and `/seancraft reload` need op.
   - `/character xp|skill|reset` is for testing the character system (op). `/character learn <player> <SKILL> <rank> <slot>` learns an active skill at a rank and puts it in slot 0-2, skipping the web. `/character ladder <player>` shows ladder progress, and `/character ladder <player> "<id>" <value>` sets it (ids like `STR1`, `AGI2`, `x:mace`, `u:mace`, `on:STR`).
   - `/seancraft eco patch` shows everything about the patch you're in; `/seancraft eco step <days>` runs it forward; `/seancraft eco set <field> <value>` sets one number (like `fertility`, `game`, `pest`, `pollution` or `fish`) for testing (all op).
+  - `/seancraft module <module> <0-3>` sets a module's level at the home base you're standing in, for testing (op).
   - `/seancraft injure <part> <bleed|fracture|scar|destroy|heal> [percent]` sets an injury on yourself, for testing (op).
 
 ## Works with

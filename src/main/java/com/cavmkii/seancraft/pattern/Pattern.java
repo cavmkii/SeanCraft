@@ -37,19 +37,34 @@ public final class Pattern {
     public final int gateLevel;
     /** The letter standing for the previous item in a line (an empty rig, backpack or pouch), or 0. */
     public final char previous;
+    /** Ingredients in any order (the pot and fermenter, 11.4): {@link #rows} is then empty and the key holds a..i. */
+    public final boolean shapeless;
+    /** Fermenter recipes: seconds until the crock turns into the result; 0 for everything else. */
+    public final int ferment;
+    /** A pot dish the Travel Grill can make (11.4). */
+    public final boolean grill;
     public final String json;
 
     private Pattern(String id, JsonObject o) {
         this.id = id;
         this.json = o.toString();
         this.station = o.has("station") ? o.get("station").getAsString() : "hideout";
-        var arr = o.getAsJsonArray("pattern");
-        this.rows = new String[arr.size()];
-        for (int i = 0; i < rows.length; i++) {
-            rows[i] = arr.get(i).getAsString().replace(" ", "");
-        }
         this.key = new HashMap<>();
-        if (o.has("key")) {
+        this.shapeless = o.has("ingredients");
+        if (shapeless) {
+            var ing = o.getAsJsonArray("ingredients");
+            this.rows = new String[0];
+            for (int i = 0; i < ing.size() && i < 9; i++) {
+                key.put((char) ('a' + i), ing.get(i).getAsString());
+            }
+        } else {
+            var arr = o.getAsJsonArray("pattern");
+            this.rows = new String[arr.size()];
+            for (int i = 0; i < rows.length; i++) {
+                rows[i] = arr.get(i).getAsString().replace(" ", "");
+            }
+        }
+        if (!shapeless && o.has("key")) {
             for (Map.Entry<String, JsonElement> e : o.getAsJsonObject("key").entrySet()) {
                 key.put(e.getKey().charAt(0), e.getValue().getAsString());
             }
@@ -63,6 +78,8 @@ public final class Pattern {
         this.gateModule = gate == null ? null : gate.get("module").getAsString().toUpperCase(Locale.ROOT);
         this.gateLevel = gate == null ? 0 : gate.get("level").getAsInt();
         this.previous = o.has("previous") ? o.get("previous").getAsString().charAt(0) : 0;
+        this.ferment = o.has("ferment") ? o.get("ferment").getAsInt() : 0;
+        this.grill = o.has("grill") && o.get("grill").getAsBoolean();
     }
 
     public static Pattern parse(String id, JsonObject o) {
@@ -115,6 +132,9 @@ public final class Pattern {
      * the mirror, or null. {@code test} says whether a square's stack fits a letter; every other square must be empty.
      */
     public char[] place(ItemStack[] grid, java.util.function.BiPredicate<Character, ItemStack> test) {
+        if (shapeless) {
+            return placeAnyOrder(grid, test);
+        }
         int h = rows.length;
         int w = width();
         for (int mirror = 0; mirror < 2; mirror++) {
@@ -144,9 +164,50 @@ public final class Pattern {
         return null;
     }
 
+    /** Each filled square matched to a different ingredient, every ingredient used once. */
+    private char[] placeAnyOrder(ItemStack[] grid, java.util.function.BiPredicate<Character, ItemStack> test) {
+        int filled = 0;
+        for (ItemStack s : grid) {
+            filled += s.isEmpty() ? 0 : 1;
+        }
+        if (filled != key.size()) {
+            return null;
+        }
+        char[] at = new char[9];
+        return assign(grid, test, at, 0, new boolean[key.size()]) ? at : null;
+    }
+
+    private boolean assign(ItemStack[] grid, java.util.function.BiPredicate<Character, ItemStack> test, char[] at, int cell, boolean[] used) {
+        while (cell < 9 && grid[cell].isEmpty()) {
+            cell++;
+        }
+        if (cell == 9) {
+            return true;
+        }
+        for (int i = 0; i < used.length; i++) {
+            char c = (char) ('a' + i);
+            if (!used[i] && test.test(c, grid[cell])) {
+                used[i] = true;
+                at[cell] = c;
+                if (assign(grid, test, at, cell + 1, used)) {
+                    return true;
+                }
+                used[i] = false;
+                at[cell] = 0;
+            }
+        }
+        return false;
+    }
+
     /** The pattern drawn at the top left of an empty grid, for the book's ghost: the letter for each square. */
     public char[] ghost() {
         char[] at = new char[9];
+        if (shapeless) {
+            for (int i = 0; i < key.size(); i++) {
+                at[i] = (char) ('a' + i);
+            }
+            return at;
+        }
         for (int y = 0; y < rows.length; y++) {
             for (int x = 0; x < rows[y].length(); x++) {
                 char c = rows[y].charAt(x);

@@ -1,0 +1,17 @@
+{
+  "station": "hideout",
+  "category": "Fermenter",
+  "ingredients": [
+    "seancraft:rice",
+    "seancraft:koji"
+  ],
+  "ferment": 600,
+  "result": {
+    "id": "seancraft:koji",
+    "count": 2
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 2
+  }
+}

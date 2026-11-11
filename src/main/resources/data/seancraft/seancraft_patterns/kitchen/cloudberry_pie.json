@@ -1,0 +1,22 @@
+{
+  "station": "hideout",
+  "category": "Oven",
+  "pattern": [
+    "SCE",
+    "WWW"
+  ],
+  "key": {
+    "S": "minecraft:sugar",
+    "C": "seancraft:cloudberries",
+    "E": "minecraft:egg",
+    "W": "minecraft:wheat"
+  },
+  "result": {
+    "id": "seancraft:cloudberry_pie",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 3
+  }
+}

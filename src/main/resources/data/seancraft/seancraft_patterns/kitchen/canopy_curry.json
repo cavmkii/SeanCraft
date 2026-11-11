@@ -1,0 +1,18 @@
+{
+  "station": "hideout",
+  "category": "Pot",
+  "ingredients": [
+    "seancraft:mango",
+    "seancraft:chili",
+    "seancraft:rice",
+    "minecraft:chicken"
+  ],
+  "result": {
+    "id": "seancraft:canopy_curry",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 1
+  }
+}

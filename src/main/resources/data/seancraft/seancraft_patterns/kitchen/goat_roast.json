@@ -1,0 +1,20 @@
+{
+  "station": "hideout",
+  "category": "Oven",
+  "pattern": [
+    "FMG"
+  ],
+  "key": {
+    "F": "seancraft:frostmint",
+    "M": "seancraft:goat_meat",
+    "G": "seancraft:garlic"
+  },
+  "result": {
+    "id": "seancraft:goat_roast",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 3
+  }
+}

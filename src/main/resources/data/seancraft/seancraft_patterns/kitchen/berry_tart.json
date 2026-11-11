@@ -1,0 +1,22 @@
+{
+  "station": "hideout",
+  "category": "Oven",
+  "pattern": [
+    "SBE",
+    "WWW"
+  ],
+  "key": {
+    "S": "minecraft:sugar",
+    "B": "minecraft:sweet_berries",
+    "E": "minecraft:egg",
+    "W": "minecraft:wheat"
+  },
+  "result": {
+    "id": "seancraft:berry_tart",
+    "count": 1
+  },
+  "gate": {
+    "module": "KITCHEN",
+    "level": 3
+  }
+}
