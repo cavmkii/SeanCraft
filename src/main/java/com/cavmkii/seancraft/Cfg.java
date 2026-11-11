@@ -138,8 +138,6 @@ public final class Cfg {
     public static double ecoTickBudgetMs = 2;
     public static double ecoDayScale = 1;
     public static double ecoCatchUpMaxDays = 30;
-    public static double ecoQualityZ = 2.5;
-    public static double ecoQualityK = 0.5;
 
     // Fight
     public static double fightTriggerRange = 35;
@@ -253,8 +251,6 @@ public final class Cfg {
         d("Ecology", "TickBudgetMs", "Server time per tick for patch updates, in milliseconds.", v -> ecoTickBudgetMs = v, () -> ecoTickBudgetMs);
         d("Ecology", "DayScale", "Ecological days per in-game day; raise it to speed everything up.", v -> ecoDayScale = v, () -> ecoDayScale);
         d("Ecology", "CatchUpMaxDays", "Longest absence a patch integrates when it reloads, in ecological days.", v -> ecoCatchUpMaxDays = v, () -> ecoCatchUpMaxDays);
-        d("Ecology", "QualityZ", "Shape of the threat curve in habitat quality (z).", v -> ecoQualityZ = v, () -> ecoQualityZ);
-        d("Ecology", "QualityK", "Half-saturation of the threat curve in habitat quality (k).", v -> ecoQualityK = v, () -> ecoQualityK);
 
         d("Fight", "TriggerRange", "Joe and Sean start fighting when this close (blocks).", v -> fightTriggerRange = v, () -> fightTriggerRange);
         d("Fight", "DurationSeconds", "Length of a fight.", v -> fightSeconds = v, () -> fightSeconds);
