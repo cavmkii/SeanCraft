@@ -435,7 +435,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - YAGM's own config is overridden on every start: graves open to anyone, 50% XP kept, no restore key.
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.
   - `Potion.CooldownMinutes` (5), `Character.AttributePointsPerLevel` (2) and `Weapons.LadderDamage` (`1000,5000,25000`: crossover, rung 2, rung 3).
-  - `Ecology.*`: `Enabled`, `PatchChunks` (4, patch size in chunks; changing it starts the model over), `TickBudgetMs` (2), `DayScale` (1; raise it to speed everything up), `CatchUpMaxDays` (30), `QualityZ` and `QualityK` (2.5, 0.5).
+  - `Ecology.*`: `Enabled`, `PatchChunks` (4, patch size in chunks; changing it starts the model over), `TickBudgetMs` (2), `DayScale` (1; raise it to speed everything up), `CatchUpMaxDays` (30).
   - Every ecology number (breeding rates, fox hunting, soil, pests, water, fish, dispersal, plant scores) is in `data/seancraft/ecology/params.json`, and a datapack can override it.
   - `Boss.HealthPerPlayer` (85), `Boss.DamagePerPlayer` (10), `Boss.CooldownPerPlayer` (20), all percent per extra player, and `Boss.ScalingCap` (6 players).
 - Damage and healing are 5x vanilla, and so is monster health. Sean's and Joe's health settings are multiplied too. Minecraft caps any mob's max health at 1024, so the Wither can't reach its full 1,500.
