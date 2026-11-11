@@ -34,6 +34,8 @@ public record HideoutRecipe(String id, Supplier<ItemStack> result, List<Cost> co
                 List.of(Cost.of(Items.CHEST, 1), Cost.planks(8)), null, 0));
         ALL.add(new HideoutRecipe("kitchen", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.KITCHEN)),
                 List.of(Cost.planks(6), Cost.of(Items.CAMPFIRE, 1), Cost.of(Items.COBBLESTONE, 3)), null, 0));
+        ALL.add(new HideoutRecipe("living_quarters", () -> new ItemStack(TarkovContent.MODULE_ITEMS.get(Module.LIVING_QUARTERS)),
+                List.of(Cost.planks(6), Cost.tag(net.minecraft.tags.ItemTags.BEDS, 1, "Any bed"), Cost.of(Items.COBBLESTONE, 3)), null, 0));
         ALL.add(new HideoutRecipe("camp_kit", () -> new ItemStack(TarkovContent.CAMP_KIT),
                 List.of(Cost.planks(8), Cost.of(Items.STICK, 4), Cost.of(Items.CAMPFIRE, 1)), null, 0));
         ALL.add(new HideoutRecipe("antidote", () -> new ItemStack(TarkovContent.ANTIDOTE),

@@ -82,6 +82,7 @@ There's no raid timer any more. Danger comes from how far out you are, the time 
   | Medstation | Unlocks meds; bleeds stop and fractures heal at home; level 3 gives regen at home |
   | Perimeter | Bigger home radius: 48, 72, 96 |
   | Map room | 2: a season and weather forecast when you get home, and everyone hears when a hunting party is after a friend. Level 1 is meant to share maps through JourneyMap; that part isn't built |
+  | Living quarters | +2/+4/+6 comfort at home on top of the usual +1; at level 3 a night's sleep at home leaves you Rested |
   | Kitchen | 1: cooking pot. 2: fermenter. 3: oven. Use the Kitchen block to cook (see Food and rest) |
 
 ### Combat
@@ -139,6 +140,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - Fried egg is just an egg on a campfire.
   - **Travel Grill** (Home Bench: iron around a campfire, iron under). Use it anywhere for the tier 1 and 2 pot dishes that don't need the fermenter: garlic chicken, honey-glazed carrots, hunter's stew, morel risotto, salmon and rice.
 - **New crops.** Garlic (temperate), onion (cold), chili (warm), rice and soybeans (temperate) only grow in their climate, from the biome's temperature. Out of climate they sit at the first stage and bone meal does nothing; look at one and it tells you. Vanilla crops grow anywhere. Soybeans give fertility back to the field as they grow instead of taking it, so they're the rotation crop.
+- **Fertile mulch** (Home Bench: bone meal and rotten flesh around a dirt block; makes 4). Use it on farmland at your home base (or on the crop sitting on it) and that block grows anything, whatever the climate. It doesn't add fertility to the field. It doesn't work away from home.
 - **Foraging.** Breaking grass and plants in the right biome sometimes turns up something: wild garlic in forests, onions in taiga, chili in badlands (grass or dead bushes), morels in dark forests (grass or mushrooms), cactus fruit in deserts (dead bushes and cactus), mango from jungle leaves, glowcap from sculk and glow lichen in the deep dark, frostmint on peaks and slopes, cloudberries in snowy biomes out in the far lands. The odds follow the patch's forage, and each find uses a bit of it, so picking a spot clean makes it dry up for a while. Not in creative.
 - **New drops.** Goats drop goat meat and hoglins drop hoglin chops. Rabbits in snowy far lands drop a snow hare too, and fish caught there are mostly ice fish.
 - **Rice, soybeans and Koji** are meant to come from beating Matt, who isn't in the game yet. Until then they show up in village house chests, and sake in village and desert temple chests.
@@ -146,7 +148,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - A Resting chip counts down while you wait.
   - Rested gives +50% health regen, +100% stamina regen and +50% skill XP.
   - It lasts 8 minutes, plus 1 minute for each point of comfort.
-  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built at the home base you're in, plus 1 or 2 if the land around is Good or Remnant (see Ecology).
+  - Comfort is 1 for each kind of thing within 8 blocks (a fire, a bed, a carpet, a banner, a table, flowers or a flower pot), plus 1 for each module built at the home base you're in, plus 2 per Living quarters level, plus 1 or 2 if the land around is Good or Remnant (see Ecology).
   - It works away from home too, and a camp counts as a fire and a roof, but there's usually less comfort out there.
 
 ### Inventory
@@ -345,6 +347,7 @@ Swings and rolls come from Better Combat and Combat Roll. SeanCraft puts a price
   - **Heat:** deserts. Potion: Fire Resistance. The key comes from a tier 2 boss that isn't in yet.
   - **Cold:** frozen biomes out in the Far lands (not the snowy taiga), and the frozen and jagged peaks anywhere. Potion: Warmth, brewed from an awkward potion and a magma block. Its key is also from a tier 2 boss.
   - Boss arenas never have a hazard, so every dungeon can be reached.
+- **Hard climbing.** In jungles, and in mountain biomes above Y 180 (`World.PeakY`), every block you climb on a ladder or vine, or pillar up, costs 8 stamina. Out of stamina you can't hold on and slide back down. Falls there are twice as likely to break a leg. No drain and no warning. Carry Mark's Reel and none of it applies.
 
 ### Ecology
 
@@ -441,6 +444,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Danger.DistanceBands` (`1000,3000,6000`) and `Danger.Caps` (`4.0,2.5`, the most distance and elite stars together can multiply a monster's health and damage).
   - `Home.Radius` (30, before Perimeter), `Home.MaxBenches` (1) and `Home.PedestalClearance` (100, no Home Bench, bed respawn or camp that close to a boss dungeon).
   - `Camp.SafeRadius` (8) and `Health.SleepHealPercent` (50).
+  - `World.PeakY` (180): above this, mountain biomes count as high peaks for hard climbing.
   - `Spawn.*`: number of spawn points, distance (400), safe radius, restock time. A config file from before this update that still says 1000 (the old default) is moved to 400 once.
   - YAGM's own config is overridden on every start: graves open to anyone, 50% XP kept, no restore key.
   - `Combat.*`: `HealthBase` (300), `DamageScale` (5), `ArmorK` and `ResistK` (20), `StaminaRegen` (25 a second), `RollIframeTicks` (`8,4`: light or medium load, then heavy) and `RollRechargeSeconds` (0.75). Every skill and weapon number assumes `DamageScale` 5, so changing it throws the balance off.

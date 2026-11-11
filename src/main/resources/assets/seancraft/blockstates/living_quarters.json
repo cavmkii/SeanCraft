@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "seancraft:block/living_quarters"
+    },
+    "facing=east": {
+      "model": "seancraft:block/living_quarters",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "seancraft:block/living_quarters",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "seancraft:block/living_quarters",
+      "y": 270
+    }
+  }
+}

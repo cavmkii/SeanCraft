@@ -25,7 +25,8 @@ public final class StationTabs {
     private static String moduleLabel(String kind) {
         for (com.cavmkii.seancraft.tarkov.Module m : com.cavmkii.seancraft.tarkov.Module.values()) {
             if (com.cavmkii.seancraft.tarkov.Stations.moduleKind(m).equals(kind)) {
-                return m.label.toUpperCase();
+                // Tabs are narrow: the Living quarters tab just says QUARTERS.
+                return m == com.cavmkii.seancraft.tarkov.Module.LIVING_QUARTERS ? "QUARTERS" : m.label.toUpperCase();
             }
         }
         return kind.toUpperCase();

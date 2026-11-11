@@ -69,6 +69,22 @@ public final class Rest {
                 LAST_HURT.put(player.getUUID(), player.serverLevel().getGameTime());
             }
         });
+        // Living quarters 3: a night's sleep at home leaves you Rested.
+        net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.STOP_SLEEPING.register((entity, sleepingPos) -> {
+            if (entity instanceof ServerPlayer player && player.serverLevel().isDay()) {
+                Hideouts.Hideout home = Hideouts.at(player.serverLevel(), Vec3.atCenterOf(sleepingPos));
+                if (home != null && home.level(Module.LIVING_QUARTERS) >= 3) {
+                    int comfort = comfort(player.serverLevel(), sleepingPos);
+                    int ticks = (int) Math.round(minutes(comfort) * 1200 * com.cavmkii.seancraft.rpg.Rpg.stats(player).preparation());
+                    MobEffectInstance rested = player.getEffect(RESTED);
+                    if (rested == null || rested.getDuration() < ticks) {
+                        player.addEffect(new MobEffectInstance(RESTED, ticks, 0, true, false, true));
+                        player.displayClientMessage(Component.literal("Rested (comfort " + comfort + "): " + minutes(comfort) + " minutes")
+                                .withStyle(ChatFormatting.GOLD), true);
+                    }
+                }
+            }
+        });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             RESTING_FOR.remove(handler.player.getUUID());
             LAST_HURT.remove(handler.player.getUUID());
@@ -191,6 +207,10 @@ public final class Rest {
             for (Module module : Module.values()) {
                 if (home.level(module) > 0) {
                     comfort++;
+                }
+                // Living quarters adds more (12): 2 a level.
+                if (module == Module.LIVING_QUARTERS) {
+                    comfort += 2 * home.level(module);
                 }
             }
         }

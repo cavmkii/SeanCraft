@@ -50,6 +50,7 @@ public final class SeanCraft implements ModInitializer {
         com.cavmkii.seancraft.ecology.Ecology.init();
         com.cavmkii.seancraft.boss.BossContent.init();
         com.cavmkii.seancraft.hazard.Hazards.init();
+        com.cavmkii.seancraft.hazard.Mobility.init();
         com.cavmkii.seancraft.compat.GrappleCompat.init();
         com.cavmkii.seancraft.compat.GraveCompat.init();
 
