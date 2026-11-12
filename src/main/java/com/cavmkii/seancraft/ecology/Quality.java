@@ -35,6 +35,11 @@ public final class Quality {
      * {@code neighbour} returns a sampled patch at an offset, or null.
      */
     public static void update(Patch p, BiFunction<Integer, Integer, Patch> neighbour) {
+        update(p, neighbour, -1);
+    }
+
+    /** As above, with the patch's distance in patches to a boss's blight (18.6), or -1 for none. */
+    public static void update(Patch p, BiFunction<Integer, Integer, Patch> neighbour, int blight) {
         if (!p.sampled) {
             return;
         }
@@ -71,6 +76,15 @@ public final class Quality {
                 }
             }
         }
+        // Boss blight (18.6): one more threat, weight 1.0, reach Blight.Radius.
+        if (blight >= 0) {
+            double v = Math.pow(0.5, blight);
+            d += v;
+            if (v > worstD) {
+                worstD = v;
+                worst = "a boss's blight";
+            }
+        }
         d = Math.min(1, d);
         p.threat = d;
         p.worstThreat = worst;
@@ -83,6 +97,10 @@ public final class Quality {
         double disturbance = overdue || tooOften || overFed ? 2.0 / 3 : 1;
         double variety = variety(p) / Params.varietyCap;
         p.quality = 100 * variety * (1 - d) * disturbance;
+        if (blight >= 0) {
+            // Held at Weedy or worse until the boss falls.
+            p.quality = Math.min(p.quality, 39.9);
+        }
 
         // What holds it back most (17.11).
         double varietyLoss = 1 - variety;

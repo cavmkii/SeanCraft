@@ -634,6 +634,13 @@ public abstract class BossEntity extends PathfinderMob {
      */
     private void reward(List<ServerPlayer> players) {
         ServerLevel level = (ServerLevel) level();
+        // The first kill on the server lifts this boss's blight (18.6).
+        BossSites sites = BossSites.get(level.getServer().overworld());
+        BossSites.Site site = sites.sites.get(defId());
+        if (site != null && !site.beaten) {
+            site.beaten = true;
+            sites.setDirty();
+        }
         List<ItemStack> loot = new ArrayList<>();
         for (ServerPlayer player : players) {
             Set<String> beaten = player.getAttachedOrCreate(BossContent.BEATEN);

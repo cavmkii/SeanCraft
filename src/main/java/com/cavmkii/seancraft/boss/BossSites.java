@@ -55,6 +55,8 @@ public final class BossSites extends SavedData {
     public static final class Site {
         public BlockPos pos;
         public boolean built;
+        /** Someone on the server has beaten this boss: its blight is lifted (18.6). */
+        public boolean beaten;
 
         Site(BlockPos pos, boolean built) {
             this.pos = pos;
@@ -518,7 +520,9 @@ public final class BossSites extends SavedData {
         CompoundTag sites = tag.getCompound("sites");
         for (String id : sites.getAllKeys()) {
             CompoundTag s = sites.getCompound(id);
-            data.sites.put(id, new Site(BlockPos.of(s.getLong("pos")), s.getBoolean("built")));
+            Site site = new Site(BlockPos.of(s.getLong("pos")), s.getBoolean("built"));
+            site.beaten = s.getBoolean("beaten");
+            data.sites.put(id, site);
         }
         return data;
     }
@@ -530,6 +534,7 @@ public final class BossSites extends SavedData {
             CompoundTag t = new CompoundTag();
             t.putLong("pos", s.pos.asLong());
             t.putBoolean("built", s.built);
+            t.putBoolean("beaten", s.beaten);
             sites.put(id, t);
         });
         tag.put("sites", sites);

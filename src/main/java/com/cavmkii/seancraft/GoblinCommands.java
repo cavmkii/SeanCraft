@@ -43,6 +43,29 @@ public final class GoblinCommands {
                                         StringArgumentType.getString(ctx, "boss")) ? "Built." : "No such dungeon.")))))
                 .then(Commands.literal("reload").requires(src -> src.hasPermission(2))
                         .executes(ctx -> reply(ctx, Cfg.load() + "\n" + JoeLines.load())))
+                .then(Commands.literal("event").requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("wildfire").executes(ctx -> {
+                            var player = ctx.getSource().getPlayerOrException();
+                            net.minecraft.core.BlockPos at = player.level().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                                    player.blockPosition().relative(player.getDirection(), 8)).below();
+                            return reply(ctx, com.cavmkii.seancraft.world.Wildfire.ignite(player.serverLevel(), at, true)
+                                    ? "Wildfire lit at " + at.toShortString() + "." : "No grass to burn 8 blocks ahead (or it's a home base).");
+                        }))
+                        .then(Commands.literal("camp").executes(ctx -> {
+                            var player = ctx.getSource().getPlayerOrException();
+                            var at = player.blockPosition().relative(player.getDirection(), 6);
+                            return reply(ctx, com.cavmkii.seancraft.world.Landmarks.camp(player.serverLevel(), at)
+                                    ? "Abandoned camp built." : "Not flat or dry enough here.");
+                        }))
+                        .then(Commands.literal("party").executes(ctx -> {
+                            com.cavmkii.seancraft.tarkov.Tarkov.forceParty(ctx.getSource().getPlayerOrException());
+                            return reply(ctx, "A hunting party has been called. It arrives in 20-30 seconds if you're still out at night.");
+                        }))
+                        .then(Commands.literal("starfall").executes(ctx -> {
+                            var player = ctx.getSource().getPlayerOrException();
+                            var at = com.cavmkii.seancraft.world.Starfall.fall(player.serverLevel(), player);
+                            return reply(ctx, at == null ? "Nowhere to land." : "A star falls at " + at.getX() + ", " + at.getZ() + ".");
+                        })))
                 .then(Commands.literal("module").requires(src -> src.hasPermission(2))
                         .then(Commands.argument("module", StringArgumentType.word())
                                 .suggests((ctx, b) -> SharedSuggestionProvider.suggest(java.util.Arrays.stream(com.cavmkii.seancraft.tarkov.Module.values())

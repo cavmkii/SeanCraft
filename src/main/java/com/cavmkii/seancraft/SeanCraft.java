@@ -54,6 +54,10 @@ public final class SeanCraft implements ModInitializer {
         com.cavmkii.seancraft.compat.Celestials.init();
         com.cavmkii.seancraft.compat.Dungeons.init();
         com.cavmkii.seancraft.compat.Markers.init();
+        com.cavmkii.seancraft.world.Blight.init();
+        com.cavmkii.seancraft.world.Wildfire.init();
+        com.cavmkii.seancraft.world.Starfall.init();
+        com.cavmkii.seancraft.world.Landmarks.init();
         com.cavmkii.seancraft.compat.GrappleCompat.init();
         com.cavmkii.seancraft.compat.GraveCompat.init();
 

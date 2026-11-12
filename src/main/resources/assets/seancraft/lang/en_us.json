@@ -335,5 +335,6 @@
   "item.seancraft.living_quarters": "Living Quarters",
   "item.seancraft.living_quarters.desc": "Home module: more comfort, so Rested lasts longer. At level 3 you wake up Rested. Place it at your home base and use it to build.",
   "item.seancraft.fertile_mulch": "Fertile Mulch",
-  "item.seancraft.fertile_mulch.desc": "Use it on farmland at your home base: any crop grows on that block, whatever the climate."
+  "item.seancraft.fertile_mulch.desc": "Use it on farmland at your home base: any crop grows on that block, whatever the climate.",
+  "block.seancraft.wildfire": "Wildfire"
 }
