@@ -21,6 +21,17 @@ abstract class EcoCropMixin {
         }
     }
 
+    /** A harvest moon (18.1): half the time a crop grows an extra stage on its tick. */
+    @Inject(method = "randomTick", at = @At("TAIL"))
+    private void seancraft$harvestMoon(BlockState state, ServerLevel level, BlockPos pos, RandomSource random, CallbackInfo ci) {
+        CropBlock self = (CropBlock) (Object) this;
+        BlockState now = level.getBlockState(pos);
+        if (now.is(self) && !self.isMaxAge(now) && random.nextBoolean() && com.cavmkii.seancraft.compat.Celestials.harvestMoon(level)
+                && level.getRawBrightness(pos, 0) >= 9) {
+            level.setBlock(pos, self.getStateForAge(self.getAge(now) + 1), 2);
+        }
+    }
+
     @Inject(method = "randomTick", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/level/ServerLevel;setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z"))
     private void seancraft$uptake(BlockState state, ServerLevel level, BlockPos pos, RandomSource random, CallbackInfo ci) {

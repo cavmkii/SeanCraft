@@ -85,7 +85,7 @@ public final class ClientCarry {
         }
         mc.player.getInventory().selected = lockedSlot;
         drain(mc.options.keyInventory, mc.options.keyDrop, mc.options.keySwapOffhand, mc.options.keyPickItem, mc.options.keySprint,
-                ClientTarkov.OPEN_STATUS, ClientTarkov.OPEN_SECURE, ClientRpg.OPEN_WEB);
+                ClientTarkov.OPEN_STATUS, ClientRpg.OPEN_WEB);
         drain(mc.options.keyHotbarSlots);
         drain(ClientRpg.ABILITY_KEYS);
         mc.player.setSprinting(false);

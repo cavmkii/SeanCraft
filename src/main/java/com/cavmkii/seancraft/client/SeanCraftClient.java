@@ -59,6 +59,14 @@ public final class SeanCraftClient implements ClientModInitializer {
                         Component.literal("SeanCraft vanilla theme"), net.fabricmc.fabric.api.resource.ResourcePackActivationType.DEFAULT_ENABLED));
         EntityRendererRegistry.register(com.cavmkii.seancraft.parts.Throwing.THROWN, com.cavmkii.seancraft.client.parts.ThrownWeaponRenderer::new);
         ClientRpg.init();
+        // Map markers go to JourneyMap when it's there; without it they're ignored (18.1).
+        boolean journeyMap = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("journeymap");
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.compat.Markers.Sync.TYPE,
+                (payload, context) -> {
+                    if (journeyMap) {
+                        context.client().execute(() -> com.cavmkii.seancraft.client.compat.JourneyMapMarkers.show(payload.markers()));
+                    }
+                });
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.pattern.Patterns.Sync.TYPE,
                 (payload, ctx) -> com.cavmkii.seancraft.pattern.Patterns.receive(payload));
         ClientTarkov.init();

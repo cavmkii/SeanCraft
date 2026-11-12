@@ -256,6 +256,10 @@ public final class Tarkov {
     private static int rollStars(ServerLevel level, Distance band, double roll) {
         int b = level.dimension() == Level.NETHER ? Distance.FAR_LANDS.ordinal() : band.ordinal();
         double night = level.dimension() == Level.OVERWORLD && level.isNight() ? 2 : 1;
+        // A blood moon doubles them again (18.1).
+        if (com.cavmkii.seancraft.compat.Celestials.bloodMoon(level)) {
+            night *= 2;
+        }
         if (roll < TWO_STAR[b] * night) {
             return 2;
         }
@@ -331,7 +335,9 @@ public final class Tarkov {
             }
         } else {
             long day = level.getDayTime() / 24000;
-            if (!night || band.ordinal() < Distance.FRONTIER.ordinal() || rt.partyDay == day || player.getRandom().nextInt(400) != 0) {
+            // A blood moon brings them into every band but the Heartland (18.1).
+            Distance from = com.cavmkii.seancraft.compat.Celestials.bloodMoon(level) ? Distance.WILDS : Distance.FRONTIER;
+            if (!night || band.ordinal() < from.ordinal() || rt.partyDay == day || player.getRandom().nextInt(400) != 0) {
                 return;
             }
             rt.partyDay = day;
