@@ -13,7 +13,7 @@ import org.lwjgl.glfw.GLFW;
 /** Client side of the world and home base: the danger HUD line, the home base screens, and the J (inventory) and H (status) keys. */
 public final class ClientTarkov {
     /** Where the player is (home, spawn, camp, the open world) and their distance band. */
-    public static TarkovNet.PlaceState place = new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0);
+    public static TarkovNet.PlaceState place = new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0, false);
 
     public static TarkovNet.Banner banner;
     public static long bannerAt;

@@ -59,6 +59,13 @@ public final class SeanCraftClient implements ClientModInitializer {
                         Component.literal("SeanCraft vanilla theme"), net.fabricmc.fabric.api.resource.ResourcePackActivationType.DEFAULT_ENABLED));
         EntityRendererRegistry.register(com.cavmkii.seancraft.parts.Throwing.THROWN, com.cavmkii.seancraft.client.parts.ThrownWeaponRenderer::new);
         ClientRpg.init();
+        com.cavmkii.seancraft.client.world.Atmosphere.init();
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlock(com.cavmkii.seancraft.world.Wildfire.FLAME,
+                net.minecraft.client.renderer.RenderType.cutout());
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.world.Blight.Zones.TYPE,
+                (payload, context) -> context.client().execute(() -> com.cavmkii.seancraft.client.world.Atmosphere.blight(payload.centres(), payload.radius())));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.world.Starfall.Streak.TYPE,
+                (payload, context) -> context.client().execute(() -> com.cavmkii.seancraft.client.world.Atmosphere.streak(payload.from(), payload.to())));
         // Map markers go to JourneyMap when it's there; without it they're ignored (18.1).
         boolean journeyMap = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("journeymap");
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(com.cavmkii.seancraft.compat.Markers.Sync.TYPE,

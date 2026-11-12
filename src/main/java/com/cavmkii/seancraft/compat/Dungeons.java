@@ -61,6 +61,11 @@ public final class Dungeons {
 
     private Dungeons() {}
 
+    /** World spawn as last seen on the server, for world-gen code. */
+    public static BlockPos spawn() {
+        return spawn;
+    }
+
     public static void init() {
         BandAtLeast.TYPE.getClass();
         ServerLifecycleEvents.SERVER_STARTED.register(server -> spawn = server.overworld().getSharedSpawnPos());

@@ -17,7 +17,7 @@ public final class TarkovNet {
     }
 
     /** Server to client once a second: where the player is (home, spawn, camp or the open world) and their distance band. */
-    public record PlaceState(int place, int band) implements CustomPacketPayload {
+    public record PlaceState(int place, int band, boolean hunted) implements CustomPacketPayload {
         public static final int UNKNOWN = 0;
         public static final int HOME = 1;
         public static final int OPEN = 2;
@@ -27,7 +27,8 @@ public final class TarkovNet {
         public static final StreamCodec<FriendlyByteBuf, PlaceState> CODEC = StreamCodec.of((buf, p) -> {
             buf.writeVarInt(p.place);
             buf.writeVarInt(p.band);
-        }, buf -> new PlaceState(buf.readVarInt(), buf.readVarInt()));
+            buf.writeBoolean(p.hunted);
+        }, buf -> new PlaceState(buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
         @Override public Type<PlaceState> type() { return TYPE; }
 
         public boolean home() {

@@ -61,6 +61,9 @@ public final class Tarkov {
         /** Overworld day number of the last hunting party sent at this player, and the game time of the last one. */
         long partyDay = -1;
         long lastParty;
+        /** A party announced by its horn (18.2): when it arrives, and from which direction (radians). 0 for none. */
+        long partyDueAt;
+        double partyAngle;
         final List<UUID> party = new ArrayList<>();
     }
 
@@ -192,7 +195,7 @@ public final class Tarkov {
         ServerLevel level = player.serverLevel();
         long now = level.getGameTime();
         if (now < rt.graceUntil) {
-            ServerPlayNetworking.send(player, new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0));
+            ServerPlayNetworking.send(player, new TarkovNet.PlaceState(TarkovNet.PlaceState.UNKNOWN, 0, false));
             return;
         }
         Hideouts.Hideout home = Hideouts.at(level, player.position());
@@ -214,8 +217,9 @@ public final class Tarkov {
             }
         }
         rt.place = place;
-        ServerPlayNetworking.send(player, new TarkovNet.PlaceState(place, band.ordinal()));
+        partyArrives(player, rt, place, band);
         huntingParty(player, rt, place, band);
+        ServerPlayNetworking.send(player, new TarkovNet.PlaceState(place, band.ordinal(), hunted(player, rt)));
     }
 
     /** Map room 2 (2.4.1): the season and the weather ahead, on coming home. */
@@ -287,7 +291,13 @@ public final class Tarkov {
             damage.addOrReplacePermanentModifier(new AttributeModifier(SeanCraft.id("elite_damage"), damageBonus, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
         if (stars > 0) {
-            mob.setCustomName(Component.literal("★".repeat(stars) + " ").withStyle(ChatFormatting.GOLD).append(mob.getType().getDescription()));
+            // Elite tells (18.2): the name in Blood, always shown; a faint aura (client); 2-star ones 15% bigger.
+            mob.setCustomName(Component.literal("★".repeat(stars) + " ").append(mob.getType().getDescription()).withColor(0xC8402E));
+            mob.setCustomNameVisible(true);
+            AttributeInstance size = mob.getAttribute(Attributes.SCALE);
+            if (size != null && stars >= 2) {
+                size.addOrReplacePermanentModifier(new AttributeModifier(SeanCraft.id("elite_size"), 0.15, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            }
         }
     }
 
@@ -322,6 +332,7 @@ public final class Tarkov {
                 }
             }
             rt.party.clear();
+            rt.partyDueAt = 0;
         }
         if (!Cfg.huntingParties || place != TarkovNet.PlaceState.OPEN || level.getDifficulty() == Difficulty.PEACEFUL
                 || com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
@@ -343,7 +354,57 @@ public final class Tarkov {
             rt.partyDay = day;
         }
         rt.lastParty = now;
-        sendParty(player, rt, band);
+        announceParty(player, rt);
+    }
+
+    /** Testing: a hunting party is announced for this player now. */
+    public static void forceParty(ServerPlayer player) {
+        Runtime rt = runtime(player);
+        rt.lastParty = player.serverLevel().getGameTime();
+        announceParty(player, rt);
+    }
+
+    /** True while a party is on its way or still hunting this player: the HUD's Hunted chip. */
+    static boolean hunted(ServerPlayer player, Runtime rt) {
+        if (rt.partyDueAt > 0) {
+            return true;
+        }
+        for (UUID id : rt.party) {
+            if (player.serverLevel().getEntity(id) instanceof Mob mob && mob.isAlive()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Hunting horns (18.2): a horn or a howl from the direction the party will come, 20 to 30 seconds before it
+     * arrives, so the player can run, hide or pick the ground.
+     */
+    private static void announceParty(ServerPlayer player, Runtime rt) {
+        ServerLevel level = player.serverLevel();
+        rt.partyAngle = level.random.nextDouble() * Math.PI * 2;
+        rt.partyDueAt = level.getGameTime() + 400 + level.random.nextInt(201);
+        Vec3 from = player.position().add(Math.cos(rt.partyAngle) * 24, 4, Math.sin(rt.partyAngle) * 24);
+        net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> sound = level.random.nextBoolean()
+                ? net.minecraft.sounds.SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(level.random.nextInt(4))
+                : net.minecraft.core.Holder.direct(net.minecraft.sounds.SoundEvents.WOLF_HOWL);
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(sound, net.minecraft.sounds.SoundSource.HOSTILE,
+                from.x, from.y, from.z, 6f, 0.8f + level.random.nextFloat() * 0.2f, level.random.nextLong()));
+        player.displayClientMessage(Component.literal("Something is hunting you.").withColor(0xC8402E), true);
+    }
+
+    /** A party that was announced arrives, unless the player reached safe ground or a fight in the meantime. */
+    private static void partyArrives(ServerPlayer player, Runtime rt, int place, Distance band) {
+        if (rt.partyDueAt <= 0 || player.serverLevel().getGameTime() < rt.partyDueAt) {
+            return;
+        }
+        rt.partyDueAt = 0;
+        ServerLevel level = player.serverLevel();
+        boolean dawn = level.dimension() == Level.OVERWORLD && !level.isNight();
+        if (!dawn && place == TarkovNet.PlaceState.OPEN && !com.cavmkii.seancraft.boss.Arenas.inFight(player)) {
+            sendParty(player, rt, band);
+        }
     }
 
     /** Two or three of the local monsters, 30-45 blocks out, led by an elite, sent straight at you. */
@@ -356,7 +417,7 @@ public final class Tarkov {
         int size = 2 + level.random.nextInt(2);
         int sent = 0;
         for (int i = 0; i < size; i++) {
-            BlockPos spot = findSpot(level, player);
+            BlockPos spot = findSpot(level, player, rt.partyAngle);
             if (spot == null) {
                 continue;
             }
@@ -451,9 +512,10 @@ public final class Tarkov {
         return pool;
     }
 
-    private static BlockPos findSpot(ServerLevel level, ServerPlayer player) {
+    /** Somewhere 30-45 blocks out, toward {@code bearing} (radians) give or take 45 degrees. */
+    private static BlockPos findSpot(ServerLevel level, ServerPlayer player, double bearing) {
         for (int attempt = 0; attempt < 10; attempt++) {
-            double angle = level.random.nextDouble() * Math.PI * 2;
+            double angle = bearing + (level.random.nextDouble() - 0.5) * Math.PI / 2;
             double dist = 30 + level.random.nextDouble() * 15;
             Vec3 at = player.position().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
             BlockPos ground = Wander.surface(level, at);

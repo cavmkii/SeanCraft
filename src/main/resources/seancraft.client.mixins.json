@@ -4,6 +4,7 @@
   "package": "com.cavmkii.seancraft.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "BandFogMixin",
     "ChatAccessor",
     "ContainerScreenMixin",
     "GameRendererInjuryMixin",

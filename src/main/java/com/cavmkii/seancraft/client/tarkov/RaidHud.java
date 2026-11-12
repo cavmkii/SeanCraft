@@ -149,5 +149,16 @@ final class RaidHud {
         }
         Kit.hudPanel(g, x - 5, y - 4, mc.font.width(line) + 10, 15);
         Kit.text(g, mc.font, line, x, y, stateColor());
+        // Hunted (18.2): a party has been heard and is coming, or is still after you.
+        if (s.hunted()) {
+            String chip = "HUNTED";
+            int cx = x + mc.font.width(line) + 12;
+            if (cx + mc.font.width(chip) + 5 > g.guiWidth() / 2 - 91 - 6) {
+                cx = x;
+                y -= 18;
+            }
+            Kit.hudPanel(g, cx - 5, y - 4, mc.font.width(chip) + 10, 15);
+            Kit.text(g, mc.font, chip, cx, y, Kit.BLOOD_LIGHT);
+        }
     }
 }

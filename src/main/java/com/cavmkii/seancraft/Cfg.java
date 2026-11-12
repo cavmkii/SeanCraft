@@ -115,6 +115,17 @@ public final class Cfg {
     public static double peakY = 180;
     /** Share of When Dungeons Arise structures that get built outside the Heartland (18.1). */
     public static double dungeonsKeep = 0.5;
+    /** Boss blight reach, in patches (18.6); 0 turns it off. */
+    public static int blightRadius = 3;
+    /** Wildfire (18.4). */
+    public static boolean wildfire = true;
+    public static double wildfireDryDays = 3;
+    public static int wildfireBlocksPerTick = 6;
+    /** Starfall (18.4): chance on each clear night. */
+    public static double starfallChance = 0.05;
+    /** Band-edge cairns and totems, and abandoned camps (18.2). */
+    public static boolean bandMarkers = true;
+    public static boolean abandonedCamps = true;
 
     // Combat
     public static double healthBase = 300;
@@ -230,6 +241,16 @@ public final class Cfg {
                 v -> peakY = v, () -> peakY);
         d("World", "DungeonsKeep", "Share (0-1) of When Dungeons Arise dungeons that get built outside the Heartland. None are built inside it.",
                 v -> dungeonsKeep = Math.max(0, Math.min(1, v)), () -> dungeonsKeep);
+        b("World", "BandMarkers", "Cairns and skull totems along the edges of the distance bands (new chunks only).", v -> bandMarkers = v, () -> bandMarkers);
+        b("World", "AbandonedCamps", "Abandoned camps in the wilds, more common further out (new chunks only).", v -> abandonedCamps = v, () -> abandonedCamps);
+        i("Blight", "Radius", "Patches around an unbeaten boss's dungeon that are blighted (grey, Weedy at best). 0 turns blight off.",
+                v -> blightRadius = Math.max(0, v), () -> blightRadius);
+        b("Events", "Wildfire", "Dry summers can set grassland on fire. Never inside a home base.", v -> wildfire = v, () -> wildfire);
+        d("Events", "WildfireDryDays", "Days without rain, in summer, before grassland can catch.", v -> wildfireDryDays = v, () -> wildfireDryDays);
+        i("Events", "WildfireBlocksPerTick", "Most grass blocks a wildfire burns per tick, across all fires.",
+                v -> wildfireBlocksPerTick = Math.max(1, v), () -> wildfireBlocksPerTick);
+        d("Events", "Starfall", "Chance (0-1) on each clear night that a star falls within about 1,000 blocks of someone.",
+                v -> starfallChance = Math.max(0, Math.min(1, v)), () -> starfallChance);
         d("Spawn", "Distance", "How far the other spawn points are from world spawn (blocks).", v -> spawnDistance = v, () -> spawnDistance);
         d("Spawn", "Radius", "Safe radius around each spawn point: hostile mobs don't spawn inside it.", v -> spawnRadius = v, () -> spawnRadius);
         d("Spawn", "RefillMinutes", "Empty spawn chests are restocked after this long.", v -> spawnRefillMinutes = v, () -> spawnRefillMinutes);

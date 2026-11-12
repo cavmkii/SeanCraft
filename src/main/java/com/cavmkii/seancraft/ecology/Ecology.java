@@ -137,6 +137,11 @@ public final class Ecology {
         return ChunkPos.asLong(px, pz);
     }
 
+    /** The key of the patch a block is in. */
+    public static long keyOf(BlockPos pos) {
+        return keyAt(pos);
+    }
+
     static long keyAt(BlockPos pos) {
         int size = patchChunks() * 16;
         return key(Math.floorDiv(pos.getX(), size), Math.floorDiv(pos.getZ(), size));
@@ -211,7 +216,7 @@ public final class Ecology {
             }
             neighbours(level, key, p, days);
         }
-        Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
+        quality(level, key, p);
         markDirty(level);
     }
 
@@ -223,7 +228,7 @@ public final class Ecology {
      * A chunk that is fully loaded right now. Level.hasChunk only says one is on its way; reading a chunk that isn't
      * finished makes the server thread stop and finish it (or generate it) on the spot, which is a lag spike.
      */
-    static boolean ready(ServerLevel level, int cx, int cz) {
+    public static boolean ready(ServerLevel level, int cx, int cz) {
         return level.getChunkSource().getChunkNow(cx, cz) != null;
     }
 
@@ -730,13 +735,13 @@ public final class Ecology {
             p.plants = plants;
             p.forage = Math.max(0.05, p.grass);
             p.sampled = true;
-            Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
+            quality(level, key, p);
             p.game = Model.gameCap(p) * 0.8;
             p.gameLag = p.game;
             p.fish = 0.8;
         }
         p.sampledAt = level.getGameTime();
-        Quality.update(p, (dx, dz) -> existing(level, key, dx, dz));
+        quality(level, key, p);
         markDirty(level);
     }
 
@@ -820,6 +825,12 @@ public final class Ecology {
         p.pest *= 1 - Params.insecticideKill * (1 - p.resistance);
         p.enemiesOffUntil = p.day + Params.enemiesOffDays;
         p.resistance = Math.min(Params.resistanceMax, p.resistance + Params.resistanceStep);
+    }
+
+    /** Recomputes a patch's quality, with boss blight (18.6). */
+    private static void quality(ServerLevel level, long key, Patch p) {
+        Quality.update(p, (dx, dz) -> existing(level, key, dx, dz),
+                com.cavmkii.seancraft.world.Blight.patchDistance(level, ChunkPos.getX(key), ChunkPos.getZ(key)));
     }
 
     // ================================================================== home bases
