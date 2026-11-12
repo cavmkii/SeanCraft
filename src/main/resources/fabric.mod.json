@@ -4,19 +4,31 @@
   "version": "${version}",
   "name": "SeanCraft",
   "description": "Survival that gets more dangerous the further you go: one home base worth building up, camps, graves to go back for, body-part health, gear built from parts, a living ecology, a passive tree and use-skills, bosses, plus Joe and Sean.",
-  "authors": ["cavmkii"],
+  "authors": [
+    "cavmkii"
+  ],
   "contact": {
     "sources": "https://github.com/cavmkii/SeanCraft"
   },
   "license": "All-Rights-Reserved",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.cavmkii.seancraft.SeanCraft"],
-    "client": ["com.cavmkii.seancraft.client.SeanCraftClient"]
+    "main": [
+      "com.cavmkii.seancraft.SeanCraft"
+    ],
+    "client": [
+      "com.cavmkii.seancraft.client.SeanCraftClient"
+    ],
+    "journeymap": [
+      "com.cavmkii.seancraft.client.compat.JourneyMapMarkers"
+    ]
   },
   "mixins": [
     "seancraft.mixins.json",
-    {"config": "seancraft.client.mixins.json", "environment": "client"}
+    {
+      "config": "seancraft.client.mixins.json",
+      "environment": "client"
+    }
   ],
   "depends": {
     "fabricloader": ">=0.16.0",
@@ -26,6 +38,15 @@
     "bettercombat": ">=2.4.0",
     "combat_roll": ">=2.0.6",
     "sereneseasons": "*",
-    "yagm": ">=0.3.2"
+    "yagm": ">=0.3.2",
+    "enhancedcelestials2core": ">=2.0.3",
+    "enhancedcelestials2defaultlunarevents": "*",
+    "dungeons_arise": ">=2.1.0"
+  },
+  "suggests": {
+    "journeymap": "*"
+  },
+  "breaks": {
+    "enhancedcelestials": "*"
   }
 }

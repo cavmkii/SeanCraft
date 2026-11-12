@@ -21,6 +21,15 @@ public final class GraveCompat {
         GravePlacementLoader.registerHandler(new IGravePlacementHandler() {
             @Override
             public Vec3 getPlacementPosition(Entity dead, Vec3 pos) {
+                Vec3 placed = place(dead, pos);
+                // The grave's spot, for map markers (18.1).
+                if (dead instanceof net.minecraft.server.level.ServerPlayer player) {
+                    Markers.grave(player.serverLevel(), player.getUUID(), BlockPos.containing(placed));
+                }
+                return placed;
+            }
+
+            private Vec3 place(Entity dead, Vec3 pos) {
                 BlockPos ring = Arenas.ringAt(dead.level(), pos);
                 if (ring == null) {
                     return pos;

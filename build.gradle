@@ -37,6 +37,12 @@ dependencies {
     modImplementation "maven.modrinth:yagm:bxcvn4H5"
     modImplementation "maven.modrinth:shatterbyte-lib:z3vMP4KZ"
     modImplementation "maven.modrinth:architectury-api:Pzc2FP5K"
+    // Enhanced Celestials 2 (18.1) is required but read by reflection (compat/Celestials), and When Dungeons Arise is
+    // only matched by structure id: their jars are newer-Loom builds this Loom won't remap. For dev runs, drop them
+    // (and JourneyMap) in run/mods; Fabric Loader remaps mods there itself. scripts/devmods.sh fetches them.
+    // JourneyMap (optional): compiled against its API jar (from inside JourneyMap's jar), with the Loom-version line
+    // taken out of its manifest so this Loom accepts it. Compile only; nothing of it ships.
+    modCompileOnly files('libs/journeymap-api-fabric-2.0.0-1.21.1.jar')
     // GlitchCore's nested libraries, which the dev run doesn't unpack.
     localRuntime "net.jodah:typetools:0.6.3"
     // OctoLib (YAGM's library) nests snakeyaml; the dev runtime does not load nested jars.

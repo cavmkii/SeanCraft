@@ -113,6 +113,8 @@ public final class Cfg {
     public static double spawnRefillMinutes = 30;
     /** Mountain-tagged biomes above this count as peaks for the Mobility hazard (9.3.3). */
     public static double peakY = 180;
+    /** Share of When Dungeons Arise structures that get built outside the Heartland (18.1). */
+    public static double dungeonsKeep = 0.5;
 
     // Combat
     public static double healthBase = 300;
@@ -226,6 +228,8 @@ public final class Cfg {
         i("Spawn", "Points", "Fixed spawn points (with a supply shelter) built in a new world. 0 turns them off. Only read when the world is first started.", v -> spawnPoints = v, () -> spawnPoints);
         d("World", "PeakY", "Height above which mountain biomes count as high peaks: climbing costs heavy stamina and falls break legs more often.",
                 v -> peakY = v, () -> peakY);
+        d("World", "DungeonsKeep", "Share (0-1) of When Dungeons Arise dungeons that get built outside the Heartland. None are built inside it.",
+                v -> dungeonsKeep = Math.max(0, Math.min(1, v)), () -> dungeonsKeep);
         d("Spawn", "Distance", "How far the other spawn points are from world spawn (blocks).", v -> spawnDistance = v, () -> spawnDistance);
         d("Spawn", "Radius", "Safe radius around each spawn point: hostile mobs don't spawn inside it.", v -> spawnRadius = v, () -> spawnRadius);
         d("Spawn", "RefillMinutes", "Empty spawn chests are restocked after this long.", v -> spawnRefillMinutes = v, () -> spawnRefillMinutes);

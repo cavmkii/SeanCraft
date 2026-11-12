@@ -23,14 +23,11 @@ public final class ClientTarkov {
     public static final KeyMapping OPEN_STATUS = new KeyMapping("key.seancraft.status", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H,
             "key.categories.seancraft");
 
-    public static final KeyMapping OPEN_SECURE = new KeyMapping("key.seancraft.secure", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J,
-            "key.categories.seancraft");
 
     private ClientTarkov() {}
 
     public static void init() {
         RecipeGridTooltip.init();
-        KeyBindingHelper.registerKeyBinding(OPEN_SECURE);
         KeyBindingHelper.registerKeyBinding(OPEN_STATUS);
         ClientPlayNetworking.registerGlobalReceiver(TarkovNet.BodySync.TYPE, (payload, ctx) -> body = payload);
         ClientHazard.init();
@@ -51,9 +48,6 @@ public final class ClientTarkov {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             while (OPEN_STATUS.consumeClick()) {
                 ClientTetris.open(TarkovScreen.STATUS);
-            }
-            while (OPEN_SECURE.consumeClick()) {
-                ClientTetris.open(TarkovScreen.GEAR);
             }
         });
         HudRenderCallback.EVENT.register(InjuryGlow::render);

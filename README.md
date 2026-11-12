@@ -22,7 +22,7 @@ To build the jar yourself you need JDK 21. Run `./gradlew build`, and the jar sh
 
 | Key | What it does |
 |---|---|
-| E or J | Inventory screen (INVENTORY tab) |
+| E | Inventory screen (INVENTORY tab). J used to open it too; it's free now, so JourneyMap gets it for its map |
 | H | Inventory screen, STATUS tab |
 | K | Inventory screen, CHARACTER tab (passive web, level, attributes, skills) |
 | Z, X, C | Your three active skills (vanilla's creative hotbar save/load keys sat on X and C and ate them; SeanCraft unbinds those now) |
@@ -81,7 +81,7 @@ There's no raid timer any more. Danger comes from how far out you are, the time 
   | Workshop | Furnaces at home cook 25/50/75% faster; level 3 halves Weapon Bench repair costs |
   | Medstation | Unlocks meds; bleeds stop and fractures heal at home; level 3 gives regen at home |
   | Perimeter | Bigger home radius: 48, 72, 96 |
-  | Map room | 2: a season and weather forecast when you get home, and everyone hears when a hunting party is after a friend. Level 1 is meant to share maps through JourneyMap; that part isn't built |
+  | Map room | 1: with JourneyMap, you see everyone's home bases, camps and graves on your map, not just yours. 2: a season and weather forecast when you get home, and everyone hears when a hunting party is after a friend |
   | Living quarters | +2/+4/+6 comfort at home on top of the usual +1; at level 3 a night's sleep at home leaves you Rested |
   | Kitchen | 1: cooking pot. 2: fermenter. 3: oven. Use the Kitchen block to cook (see Food and rest) |
 
@@ -444,6 +444,7 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
   - `Danger.DistanceBands` (`1000,3000,6000`) and `Danger.Caps` (`4.0,2.5`, the most distance and elite stars together can multiply a monster's health and damage).
   - `Home.Radius` (30, before Perimeter), `Home.MaxBenches` (1) and `Home.PedestalClearance` (100, no Home Bench, bed respawn or camp that close to a boss dungeon).
   - `Camp.SafeRadius` (8) and `Health.SleepHealPercent` (50).
+  - `World.DungeonsKeep` (0.5): the share of When Dungeons Arise dungeons that get built outside the Heartland.
   - `World.PeakY` (180): above this, mountain biomes count as high peaks for hard climbing.
   - `Spawn.*`: number of spawn points, distance (400), safe radius, restock time. A config file from before this update that still says 1000 (the old default) is moved to 400 once.
   - YAGM's own config is overridden on every start: graves open to anyone, 50% XP kept, no restore key.
@@ -468,9 +469,15 @@ There's only ever one Joe and one Sean, and they're not always around. Each visi
 - **Serene Seasons:** required. The ecology and the Map room forecast follow its seasons.
 - **FallingTree:** trees you chop go into your inventory, and axes made from parts work with it.
 - **Better Combat and Combat Roll:** required (see Combat).
+- **Enhanced Celestials 2:** required (Core and Default Lunar Events; not the old Enhanced Celestials, which it refuses to run with). On top of its own moons:
+  - **Blood moon:** elite chances double again (so 4x the daytime odds), hunting parties come for you in the Wilds too, not just the Frontier and Far lands, and monsters you kill have a 5% chance (25% for elites) to drop a weapon part, better further out. EC2's own blood moon adds more spawns and stops you sleeping.
+  - **Harvest moon:** crops in the light grow an extra stage on half their growth ticks, so roughly twice as fast.
+  - If EC2 ever changes in a way SeanCraft can't read, the moons just stop affecting SeanCraft; it logs one error and carries on.
+- **When Dungeons Arise:** required. None of its dungeons spawn in the Heartland, and only half of the rest get built (`World.DungeonsKeep`, 0.5), so they're a find, not a fixture. Their chests get an extra roll of meds, ingots and diamonds in the Frontier, and another with surgical kits, diamonds, netherite scrap, echo shards and breeze rods in the Far lands.
+- **JourneyMap:** optional. Your home base, camps and last 3 graves show up as waypoints (gold, orange, grey). With a Map room at your home base, everyone's do. J opens JourneyMap's map now; SeanCraft's inventory is just E.
 - **Grappling Hook Mod:** needs Forge Config API Port too. Hooks go to your hotbar, and using them trains bows & crossbows.
 
-FallingTree and the Grappling Hook Mod were checked by reading their code, and neither has been played alongside this mod yet. Better Combat and Combat Roll were tested in game.
+FallingTree and the Grappling Hook Mod were checked by reading their code, and neither has been played alongside this mod yet. Better Combat, Combat Roll, Enhanced Celestials 2, When Dungeons Arise and JourneyMap were tested in game.
 
 ## Custom icons
 

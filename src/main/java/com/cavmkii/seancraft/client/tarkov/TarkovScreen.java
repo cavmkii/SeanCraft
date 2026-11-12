@@ -2158,7 +2158,7 @@ public class TarkovScreen extends Screen {
             }
             return true;
         }
-        if (minecraft.options.keyInventory.matches(keyCode, scanCode) || ClientTarkov.OPEN_SECURE.matches(keyCode, scanCode)
+        if (minecraft.options.keyInventory.matches(keyCode, scanCode)
                 || ClientTarkov.OPEN_STATUS.matches(keyCode, scanCode)
                 || com.cavmkii.seancraft.client.rpg.ClientRpg.OPEN_WEB.matches(keyCode, scanCode)) {
             onClose();
